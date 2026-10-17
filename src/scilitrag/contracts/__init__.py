@@ -145,6 +145,11 @@ class StatusEvent(Model):
     latency_ms: float
 
 
+# Result of a "generate" status event sent for each sentence that failed check_sentence,
+# followed by the SentenceStatus, e.g. "removed: unsupported".
+SENTENCE_REMOVED = "removed: "
+
+
 class SentenceEvent(RenderedSentence):
     check: SentenceCheck
 

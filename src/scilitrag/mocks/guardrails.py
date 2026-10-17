@@ -4,6 +4,7 @@ import time
 from scilitrag.contracts import CheckInputResult, EvidenceMapping, SentenceCheck, StageResult
 
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+LABEL = re.compile(r"\[(\d+)\]")
 INJECTION = re.compile(
     r"ignore (?:all |any )?(?:previous|prior|above) instructions|system prompt"
     r"|disregard (?:all |any )?(?:previous |prior )?instructions|ignoriere .*anweisungen",
@@ -55,9 +56,17 @@ def check_input(query: str) -> CheckInputResult:
     return finish("ok")
 
 
+# Structure stage only (label present and known); no fact or NLI check.
 # Open (O12): share of removed sentences that triggers "not enough evidence" must be chosen.
 def check_sentence(sentence: str, mapping: EvidenceMapping) -> SentenceCheck:
-    return SentenceCheck(status="ok", latency_ms=0.0)
+    labels = {int(n) for n in LABEL.findall(sentence)}
+    if not labels:
+        status = "no_citation"
+    elif labels - mapping.keys():
+        status = "unknown_label"
+    else:
+        status = "ok"
+    return SentenceCheck(status=status, latency_ms=0.0)
 
 
 def _stage(stage: str, result: str, hit: bool) -> StageResult:

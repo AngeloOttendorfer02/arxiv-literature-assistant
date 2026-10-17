@@ -14,6 +14,14 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D017 Live guardrail status and citation drawer
+
+- Context: The UI must show live guardrail status and let users inspect each citation (A-06, A-07). Removed sentences were only counted in `done`.
+- Options: report removed sentences in `done` only; a new event type; a `status` event per removed sentence.
+- Decision: The API sends a `status` event with `stage="generate"` and result `SENTENCE_REMOVED` + the sentence status (e.g. `removed: unsupported`) for every sentence that fails `check_sentence`. The constant lives in the contracts (additive, no version change). The UI shows one badge per stage in the sidebar, updated per event, and a drawer with title, year, ids, section, supporting text and the SQL query for a clicked citation. The `check_sentence` mock now runs the structure stage (label present and known), and the mock answer contains one sentence without a source, so the removal path always runs.
+- Reason: No new event type; the existing event list stays the single source for UI and logs.
+- Date: 2026-10-17
+
 ### D016 Citation carries the supporting text (contracts 0.2)
 
 - Context: The citation drawer (A-06) must show the supporting passage. The UI only receives SSE events, and `Citation` had no text or section.

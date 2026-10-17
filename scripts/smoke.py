@@ -19,7 +19,7 @@ from fastapi.testclient import TestClient
 from scilitrag.api.app import create_app
 from scilitrag.components import Components, get_components
 from scilitrag.config import Settings, load_settings
-from scilitrag.contracts import DoneEvent, SentenceEvent, StatusEvent
+from scilitrag.contracts import SENTENCE_REMOVED, DoneEvent, SentenceEvent, StatusEvent
 from scilitrag.ui.sse import iter_events
 
 DOWNSTREAM = ("plan", "retrieve", "sql_facts", "generate")
@@ -119,6 +119,12 @@ def run_case(case: Case) -> list[str]:
             errors.append("no sentence with resolved citations")
         if any(not c.text for s in sentences for c in s.citations):
             errors.append("citation without supporting text")
+        removed = [e for n, e in events if n == "status" and e.result.startswith(SENTENCE_REMOVED)]
+        if isinstance(done, DoneEvent) and (
+            done.sentences_removed != len(removed)
+            or done.sentences_checked != len(sentences) + len(removed)
+        ):
+            errors.append("removed or checked sentence counts do not match done")
         if ("table" in names) != case.table:
             errors.append("table expected" if case.table else "unexpected table")
     return errors
