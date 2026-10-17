@@ -133,6 +133,9 @@ def run_case(case: Case) -> list[str]:
             errors.append("removed or checked sentence counts do not match done")
         if ("table" in names) != case.table:
             errors.append("table expected" if case.table else "unexpected table")
+        sql_cited = any(c.query_id for s in sentences for c in s.citations)
+        if case.table and not sql_cited:
+            errors.append("no sentence cites the SQL evidence")
     return errors
 
 

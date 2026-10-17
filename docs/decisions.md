@@ -14,6 +14,13 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D019 UI hardening and request tracing
+
+- Context: A review of the UI and container PRs found that the UI crashes on events from a newer contract, its logic was untested, the SQL path of the citation drawer never ran, and only the request log line carried the request id.
+- Decision: The UI shows a "contract version mismatch" error for unknown events or payloads instead of crashing; `app.py` runs `main()` only as `__main__`, so tests import it (`tests/test_ui.py`, skipped without the `ui` group). The `retrieve` mock returns a SQL evidence for S3 and the mock answer cites it, so the drawer shows the SQL query; the smoke test checks that S3 cites SQL. The request id is stored in a context variable and added to every application log line. A separate workflow builds both Docker images when Docker or source files change.
+- Reason: The UI and API images can be rebuilt separately, so contract drift is a real case. Context variables follow the request into worker threads and the pipeline task without passing the id through every component.
+- Date: 2026-10-17
+
 ### D018 Request limits, health checks and request log
 
 - Context: A-03 needs clean handling of client disconnects, timeouts and missing services; A-08 needs structured per-request telemetry without PII for the benchmark and guardrail numbers in the report.

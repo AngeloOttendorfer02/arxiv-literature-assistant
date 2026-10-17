@@ -47,12 +47,23 @@ EVIDENCE = [
     ),
 ]
 
+SQL_QUERY_ID = "mock_top_cited_authors"
+SQL_EVIDENCE = Evidence(
+    label=4,
+    type="sql",
+    query_id=SQL_QUERY_ID,
+    title="Citation count per author",
+    text="MOCK Author A: 12 citations; MOCK Author B: 9; MOCK Author C: 7.",
+)
+
 ANSWER = (
     "MOCK answer: dense retrieval improves recall on scientific queries [1]. "
     "Hybrid search with BM25 helps for rare terms [2]. "
     "This sentence has no source and is removed by the check. "
     "A recent survey compares both approaches [1][3]."
 )
+# Counts come from SQL; the sentence cites the SQL evidence, as in scenario S3.
+SQL_SENTENCE = " MOCK Author A is the most cited author with 12 citations [4]."
 
 
 def plan(masked_query: str) -> Plan:
@@ -67,7 +78,7 @@ def plan(masked_query: str) -> Plan:
 
 
 def retrieve(plan: Plan) -> list[Evidence]:
-    return list(EVIDENCE)
+    return [*EVIDENCE, SQL_EVIDENCE] if plan.scenario == "S3" else list(EVIDENCE)
 
 
 def sql_facts(plan: Plan) -> list[SqlFacts]:
@@ -75,7 +86,7 @@ def sql_facts(plan: Plan) -> list[SqlFacts]:
         return []
     return [
         SqlFacts(
-            query_id="mock_top_cited_authors",
+            query_id=SQL_QUERY_ID,
             sql="SELECT author, citations FROM mock_top_cited_authors",
             columns=["author", "citations"],
             rows=[["MOCK Author A", 12], ["MOCK Author B", 9], ["MOCK Author C", 7]],
@@ -88,7 +99,8 @@ class Generate:
         self.token_delay = token_delay
 
     async def __call__(self, plan: Plan, evidence: list[Evidence]) -> AsyncIterator[str]:
-        for token in re.findall(r"\S+\s*", ANSWER):
+        text = ANSWER + SQL_SENTENCE if plan.scenario == "S3" else ANSWER
+        for token in re.findall(r"\S+\s*", text):
             if self.token_delay:
                 await asyncio.sleep(self.token_delay)
             yield token
