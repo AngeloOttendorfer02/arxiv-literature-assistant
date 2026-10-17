@@ -7,6 +7,7 @@ from fastapi.concurrency import run_in_threadpool
 
 from scilitrag.components import Components
 from scilitrag.contracts import (
+    SENTENCE_REMOVED,
     DoneEvent,
     ErrorEvent,
     Model,
@@ -74,28 +75,36 @@ async def run_query(query: str, c: Components) -> AsyncIterator[tuple[str, Model
         buffer = ""
         t = time.perf_counter()
 
-        async def release(sentences: list[str]) -> AsyncIterator[SentenceEvent]:
+        async def release(sentences: list[str]) -> AsyncIterator[tuple[str, Model]]:
             nonlocal checked_count, removed, ttft_user
             for sentence in sentences:
                 check = await run_in_threadpool(c.check_sentence, sentence, mapping)
                 checked_count += 1
                 if check.status != "ok":
                     removed += 1
+                    yield (
+                        "status",
+                        StatusEvent(
+                            stage="generate",
+                            result=f"{SENTENCE_REMOVED}{check.status}",
+                            latency_ms=check.latency_ms,
+                        ),
+                    )
                     continue
                 masked = await run_in_threadpool(c.mask_pii, sentence)
                 rendered = await run_in_threadpool(c.render_citations, masked, mapping)
                 if ttft_user is None:
                     ttft_user = _ms(start)
-                yield SentenceEvent(**rendered.model_dump(), check=check)
+                yield "sentence", SentenceEvent(**rendered.model_dump(), check=check)
 
         async for token in c.generate(plan, evidence):
             if ttft_engine is None:
                 ttft_engine = _ms(start)
             sentences, buffer = split_sentences(buffer + token)
             async for event in release(sentences):
-                yield "sentence", event
+                yield event
         async for event in release([buffer.strip()] if buffer.strip() else []):
-            yield "sentence", event
+            yield event
 
         latency["generate"] = _ms(t)
         yield (

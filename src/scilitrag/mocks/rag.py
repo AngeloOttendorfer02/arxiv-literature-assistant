@@ -50,6 +50,7 @@ EVIDENCE = [
 ANSWER = (
     "MOCK answer: dense retrieval improves recall on scientific queries [1]. "
     "Hybrid search with BM25 helps for rare terms [2]. "
+    "This sentence has no source and is removed by the check. "
     "A recent survey compares both approaches [1][3]."
 )
 
