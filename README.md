@@ -88,7 +88,7 @@ uv run ruff check .
 uv run ruff format --check .
 ```
 
-The smoke test runs the scenarios S1 to S4 and three attacks in-process against the mocks. No server needed.
+The smoke test runs the scenarios S1 to S4 and attacks in-process, no server needed. It uses the mocks except for the components in `REAL_COMPONENTS`, e.g. `REAL_COMPONENTS=retrieve uv run python scripts/smoke.py` tests a real `retrieve` with everything else mocked.
 
 ## Layout
 

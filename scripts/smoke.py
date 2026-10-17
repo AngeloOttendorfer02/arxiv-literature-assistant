@@ -1,18 +1,25 @@
-"""End-to-end smoke test: scenarios S1 to S4 and three attacks against the mocks, in-process.
+"""End-to-end smoke test: scenarios S1 to S4 and attacks through the app, in-process.
 
-Usage: uv run python scripts/smoke.py
+Uses mocks for every component except those listed in REAL_COMPONENTS (environment or .env).
+
+Usage:
+    uv run python scripts/smoke.py
+    REAL_COMPONENTS=retrieve uv run python scripts/smoke.py
 """
 
 import json
+import os
 import sys
 from collections import Counter
 from dataclasses import dataclass, fields, replace
+from functools import cache
 
+from dotenv import find_dotenv, load_dotenv
 from fastapi.testclient import TestClient
 
 from scilitrag.api.app import create_app
-from scilitrag.components import Components, mock_components
-from scilitrag.config import load_settings
+from scilitrag.components import Components, get_components
+from scilitrag.config import Settings, load_settings
 from scilitrag.contracts import EVENT_TYPES, DoneEvent, SentenceEvent, StatusEvent
 
 DOWNSTREAM = ("plan", "retrieve", "sql_facts", "generate")
@@ -44,6 +51,19 @@ CASES = [
 ]
 
 
+@cache
+def smoke_settings() -> Settings:
+    load_dotenv(find_dotenv(usecwd=True))
+    return load_settings({**os.environ, "USE_MOCKS": "1"})
+
+
+def expected_fail(case: Case) -> str | None:
+    """Expected failure applies only while check_input is mocked."""
+    if "check_input" in smoke_settings().real_components:
+        return None
+    return case.expected_fail_with_mocks
+
+
 def spy(components: Components) -> tuple[Components, Counter]:
     calls: Counter = Counter()
 
@@ -73,8 +93,9 @@ def parse_sse(lines) -> list[tuple[str, object]]:
 
 def run_case(case: Case) -> list[str]:
     """Return the list of failed expectations, empty if the case passes."""
-    components, calls = spy(mock_components(token_delay=0))
-    client = TestClient(create_app(components, load_settings({"USE_MOCKS": "1"})))
+    settings = smoke_settings()
+    components, calls = spy(get_components(settings, token_delay=0))
+    client = TestClient(create_app(components, settings))
     with client.stream("POST", "/query", json={"query": case.query}) as response:
         if response.status_code != 200:
             return [f"HTTP {response.status_code}"]
@@ -115,13 +136,16 @@ def run_case(case: Case) -> list[str]:
 
 
 def main() -> int:
+    real = sorted(smoke_settings().real_components)
+    print(f"real components: {', '.join(real) or 'none'}")
     unexpected = 0
     for case in CASES:
         errors = run_case(case)
+        reason = expected_fail(case)
         if not errors:
-            print(f"{case.name}  PASS")
-        elif case.expected_fail_with_mocks:
-            print(f"{case.name}  FAIL (expected with mocks: {case.expected_fail_with_mocks})")
+            print(f"{case.name}  PASS" + (" (expected fail can be removed)" if reason else ""))
+        elif reason:
+            print(f"{case.name}  FAIL (expected with mocks: {reason})")
         else:
             unexpected += 1
             print(f"{case.name}  FAIL {'; '.join(errors)}")

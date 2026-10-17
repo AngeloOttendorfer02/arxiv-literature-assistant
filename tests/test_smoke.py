@@ -8,8 +8,8 @@ import smoke
         pytest.param(
             case,
             id=case.name,
-            marks=pytest.mark.xfail(reason=case.expected_fail_with_mocks, strict=False)
-            if case.expected_fail_with_mocks
+            marks=pytest.mark.xfail(reason=smoke.expected_fail(case), strict=False)
+            if smoke.expected_fail(case)
             else (),
         )
         for case in smoke.CASES

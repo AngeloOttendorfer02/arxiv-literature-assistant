@@ -14,6 +14,14 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D015 Smoke test grows with the system (extends D009)
+
+- Context: The smoke test only exercised the mocks; real components were never run through the whole pipeline before integration.
+- Options: keep it mock-only, run it against real components on demand, add a separate integration suite.
+- Decision: `scripts/smoke.py` uses mocks except the components in `REAL_COMPONENTS` (environment or `.env`), so each owner runs the same cases with their real module. CI stays mock-only, since it has no database or model. Every PR that adds behaviour visible in the API adds or updates a smoke case. An expected failure only applies while `check_input` is mocked. Later: an option to run the cases against the running Docker stack (for E-10).
+- Reason: One set of end-to-end cases from mocks to the final system; no second test suite to maintain.
+- Date: 2026-10-17
+
 ### D014 Database image
 
 - Context: E5 fixes PostgreSQL with pgvector and pg_search (ParadeDB) in Docker; A-01 needs a concrete image.

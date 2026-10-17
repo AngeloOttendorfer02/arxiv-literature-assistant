@@ -58,13 +58,13 @@ def mock_components(token_delay: float = 0.02) -> Components:
     )
 
 
-def get_components(settings: Settings | None = None) -> Components:
+def get_components(settings: Settings | None = None, token_delay: float = 0.02) -> Components:
     settings = settings or load_settings()
     unknown = sorted(settings.real_components - REAL.keys())
     if unknown:
         raise ConfigError(f"Unknown REAL_COMPONENTS: {', '.join(unknown)}")
 
-    mocks = mock_components()
+    mocks = mock_components(token_delay)
     selected = {name: getattr(mocks, name) for name in REAL}
     for name in REAL.keys() if not settings.use_mocks else settings.real_components:
         selected[name] = getattr(importlib.import_module(REAL[name]), name)
