@@ -117,6 +117,8 @@ def run_case(case: Case) -> list[str]:
             errors.append("sentence before first status")
         if not any(isinstance(s, SentenceEvent) and s.citations for s in sentences):
             errors.append("no sentence with resolved citations")
+        if any(not c.text for s in sentences for c in s.citations):
+            errors.append("citation without supporting text")
         if ("table" in names) != case.table:
             errors.append("table expected" if case.table else "unexpected table")
     return errors

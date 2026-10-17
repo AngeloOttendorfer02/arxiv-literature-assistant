@@ -107,6 +107,8 @@ def render_citations(sentence: str, mapping: EvidenceMapping) -> RenderedSentenc
                 title=evidence.title,
                 year=evidence.year,
                 query_id=evidence.query_id,
+                section=evidence.section,
+                text=evidence.text,
             )
         )
     return RenderedSentence(text=sentence, citations=citations)
