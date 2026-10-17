@@ -9,14 +9,17 @@ from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from scilitrag.api.health import dependency_checks
 from scilitrag.api.pipeline import run_query
-from scilitrag.api.telemetry import RequestLog, setup_request_log
+from scilitrag.api.telemetry import RequestLog, request_id_var, setup_app_log, setup_request_log
 from scilitrag.components import Components, get_components
 from scilitrag.config import Settings, load_settings
 from scilitrag.contracts import CONTRACT_VERSION, QueryRequest
 
 
 class RequestIdMiddleware:
-    """Gives every request an id (request.state.request_id) and returns it as X-Request-ID.
+    """Gives every request an id and returns it as X-Request-ID.
+
+    The id is in request.state.request_id and in request_id_var, so every log line written
+    while the request runs (also in worker threads and the pipeline task) carries it.
 
     Plain ASGI on purpose: BaseHTTPMiddleware interferes with streaming and disconnects.
     """
@@ -37,12 +40,17 @@ class RequestIdMiddleware:
                 message = {**message, "headers": headers}
             await send(message)
 
-        await self.app(scope, receive, send_with_id)
+        token = request_id_var.set(request_id)
+        try:
+            await self.app(scope, receive, send_with_id)
+        finally:
+            request_id_var.reset(token)
 
 
 def create_app(components: Components | None = None, settings: Settings | None = None) -> FastAPI:
     settings = settings or load_settings()
     components = components or get_components(settings)
+    setup_app_log()
     setup_request_log(settings.log_dir)
     app = FastAPI(title="SciLitRAG")
     app.add_middleware(RequestIdMiddleware)

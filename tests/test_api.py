@@ -1,5 +1,6 @@
 import asyncio
 import json
+import logging
 import socket
 from dataclasses import replace
 
@@ -9,6 +10,7 @@ from starlette.requests import Request
 
 from scilitrag.api.app import create_app
 from scilitrag.api.pipeline import run_query
+from scilitrag.api.telemetry import RequestIdFilter
 from scilitrag.components import mock_components
 from scilitrag.config import ConfigError, load_settings
 from scilitrag.contracts import QueryRequest
@@ -54,6 +56,40 @@ def test_request_id_header_matches_log_without_query_text(tmp_path):
     assert record["status"] == "ok"
     assert record["tokens"] > 0
     assert "alice" not in json.dumps(record) and "dense" not in json.dumps(record)
+
+
+def test_component_logs_carry_the_request_id(tmp_path):
+    seen = []
+
+    class Capture(logging.Handler):
+        def emit(self, record):
+            seen.append((record.getMessage(), record.request_id))
+
+    handler = Capture()
+    handler.addFilter(RequestIdFilter())
+    logger = logging.getLogger("scilitrag.test_component")
+    logger.addHandler(handler)
+    mocks = mock_components(0)
+
+    def check_input(query):  # runs in a worker thread
+        logger.warning("check_input")
+        return mocks.check_input(query)
+
+    async def generate(plan, evidence):  # runs in the pipeline task
+        logger.warning("generate")
+        async for token in mocks.generate(plan, evidence):
+            yield token
+
+    components = replace(mocks, check_input=check_input, generate=generate)
+    settings = load_settings({"USE_MOCKS": "1", "LOG_DIR": str(tmp_path)})
+    try:
+        response = TestClient(create_app(components, settings)).post(
+            "/query", json={"query": QUERY}
+        )
+    finally:
+        logger.removeHandler(handler)
+    request_id = response.headers["x-request-id"]
+    assert seen == [("check_input", request_id), ("generate", request_id)]
 
 
 def test_timeout_sends_timeout_event_and_logs_it(tmp_path):

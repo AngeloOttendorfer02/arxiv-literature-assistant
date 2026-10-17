@@ -206,6 +206,12 @@ def stream_answer(query: str, panel) -> Answer:
         answer.error = f"The API answered with HTTP {exc.response.status_code}."
     except httpx2.HTTPError:
         answer.error = f"The API at {API_URL} is not reachable."
+    except (KeyError, ValueError):
+        # Unknown event name (KeyError) or payload (pydantic ValidationError and JSON errors
+        # are ValueErrors): API and UI were built from different contracts.
+        answer.error = (
+            "The API sent an event this UI does not understand (contract version mismatch?)."
+        )
     return answer
 
 
@@ -244,4 +250,6 @@ def main() -> None:
     st.rerun()
 
 
-main()
+# Streamlit runs this file as __main__; tests can import it without starting the app.
+if __name__ == "__main__":
+    main()

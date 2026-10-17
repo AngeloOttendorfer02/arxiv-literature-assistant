@@ -2,6 +2,7 @@ import json
 import logging
 import sys
 import uuid
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -9,8 +10,33 @@ from pathlib import Path
 from scilitrag.contracts import SENTENCE_REMOVED, DoneEvent, ErrorEvent, Model, StatusEvent
 
 GUARD_STAGES = ("prompt_guard", "topic_gate", "pii")
+APP_LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s [%(request_id)s] %(message)s"
 
 request_logger = logging.getLogger("scilitrag.requests")
+# Set per request by the API middleware; copied into worker threads and tasks automatically.
+request_id_var: ContextVar[str] = ContextVar("request_id", default="-")
+
+
+class RequestIdFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        record.request_id = request_id_var.get()
+        return True
+
+
+def setup_app_log() -> None:
+    """Application log lines (all scilitrag.* loggers) carry the current request id."""
+    root = logging.getLogger()
+    for handler in [h for h in root.handlers if isinstance(h, _AppLogHandler)]:
+        root.removeHandler(handler)
+    handler = _AppLogHandler()
+    handler.addFilter(RequestIdFilter())
+    handler.setFormatter(logging.Formatter(APP_LOG_FORMAT))
+    root.addHandler(handler)
+    logging.getLogger("scilitrag").setLevel(logging.INFO)
+
+
+class _AppLogHandler(logging.StreamHandler):
+    """Marks the handler added by setup_app_log, so a second call replaces it."""
 
 
 def setup_request_log(log_dir: str | None) -> None:
