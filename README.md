@@ -44,6 +44,16 @@ Check: http://127.0.0.1:8000/health
 
 `POST /query` with body `{"query": "..."}` returns a stream of server-sent events: `status`, `sentence`, `table`, `done`, `error`.
 
+### Chat UI
+
+With the API running (locally or in Docker):
+
+```
+uv run --group ui streamlit run src/scilitrag/ui/app.py
+```
+
+Opens http://localhost:8501. The UI reaches the API at `API_URL` (default `http://localhost:8000`).
+
 ### Switching single components to real
 
 `USE_MOCKS=0` uses only real components. With `USE_MOCKS=1`, `REAL_COMPONENTS` lists the components that use the real implementation while all others stay mocked:

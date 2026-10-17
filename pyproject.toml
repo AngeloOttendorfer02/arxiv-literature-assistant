@@ -22,7 +22,10 @@ data = [
 ]
 rag = []
 guardrails = []
-ui = []
+ui = [
+    "httpx2>=2.13",
+    "streamlit>=1.66",
+]
 bench = []
 
 [build-system]
