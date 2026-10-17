@@ -5,7 +5,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-CONTRACT_VERSION = "0.1"
+CONTRACT_VERSION = "0.2"
 
 InputCategory = Literal["ok", "off_topic", "injection", "write_intent"]
 Scenario = Literal["S1", "S2", "S3"]
@@ -84,6 +84,8 @@ class Citation(Model):
     title: str | None = None
     year: int | None = None
     query_id: str | None = None
+    section: str | None = None
+    text: str | None = None
 
 
 class RenderedSentence(Model):

@@ -14,6 +14,14 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D016 Citation carries the supporting text (contracts 0.2)
+
+- Context: The citation drawer (A-06) must show the supporting passage. The UI only receives SSE events, and `Citation` had no text or section.
+- Options: add `section` and `text` to `Citation`; send the evidence list as its own event; show metadata only.
+- Decision: `Citation` gets `section` and `text`, filled by `render_citations` from the evidence. `CONTRACT_VERSION` 0.2.
+- Reason: Smallest change; each sentence event already carries everything the drawer needs, no new event type.
+- Date: 2026-10-17
+
 ### D015 Smoke test grows with the system (extends D009)
 
 - Context: The smoke test only exercised the mocks; real components were never run through the whole pipeline before integration.
