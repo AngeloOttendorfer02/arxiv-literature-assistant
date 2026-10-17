@@ -7,6 +7,7 @@ Aufruf:
     python scripts/download_data.py                  # alle drei Configs
     python scripts/download_data.py query corpus_clean
 """
+
 import os
 import sys
 from pathlib import Path
