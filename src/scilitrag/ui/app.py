@@ -51,6 +51,7 @@ class Answer:
     tables: list[TableEvent] = field(default_factory=list)
     done: DoneEvent | None = None
     error: str | None = None
+    request_id: str | None = None
 
     def add(self, event: object) -> None:
         match event:
@@ -179,6 +180,10 @@ def render_answer(answer: Answer, index: int) -> None:
         if d.ttft_user_ms is not None:
             parts.append(f"first sentence after {d.ttft_user_ms:.0f} ms")
         parts.append(f"total {d.total_ms:.0f} ms")
+        if d.tokens_per_s is not None:
+            parts.append(f"{d.tokens_per_s:.0f} tokens/s")
+        if answer.request_id:
+            parts.append(f"request {answer.request_id[:8]}")
         st.caption(" · ".join(parts))
 
 
@@ -190,6 +195,7 @@ def stream_answer(query: str, panel) -> Answer:
         url = f"{API_URL}/query"
         with httpx2.stream("POST", url, json={"query": query}, timeout=TIMEOUT) as response:
             response.raise_for_status()
+            answer.request_id = response.headers.get("x-request-id")
             for _, event in iter_events(response.iter_lines()):
                 answer.add(event)
                 if isinstance(event, SentenceEvent):

@@ -5,7 +5,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-CONTRACT_VERSION = "0.2"
+CONTRACT_VERSION = "0.3"
 
 InputCategory = Literal["ok", "off_topic", "injection", "write_intent"]
 Scenario = Literal["S1", "S2", "S3"]
@@ -166,6 +166,8 @@ class DoneEvent(Model):
     sentences_checked: int = 0
     sentences_removed: int = 0
     refused: bool = False
+    tokens: int = 0
+    tokens_per_s: float | None = None
 
 
 class ErrorEvent(Model):
