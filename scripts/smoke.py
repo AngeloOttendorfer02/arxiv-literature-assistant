@@ -7,7 +7,6 @@ Usage:
     REAL_COMPONENTS=retrieve uv run python scripts/smoke.py
 """
 
-import json
 import os
 import sys
 from collections import Counter
@@ -20,7 +19,8 @@ from fastapi.testclient import TestClient
 from scilitrag.api.app import create_app
 from scilitrag.components import Components, get_components
 from scilitrag.config import Settings, load_settings
-from scilitrag.contracts import EVENT_TYPES, DoneEvent, SentenceEvent, StatusEvent
+from scilitrag.contracts import DoneEvent, SentenceEvent, StatusEvent
+from scilitrag.ui.sse import iter_events
 
 DOWNSTREAM = ("plan", "retrieve", "sql_facts", "generate")
 GUARD_STAGES = ("prompt_guard", "topic_gate", "pii")
@@ -78,19 +78,6 @@ def spy(components: Components) -> tuple[Components, Counter]:
     return replace(components, **wrapped), calls
 
 
-def parse_sse(lines) -> list[tuple[str, object]]:
-    events, name, data = [], None, []
-    for line in [*lines, ""]:
-        if line.startswith("event:"):
-            name = line[6:].strip()
-        elif line.startswith("data:"):
-            data.append(line[5:].strip())
-        elif line == "" and name:
-            events.append((name, EVENT_TYPES[name].model_validate(json.loads("\n".join(data)))))
-            name, data = None, []
-    return events
-
-
 def run_case(case: Case) -> list[str]:
     """Return the list of failed expectations, empty if the case passes."""
     settings = smoke_settings()
@@ -99,7 +86,7 @@ def run_case(case: Case) -> list[str]:
     with client.stream("POST", "/query", json={"query": case.query}) as response:
         if response.status_code != 200:
             return [f"HTTP {response.status_code}"]
-        events = parse_sse(response.iter_lines())
+        events = list(iter_events(response.iter_lines()))
 
     if not events:
         return ["no events"]
