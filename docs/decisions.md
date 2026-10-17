@@ -14,6 +14,14 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D020 CPU-only PyTorch
+
+- Context: Prompt Guard 2 and the NLI model need torch. On Linux, PyPI serves the CUDA build, which adds several GB to the API image and to every `uv sync`.
+- Options: CPU build on every platform; separate CPU and GPU groups with `tool.uv.conflicts`; leave it open until WP3 adds torch.
+- Decision: `torch` comes from the PyTorch CPU index on every platform (`tool.uv.sources`, explicit index) and is a direct dependency of the `guardrails` group. Any group that needs torch lists it directly, so the source applies. The API image installs `rag` and `guardrails`, without `dev`.
+- Reason: Guardrails run on CPU as planned, the API image stays at about 1 GB, and there is one lock for everyone. The one-time embedding build (D-16) can run on a GPU outside this environment (Modal or a separate env); query embeddings with the same model on CPU stay compatible.
+- Date: 2026-10-17
+
 ### D019 UI hardening and request tracing
 
 - Context: A review of the UI and container PRs found that the UI crashes on events from a newer contract, its logic was untested, the SQL path of the citation drawer never ran, and only the request log line carried the request id.

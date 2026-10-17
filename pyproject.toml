@@ -21,12 +21,24 @@ data = [
     "datasets>=3.0",
 ]
 rag = []
-guardrails = []
+guardrails = [
+    "torch>=2.14.1",
+]
 ui = [
     "httpx2>=2.13",
     "streamlit>=1.66",
 ]
 bench = []
+
+# CPU-only torch on every platform (Prompt Guard and NLI run on CPU, small image).
+# Add torch as a direct dependency in any group that needs it, so this source applies.
+[tool.uv.sources]
+torch = [{ index = "pytorch-cpu" }]
+
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
 [build-system]
 requires = ["uv_build>=0.13.1,<0.14.0"]
