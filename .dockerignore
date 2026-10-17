@@ -1,0 +1,14 @@
+.git
+.github
+.venv
+.env
+.env.*
+todo
+data
+models
+**/__pycache__
+.pytest_cache
+.ruff_cache
+*.dump
+*.backup
+*.sql.gz

@@ -69,6 +69,16 @@ docker compose exec db psql -U postgres -d scilitrag -c "\dx"
 
 TODO: schema, roles, fixture and dump restore.
 
+## Run with Docker
+
+```
+docker compose up -d --build
+```
+
+Starts `db` and `api` (http://127.0.0.1:8000/health). The API container uses the settings from `.env`, but reaches the database as `db` and Ollama on the host as `host.docker.internal`.
+
+Ollama runs on the host, outside compose. Keep it bound to localhost (default `127.0.0.1:11434`); in the Ollama app, "Expose Ollama to the network" must be off. Ollama has no authentication.
+
 ## Tests
 
 ```
