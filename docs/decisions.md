@@ -14,6 +14,14 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D013 Python 3.13 (replaces D001)
+
+- Context: The team had agreed on Python 3.13; the setup used 3.12.
+- Options: stay on 3.12, switch to 3.13.
+- Decision: Python 3.13, switched before the work packages start.
+- Reason: Team decision. All planned dependencies support 3.13 (checked on PyPI 2026-10-17: torch 2.14, spaCy 3.8 with thinc 8.3 ship 3.13 wheels; presidio-analyzer, transformers, sentence-transformers, psycopg and streamlit allow 3.13).
+- Date: 2026-10-17
+
 ### D012 Development LLM without GPU
 
 - Context: Team members without a GPU need a local model for development; the final model is chosen later (O6).
@@ -106,7 +114,7 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 - Context: The team needs one interpreter version for all modules and containers.
 - Options: 3.11, 3.12, 3.13.
-- Decision: Python 3.12.
+- Decision: Python 3.12. Replaced by D013.
 - Reason: Team decision. Library support for the model dependencies is checked when the groups are filled.
 - Date: 2026-10-17
 
