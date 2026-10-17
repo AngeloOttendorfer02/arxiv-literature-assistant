@@ -1,0 +1,53 @@
+name: scilitrag
+
+services:
+  db:
+    image: paradedb/paradedb:0.26.2-pg18
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+    ports:
+      - "127.0.0.1:${DB_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+      # Single file, so the image's own bootstrap script in the same folder still runs.
+      - ./docker/db/20-extensions.sql:/docker-entrypoint-initdb.d/20-extensions.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    build:
+      context: .
+      dockerfile: docker/api/Dockerfile
+    environment:
+      USE_MOCKS: ${USE_MOCKS:-1}
+      REAL_COMPONENTS: ${REAL_COMPONENTS:-}
+      # Same app role as DATABASE_URL in .env, but reached via the compose service name.
+      DATABASE_URL: postgresql://app:app@db:5432/${POSTGRES_DB}
+      # Ollama runs on the host, outside compose.
+      LLM_BASE_URL: http://host.docker.internal:11434/v1
+      LLM_MODEL: ${LLM_MODEL:-}
+      EMBED_MODEL: ${EMBED_MODEL:-BAAI/bge-base-en-v1.5}
+      HF_TOKEN: ${HF_TOKEN:-}
+    extra_hosts:
+      # Needed on Linux; Docker Desktop resolves host.docker.internal by itself.
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  pgdata:
