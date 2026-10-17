@@ -85,7 +85,7 @@ TODO: schema, roles, fixture and dump restore.
 docker compose up -d --build
 ```
 
-Starts `db` and `api` (http://127.0.0.1:8000/health). The API container uses the settings from `.env`, but reaches the database as `db` and Ollama on the host as `host.docker.internal`.
+Starts `db`, `api` (http://127.0.0.1:8000/health) and `ui` (chat at http://127.0.0.1:8501). Use `--build` after code changes, otherwise the old images are reused. The API container uses the settings from `.env`, but reaches the database as `db` and Ollama on the host as `host.docker.internal`; the UI container reaches the API as `api`. Host ports can be changed with `DB_PORT`, `API_PORT` and `UI_PORT` in `.env`.
 
 Ollama runs on the host, outside compose. Keep it bound to localhost (default `127.0.0.1:11434`); in the Ollama app, "Expose Ollama to the network" must be off. Ollama has no authentication.
 
