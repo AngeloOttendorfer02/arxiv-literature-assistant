@@ -87,6 +87,18 @@ docker compose up -d --build
 
 Starts `db`, `api` (http://127.0.0.1:8000/health) and `ui` (chat at http://127.0.0.1:8501). Use `--build` after code changes, otherwise the old images are reused. The API container uses the settings from `.env`, but reaches the database as `db` and Ollama on the host as `host.docker.internal`; the UI container reaches the API as `api`. Host ports can be changed with `DB_PORT`, `API_PORT` and `UI_PORT` in `.env`.
 
+## Request log
+
+The API writes one JSON line per query to stdout and to `logs/requests.jsonl` (folder set by `LOG_DIR`): request id, status (`ok`, `refused`, `error`, `timeout`, `cancelled`), latencies per stage, TTFT, tokens per second, guardrail events. The query text is never logged, only its length. The id is also sent as `X-Request-ID` and shown under each answer in the UI.
+
+```
+docker compose logs -f api
+```
+
+On Linux, create `logs/` before the first `docker compose up` (`mkdir logs`); a folder created by Docker belongs to root, and the API then logs to stdout only.
+
+`GET /health` reports whether the database and the LLM are reachable (`skipped` while the component is mocked).
+
 Ollama runs on the host, outside compose. Keep it bound to localhost (default `127.0.0.1:11434`); in the Ollama app, "Expose Ollama to the network" must be off. Ollama has no authentication.
 
 ## Tests

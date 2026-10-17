@@ -17,6 +17,7 @@ from dotenv import find_dotenv, load_dotenv
 from fastapi.testclient import TestClient
 
 from scilitrag.api.app import create_app
+from scilitrag.api.telemetry import request_logger
 from scilitrag.components import Components, get_components
 from scilitrag.config import Settings, load_settings
 from scilitrag.contracts import SENTENCE_REMOVED, DoneEvent, SentenceEvent, StatusEvent
@@ -54,7 +55,7 @@ CASES = [
 @cache
 def smoke_settings() -> Settings:
     load_dotenv(find_dotenv(usecwd=True))
-    return load_settings({**os.environ, "USE_MOCKS": "1"})
+    return load_settings({**os.environ, "USE_MOCKS": "1", "LOG_DIR": ""})
 
 
 def expected_fail(case: Case) -> str | None:
@@ -83,15 +84,20 @@ def run_case(case: Case) -> list[str]:
     settings = smoke_settings()
     components, calls = spy(get_components(settings, token_delay=0))
     client = TestClient(create_app(components, settings))
+    # The request log would mix JSON lines into the case output.
+    request_logger.disabled = True
     with client.stream("POST", "/query", json={"query": case.query}) as response:
         if response.status_code != 200:
             return [f"HTTP {response.status_code}"]
+        request_id = response.headers.get("x-request-id")
         events = list(iter_events(response.iter_lines()))
 
     if not events:
         return ["no events"]
     names = [name for name, _ in events]
     errors = []
+    if not request_id:
+        errors.append("missing X-Request-ID header")
     if "error" in names:
         errors.append(f"error event: {events[names.index('error')][1].message}")
     if names.count("done") != 1 or names[-1] != "done":

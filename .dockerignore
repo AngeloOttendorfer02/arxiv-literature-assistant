@@ -12,3 +12,4 @@ models
 *.dump
 *.backup
 *.sql.gz
+logs

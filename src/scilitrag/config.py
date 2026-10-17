@@ -1,3 +1,4 @@
+import math
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -5,6 +6,8 @@ from dataclasses import dataclass
 from dotenv import find_dotenv, load_dotenv
 
 DEFAULT_EMBED_MODEL = "BAAI/bge-base-en-v1.5"
+DEFAULT_REQUEST_TIMEOUT_S = 120.0
+DEFAULT_LOG_DIR = "logs"
 REQUIRED_WITHOUT_MOCKS = ("DATABASE_URL", "LLM_BASE_URL", "LLM_MODEL")
 
 
@@ -20,6 +23,18 @@ class Settings:
     embed_model: str
     use_mocks: bool
     real_components: frozenset[str]
+    request_timeout_s: float = DEFAULT_REQUEST_TIMEOUT_S
+    log_dir: str | None = DEFAULT_LOG_DIR
+
+
+def _parse_float(name: str, value: str) -> float:
+    try:
+        number = float(value)
+    except ValueError:
+        raise ConfigError(f"{name} must be a number, got {value!r}") from None
+    if not math.isfinite(number) or number <= 0:
+        raise ConfigError(f"{name} must be a positive finite number, got {value!r}")
+    return number
 
 
 def _parse_bool(name: str, value: str) -> bool:
@@ -51,4 +66,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         embed_model=env.get("EMBED_MODEL") or DEFAULT_EMBED_MODEL,
         use_mocks=use_mocks,
         real_components=frozenset(name.strip() for name in real.split(",") if name.strip()),
+        request_timeout_s=_parse_float(
+            "REQUEST_TIMEOUT_S", env.get("REQUEST_TIMEOUT_S") or str(DEFAULT_REQUEST_TIMEOUT_S)
+        ),
+        # LOG_DIR set but empty disables the log file; stdout logging stays on.
+        log_dir=env.get("LOG_DIR", DEFAULT_LOG_DIR) or None,
     )

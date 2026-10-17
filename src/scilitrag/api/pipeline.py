@@ -1,7 +1,9 @@
+import asyncio
 import logging
 import re
 import time
 from collections.abc import AsyncIterator
+from contextlib import aclosing
 
 from fastapi.concurrency import run_in_threadpool
 
@@ -21,6 +23,8 @@ logger = logging.getLogger(__name__)
 # Naive splitter; WP3 replaces it (S-11).
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
+_END = object()
+
 
 def split_sentences(buffer: str) -> tuple[list[str], str]:
     """Return the complete sentences in buffer and the incomplete rest."""
@@ -32,7 +36,50 @@ def _ms(start: float) -> float:
     return (time.perf_counter() - start) * 1000
 
 
-async def run_query(query: str, c: Components) -> AsyncIterator[tuple[str, Model]]:
+async def run_query(
+    query: str, c: Components, timeout_s: float | None = None
+) -> AsyncIterator[tuple[str, Model]]:
+    """Events of one query, ending with done or error.
+
+    The pipeline runs as its own task and the caller reads events from a queue with a
+    deadline. The time limit therefore never spans a yield, and closing this generator
+    (client disconnect) cancels the task, which also closes the LLM stream.
+    """
+    loop = asyncio.get_running_loop()
+    deadline = None if timeout_s is None else loop.time() + timeout_s
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def produce() -> None:
+        try:
+            async with aclosing(_run(query, c)) as events:
+                async for event in events:
+                    queue.put_nowait(event)
+        finally:
+            queue.put_nowait(_END)
+
+    task = asyncio.create_task(produce())
+    try:
+        while True:
+            remaining = None if deadline is None else max(deadline - loop.time(), 0)
+            try:
+                item = await asyncio.wait_for(queue.get(), remaining)
+            except TimeoutError:
+                logger.warning("query timed out after %g s", timeout_s)
+                yield (
+                    "error",
+                    ErrorEvent(
+                        code="timeout", message=f"The request took longer than {timeout_s:g} s."
+                    ),
+                )
+                return
+            if item is _END:
+                return
+            yield item
+    finally:
+        task.cancel()
+
+
+async def _run(query: str, c: Components) -> AsyncIterator[tuple[str, Model]]:
     start = time.perf_counter()
     latency: dict[str, float] = {}
     try:
@@ -70,8 +117,9 @@ async def run_query(query: str, c: Components) -> AsyncIterator[tuple[str, Model
             yield "table", TableEvent(**table.model_dump())
 
         mapping = {e.label: e for e in evidence}
-        checked_count = removed = 0
-        ttft_engine = ttft_user = None
+        checked_count = removed = tokens = 0
+        first_token = last_token = None
+        ttft_user = None
         buffer = ""
         t = time.perf_counter()
 
@@ -97,12 +145,15 @@ async def run_query(query: str, c: Components) -> AsyncIterator[tuple[str, Model
                     ttft_user = _ms(start)
                 yield "sentence", SentenceEvent(**rendered.model_dump(), check=check)
 
-        async for token in c.generate(plan, evidence):
-            if ttft_engine is None:
-                ttft_engine = _ms(start)
-            sentences, buffer = split_sentences(buffer + token)
-            async for event in release(sentences):
-                yield event
+        async with aclosing(c.generate(plan, evidence)) as stream:
+            async for token in stream:
+                last_token = time.perf_counter()
+                if first_token is None:
+                    first_token = last_token
+                tokens += 1
+                sentences, buffer = split_sentences(buffer + token)
+                async for event in release(sentences):
+                    yield event
         async for event in release([buffer.strip()] if buffer.strip() else []):
             yield event
 
@@ -115,15 +166,20 @@ async def run_query(query: str, c: Components) -> AsyncIterator[tuple[str, Model
                 latency_ms=latency["generate"],
             ),
         )
+        rate = None
+        if tokens > 1 and last_token > first_token:
+            rate = round((tokens - 1) / (last_token - first_token), 2)
         yield (
             "done",
             DoneEvent(
                 stage_latency_ms=latency,
-                ttft_engine_ms=ttft_engine,
+                ttft_engine_ms=None if first_token is None else (first_token - start) * 1000,
                 ttft_user_ms=ttft_user,
                 total_ms=_ms(start),
                 sentences_checked=checked_count,
                 sentences_removed=removed,
+                tokens=tokens,
+                tokens_per_s=rate,
             ),
         )
     except NotImplementedError as exc:

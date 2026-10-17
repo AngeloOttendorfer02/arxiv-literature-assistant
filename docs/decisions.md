@@ -14,6 +14,14 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D018 Request limits, health checks and request log
+
+- Context: A-03 needs clean handling of client disconnects, timeouts and missing services; A-08 needs structured per-request telemetry without PII for the benchmark and guardrail numbers in the report.
+- Options: log file, stdout or both; per-stage or whole-request timeout; health check with or without DB driver.
+- Decision: One time limit per query (`REQUEST_TIMEOUT_S`, default 120 s), then an `error` event with code `timeout`. The pipeline runs as its own task and the endpoint reads its events from a queue with a deadline, so the time limit never spans a `yield`. On client disconnect the endpoint closes the event stream, which cancels the task and closes the LLM stream; the request is logged as `cancelled`. `DoneEvent` carries `tokens` and `tokens_per_s`, measured once in the pipeline (contracts 0.3). One JSON line per query to stdout (live in `docker compose logs`) and, if writable, to `logs/requests.jsonl`; it holds ids, status, latencies, TTFT, tokens/s and guardrail events, never the query text. Request id via a plain ASGI middleware and `X-Request-ID`. `/health` checks database reachability by TCP and the LLM via `GET /models` in parallel (1 s each), only for components that run for real, and reports `degraded` with HTTP 200 otherwise.
+- Reason: 120 s covers about 2000 tokens on CPU (about 30 tokens/s) plus retrieval and checks. Logging only the query length rules out PII in logs even if masking misses something. The TCP check needs no DB driver before WP1 picks one.
+- Date: 2026-10-17
+
 ### D017 Live guardrail status and citation drawer
 
 - Context: The UI must show live guardrail status and let users inspect each citation (A-06, A-07). Removed sentences were only counted in `done`.

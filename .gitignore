@@ -16,6 +16,9 @@ hf_datasets/
 .env.*
 !.env.example
 
+# Request logs
+logs/
+
 # Private notes
 todo/
 
