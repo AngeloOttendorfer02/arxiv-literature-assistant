@@ -16,10 +16,8 @@ hf_datasets/
 .env.*
 !.env.example
 
-# Private notes and local tool settings
+# Private notes
 todo/
-CLAUDE.local.md
-.claude/settings.local.json
 
 # Python
 .venv/

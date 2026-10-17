@@ -12,7 +12,7 @@ TODO: data loading, fixture and dump restore.
 
 ## Setup
 
-Requirements: [uv](https://docs.astral.sh/uv/) and Python 3.12 (uv installs it if missing).
+Requirements: [uv](https://docs.astral.sh/uv/) and Python 3.13 (uv installs it if missing).
 
 ```
 uv sync
