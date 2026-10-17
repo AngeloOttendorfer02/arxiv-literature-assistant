@@ -14,6 +14,22 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D012 Development LLM without GPU
+
+- Context: Team members without a GPU need a local model for development; the final model is chosen later (O6).
+- Options: qwen3.5:2b-q4_K_M, qwen3.5:2b-mtp-q4_K_M.
+- Decision: `qwen3.5:2b-mtp-q4_K_M` via Ollama as `LLM_MODEL` for CPU-only development.
+- Reason: Measured on CPU (i7-14700K, `num_gpu=0`, 3 prompts with 2000 output tokens each): 34.2 vs 31.7 tokens/s median, same output on a short RAG prompt.
+- Date: 2026-10-17
+
+### D011 Embedding model candidates
+
+- Context: E8 proposes bge-base-en-v1.5. The choice fixes the vector dimension in the schema, so it must be final before the embeddings are built (D-14, day 6).
+- Options: bge-base-en-v1.5, granite-embedding-english-r2, cadet-embed-base-v1, all-MiniLM-L6-v2, larger models (stella_en_400M_v5, Qwen3-Embedding-0.6B).
+- Decision: bge-base-en-v1.5 stays the default. Before D-14 it is compared with `ibm-granite/granite-embedding-english-r2` and `manveertamber/cadet-embed-base-v1` on the LitSearch queries (Recall@k, NDCG@10). All three have 768 dimensions, so a switch does not change the schema.
+- Reason: MTEB results (embeddings-benchmark/results, read 2026-10-17, NDCG@10): base-size models differ by 1 to 3 points. granite-r2 beats bge-base on SCIDOCS (25.0 vs 21.7) and SciFact (75.8 vs 74.3); cadet is the only small model with a LitSearchRetrieval score (47.9), bge-base has none. all-MiniLM-L6-v2 is clearly weaker (SciFact 64.5, 256 tokens). Larger models are too heavy for CPU and pgvector.
+- Date: 2026-10-17
+
 ### D010 Linting and formatting
 
 - Context: Consistent style across four people.
