@@ -14,6 +14,14 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D014 Database image
+
+- Context: E5 fixes PostgreSQL with pgvector and pg_search (ParadeDB) in Docker; A-01 needs a concrete image.
+- Options: `paradedb/paradedb:0.26.2-pg18`, `paradedb/paradedb:0.26.2-pg17`, plain Postgres with self-built extensions.
+- Decision: `paradedb/paradedb:0.26.2-pg18`, pinned to the exact tag. Port bound to 127.0.0.1, data in a named volume.
+- Reason: Latest release (2026-10-16). Checked in the container: PostgreSQL 18.6, pg_search 0.26.2 and pgvector 0.8.6 preinstalled, pg_trgm 1.6 available. No own Dockerfile needed.
+- Date: 2026-10-17
+
 ### D013 Python 3.13 (replaces D001)
 
 - Context: The team had agreed on Python 3.13; the setup used 3.12.

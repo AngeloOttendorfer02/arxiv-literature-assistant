@@ -55,6 +55,20 @@ REAL_COMPONENTS=plan,retrieve
 
 Names: `check_input`, `mask_pii`, `embed`, `plan`, `retrieve`, `sql_facts`, `generate`, `check_sentence`, `render_citations`. Unknown names stop the app at startup.
 
+## Database
+
+PostgreSQL 18 with pgvector and pg_search (ParadeDB image) runs in Docker. Credentials and port come from `.env`; the port is bound to localhost only.
+
+```
+docker compose up -d db
+docker compose ps
+docker compose exec db psql -U postgres -d scilitrag -c "\dx"
+```
+
+`\dx` lists the extensions `vector`, `pg_search` and `pg_trgm`. Stop with `docker compose down`; `docker compose down -v` also deletes the data volume.
+
+TODO: schema, roles, fixture and dump restore.
+
 ## Tests
 
 ```
@@ -81,6 +95,7 @@ src/scilitrag/
   components.py selects mocks or real components
 eval/           evaluation scripts
 bench/          quantization benchmark
+docker/         container configuration
 scripts/        helper scripts (data download, smoke test)
 tests/          pytest tests
 docs/           decisions and diagrams
