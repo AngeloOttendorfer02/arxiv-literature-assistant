@@ -25,6 +25,9 @@ class Settings:
     real_components: frozenset[str]
     request_timeout_s: float = DEFAULT_REQUEST_TIMEOUT_S
     log_dir: str | None = DEFAULT_LOG_DIR
+    llm_max_retries: int = 1
+    llm_retry_backoff_s: float = 0.2
+    llm_max_output_tokens: int = 1024
 
 
 def _parse_float(name: str, value: str) -> float:
@@ -44,6 +47,16 @@ def _parse_bool(name: str, value: str) -> bool:
     if normalized in ("0", "false", "no", ""):
         return False
     raise ConfigError(f"{name} must be 0 or 1, got {value!r}")
+
+
+def _parse_int(name: str, value: str, low: int, high: int) -> int:
+    try:
+        number = int(value)
+    except ValueError:
+        raise ConfigError(f"{name} must be an integer") from None
+    if not low <= number <= high:
+        raise ConfigError(f"{name} must be between {low} and {high}")
+    return number
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
@@ -71,4 +84,11 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         ),
         # LOG_DIR set but empty disables the log file; stdout logging stays on.
         log_dir=env.get("LOG_DIR", DEFAULT_LOG_DIR) or None,
+        llm_max_retries=_parse_int("LLM_MAX_RETRIES", env.get("LLM_MAX_RETRIES", "1"), 0, 3),
+        llm_retry_backoff_s=_parse_float(
+            "LLM_RETRY_BACKOFF_S", env.get("LLM_RETRY_BACKOFF_S", "0.2")
+        ),
+        llm_max_output_tokens=_parse_int(
+            "LLM_MAX_OUTPUT_TOKENS", env.get("LLM_MAX_OUTPUT_TOKENS", "1024"), 64, 8192
+        ),
     )

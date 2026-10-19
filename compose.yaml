@@ -36,6 +36,9 @@ services:
       HF_TOKEN: ${HF_TOKEN:-}
       # Empty means the default from config.py.
       REQUEST_TIMEOUT_S: ${REQUEST_TIMEOUT_S:-}
+      LLM_MAX_RETRIES: ${LLM_MAX_RETRIES:-1}
+      LLM_RETRY_BACKOFF_S: ${LLM_RETRY_BACKOFF_S:-0.2}
+      LLM_MAX_OUTPUT_TOKENS: ${LLM_MAX_OUTPUT_TOKENS:-1024}
       LOG_DIR: /app/logs
     volumes:
       # Request log (logs/requests.jsonl) on the host for evaluation.
