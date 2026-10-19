@@ -19,6 +19,7 @@ from scilitrag.contracts import (
     StatusEvent,
     TableEvent,
 )
+from scilitrag.ui.citation_details import citation_details
 from scilitrag.ui.sse import iter_events
 
 load_dotenv(find_dotenv(usecwd=True))
@@ -134,13 +135,24 @@ def render_drawer(history: list) -> None:
         f"Section: {citation.section}" if citation.section else None,
     ]
     st.caption(" · ".join(f for f in facts if f))
-    if citation.text:
-        st.markdown(f"> {citation.text}")
+    details = citation_details(citation, answer.tables)
+    if citation.author_ids:
+        st.caption("Author IDs: " + ", ".join(str(value) for value in citation.author_ids))
+    if citation.source_hash:
+        st.caption(f"Source fingerprint: {citation.source_hash[:16]}")
+    if details["kind"] != "sql" and citation.text:
+        st.text(citation.text)
     if citation.query_id:
         table = next((t for t in answer.tables if t.query_id == citation.query_id), None)
         st.caption(f"SQL query `{citation.query_id}`")
         if table:
+            if table.scope:
+                st.write(table.scope)
+            if table.dataset_revision:
+                st.caption(f"Dataset revision: {table.dataset_revision}")
             st.code(table.sql, language="sql")
+            if table.parameters:
+                st.json(table.parameters)
 
 
 def select_citation(index: int, label: int) -> None:
@@ -154,7 +166,6 @@ def answer_text(answer: Answer) -> str:
 def render_answer(answer: Answer, index: int) -> None:
     if answer.error:
         st.error(answer.error)
-        return
     if refusal := answer.refusal():
         st.warning(refusal)
         return
