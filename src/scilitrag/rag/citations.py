@@ -1,5 +1,6 @@
 from scilitrag.contracts import Citation, EvidenceMapping, RenderedSentence
 from scilitrag.rag.citation_labels import citation_labels
+from scilitrag.rag.provenance import evidence_fingerprint
 
 
 def render_citations(sentence: str, mapping: EvidenceMapping) -> RenderedSentence:
@@ -13,6 +14,7 @@ def render_citations(sentence: str, mapping: EvidenceMapping) -> RenderedSentenc
         citations.append(
             Citation(
                 label=label,
+                source_hash=evidence_fingerprint(evidence),
                 corpus_id=evidence.corpus_id,
                 chunk_id=evidence.chunk_id,
                 author_ids=list(evidence.author_ids),
