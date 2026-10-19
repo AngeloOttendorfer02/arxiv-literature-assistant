@@ -1,11 +1,14 @@
 import json
-from collections.abc import AsyncIterator, Mapping
+import time
+from collections.abc import AsyncIterator
+from contextlib import aclosing
 from urllib.parse import urlsplit
 
 import httpx
 
 from scilitrag.config import Settings
 from scilitrag.rag.errors import LLMClientError
+from scilitrag.rag.retry import RetryBudget
 
 
 class ChatClient:
@@ -37,63 +40,69 @@ class ChatClient:
             }
         return payload
 
-    def complete(self, messages: list[Mapping[str, str]], *, schema=None) -> str:
+    def _complete_once(self, messages, *, schema=None, timeout=None) -> str:
         url = self._url()
         payload = self._payload(messages, stream=False, schema=schema)
+        timeout = timeout or self.settings.request_timeout_s
+        deadline = time.monotonic() + timeout
+        body = bytearray()
         try:
-            with httpx.Client(
-                timeout=self.settings.request_timeout_s, transport=self.transport
-            ) as client:
-                response = client.post(url, json=payload)
-                response.raise_for_status()
-                content = response.json()["choices"][0]["message"]["content"]
-                if not isinstance(content, str) or not content.strip():
-                    raise ValueError("empty completion")
-                return content
-        except httpx.TimeoutException:
-            raise LLMClientError("The model request timed out.", kind="timeout") from None
-        except httpx.HTTPError:
-            raise LLMClientError("The model service is unavailable.", kind="unavailable") from None
-        except (ValueError, KeyError, IndexError, TypeError):
-            raise LLMClientError("The model returned an invalid response.") from None
-
-    async def stream(self, messages) -> AsyncIterator[str]:
-        url = self._url()
-        payload = self._payload(messages, stream=True)
-        try:
-            async with (
-                httpx.AsyncClient(
-                    timeout=self.settings.request_timeout_s, transport=self.transport
-                ) as client,
+            with (
+                httpx.Client(timeout=timeout, transport=self.transport) as client,
                 client.stream("POST", url, json=payload) as response,
             ):
                 response.raise_for_status()
-                data: list[str] = []
-                async for line in response.aiter_lines():
-                    if line.startswith(":"):
-                        continue
-                    if line.startswith("data:"):
-                        data.append(line[5:].lstrip())
-                    elif not line and data:
-                        value = "\n".join(data)
-                        data.clear()
-                        if value == "[DONE]":
-                            return
-                        token = self._delta(value)
-                        if token:
-                            yield token
-                if data:
+                for chunk in response.iter_bytes():
+                    if time.monotonic() >= deadline:
+                        raise LLMClientError("The model request timed out.", kind="timeout")
+                    body.extend(chunk)
+                    if len(body) > 2_000_000:
+                        raise LLMClientError(
+                            "The model response exceeds the configured service limit."
+                        )
+            content = json.loads(body)["choices"][0]["message"]["content"]
+            if not isinstance(content, str) or not content.strip():
+                raise ValueError("empty completion")
+            return content
+        except (ValueError, KeyError, IndexError, TypeError):
+            raise LLMClientError("The model returned an invalid response.") from None
+
+    async def _stream_once(self, messages, *, timeout=None) -> AsyncIterator[str]:
+        timeout = timeout or self.settings.request_timeout_s
+        deadline = time.monotonic() + timeout
+        url = self._url()
+        payload = self._payload(messages, stream=True)
+        async with (
+            httpx.AsyncClient(timeout=timeout, transport=self.transport) as client,
+            client.stream("POST", url, json=payload) as response,
+        ):
+            response.raise_for_status()
+            data = []
+            async for line in response.aiter_lines():
+                if time.monotonic() >= deadline:
+                    raise LLMClientError("The model request timed out.", kind="timeout")
+                if len(line) + sum(map(len, data)) > 131072:
+                    raise LLMClientError("The model stream frame exceeds the service limit.")
+                if line.startswith(":"):
+                    continue
+                if line.startswith("data:"):
+                    data.append(line[5:].lstrip())
+                elif not line and data:
                     value = "\n".join(data)
+                    data.clear()
                     if value == "[DONE]":
                         return
                     token = self._delta(value)
                     if token:
                         yield token
-                raise LLMClientError("The model stream ended before completion.")
-        except httpx.TimeoutException:
-            raise LLMClientError("The model request timed out.", kind="timeout") from None
-        except httpx.HTTPError:
-            raise LLMClientError("The model service is unavailable.", kind="unavailable") from None
+            if data:
+                value = "\n".join(data)
+                if value == "[DONE]":
+                    return
+                token = self._delta(value)
+                if token:
+                    yield token
+            raise LLMClientError("The model stream ended before completion.")
 
     @staticmethod
     def _delta(value: str) -> str:
@@ -104,9 +113,57 @@ class ChatClient:
             choices = packet["choices"]
             if not choices:  # optional usage-only packet
                 return ""
+            if choices[0].get("finish_reason") == "length":
+                raise LLMClientError(
+                    "The model reached its generation limit before completing the answer.",
+                    kind="truncated",
+                )
             token = choices[0]["delta"].get("content")
             if token is not None and not isinstance(token, str):
                 raise ValueError("invalid token")
             return token or ""
         except (ValueError, KeyError, IndexError, TypeError, AttributeError):
             raise LLMClientError("The model returned an invalid stream event.") from None
+
+    @staticmethod
+    def _translate(error: Exception) -> LLMClientError:
+        if isinstance(error, LLMClientError):
+            return error
+        if isinstance(error, httpx.TimeoutException):
+            return LLMClientError("The model request timed out.", kind="timeout")
+        return LLMClientError("The model service is unavailable.", kind="unavailable")
+
+    def complete(self, messages, *, schema=None) -> str:
+        budget = RetryBudget.start(self.settings)
+        for attempt in range(budget.max_retries + 1):
+            try:
+                if budget.remaining() <= 0:
+                    raise LLMClientError("The model request timed out.", kind="timeout")
+                return self._complete_once(messages, schema=schema, timeout=budget.remaining())
+            except (httpx.HTTPError, LLMClientError) as error:
+                delay = budget.delay(attempt, error)
+                if delay is None:
+                    raise self._translate(error) from None
+                budget.wait(delay)
+        raise AssertionError("unreachable")
+
+    async def stream(self, messages) -> AsyncIterator[str]:
+        budget = RetryBudget.start(self.settings)
+        for attempt in range(budget.max_retries + 1):
+            emitted = False
+            try:
+                if budget.remaining() <= 0:
+                    raise LLMClientError("The model request timed out.", kind="timeout")
+                async with aclosing(
+                    self._stream_once(messages, timeout=budget.remaining())
+                ) as stream:
+                    async for token in stream:
+                        emitted = True
+                        yield token
+                return
+            except (httpx.HTTPError, LLMClientError) as error:
+                delay = None if emitted else budget.delay(attempt, error)
+                if delay is None:
+                    raise self._translate(error) from None
+                await budget.wait_async(delay)
+        raise AssertionError("unreachable")
