@@ -109,8 +109,9 @@ def test_missing_cache_fails_without_downloading(tmp_path):
 def test_prepared_arrow_cache_is_read_offline_and_revision_is_enforced(tmp_path, monkeypatch):
     import socket
 
-    pa = pytest.importorskip("pyarrow")
-    ipc = pytest.importorskip("pyarrow.ipc")
+    import pyarrow as pa
+    from pyarrow import ipc
+
     monkeypatch.setattr(socket, "create_connection", lambda *a, **k: pytest.fail("Network access"))
     features = {"corpusid": {"_type": "Value", "dtype": "int64"}}
     for subset in ("query", "corpus_clean", "corpus_s2orc"):

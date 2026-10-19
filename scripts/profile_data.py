@@ -1,8 +1,7 @@
 """Profile the prepared D-01 Arrow cache offline; never download or clean data.
 
-Local: uv run --locked --group data python scripts/profile_data.py
-Docker (PowerShell, project root; replace <DATA_DIR> with your Windows data path):
-    docker run --rm -it -v "${PWD}:/app" -v "<DATA_DIR>:/data" -v scilitrag-uv-cache:/root/.cache/uv -w /app -e DATA_DIR=/data -e UV_PROJECT_ENVIRONMENT=/opt/venv -e UV_LINK_MODE=copy ghcr.io/astral-sh/uv:python3.13-bookworm-slim uv run --locked --group data python scripts/profile_data.py
+Local execution:
+    uv run --locked --group data python scripts/profile_data.py
 
 Writes DATA_DIR/profiling/d02_profile.json. Use --stdout to print JSON without
 writing a report. Text lengths count Unicode characters, including surrounding

@@ -1,8 +1,7 @@
 """Apply D-03 quality filters, preserving every query target and the D-01 cache.
 
-Local: uv run --locked --group data python scripts/filter_data.py
-Docker (PowerShell, project root; replace <DATA_DIR> with your Windows data path):
-    docker run --rm -it -v "${PWD}:/app" -v "<DATA_DIR>:/data" -v scilitrag-uv-cache:/root/.cache/uv -w /app -e DATA_DIR=/data -e UV_PROJECT_ENVIRONMENT=/opt/venv -e UV_LINK_MODE=copy ghcr.io/astral-sh/uv:python3.13-bookworm-slim uv run --locked --group data python scripts/filter_data.py
+Local execution:
+    uv run --locked --group data python scripts/filter_data.py
 
 Writes Arrow IPC streams under DATA_DIR/filtered/d03 and two Markdown reports
 under docs/. --report-only writes reports without exporting filtered datasets.
