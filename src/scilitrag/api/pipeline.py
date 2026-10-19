@@ -19,7 +19,7 @@ from scilitrag.contracts import (
     TableEvent,
 )
 from scilitrag.rag.citation_labels import citation_status
-from scilitrag.rag.errors import LLMClientError
+from scilitrag.rag.errors import LLMClientError, RagUserError
 from scilitrag.rag.evidence_index import EvidenceIndex
 
 logger = logging.getLogger(__name__)
@@ -191,6 +191,8 @@ async def _run(query: str, c: Components) -> AsyncIterator[tuple[str, Model]]:
                 tokens_per_s=rate,
             ),
         )
+    except RagUserError as exc:
+        yield "error", ErrorEvent(code="bad_request", message=str(exc))
     except LLMClientError as exc:
         yield (
             "error",
