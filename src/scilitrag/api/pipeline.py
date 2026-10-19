@@ -17,6 +17,7 @@ from scilitrag.contracts import (
     StatusEvent,
     TableEvent,
 )
+from scilitrag.rag.errors import LLMClientError
 
 logger = logging.getLogger(__name__)
 
@@ -181,6 +182,11 @@ async def _run(query: str, c: Components) -> AsyncIterator[tuple[str, Model]]:
                 tokens=tokens,
                 tokens_per_s=rate,
             ),
+        )
+    except LLMClientError as exc:
+        yield (
+            "error",
+            ErrorEvent(code="timeout" if exc.kind == "timeout" else "internal", message=str(exc)),
         )
     except NotImplementedError as exc:
         logger.warning("%s", exc)
