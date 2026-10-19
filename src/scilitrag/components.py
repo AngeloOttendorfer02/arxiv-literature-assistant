@@ -59,6 +59,7 @@ def mock_components(token_delay: float = 0.02) -> Components:
 
 
 def get_components(settings: Settings | None = None, token_delay: float = 0.02) -> Components:
+    """Select components lazily and pass one settings snapshot to supported factories."""
     settings = settings or load_settings()
     unknown = sorted(settings.real_components - REAL.keys())
     if unknown:
@@ -68,6 +69,8 @@ def get_components(settings: Settings | None = None, token_delay: float = 0.02) 
     selected = {name: getattr(mocks, name) for name in REAL}
     for name in REAL.keys() if not settings.use_mocks else settings.real_components:
         module = importlib.import_module(REAL[name])
+        # Settings-aware components use a factory. Modules without one expose
+        # the component callable directly.
         factory = getattr(module, "build_component", None)
         selected[name] = factory(settings) if factory is not None else getattr(module, name)
     return Components(**selected)

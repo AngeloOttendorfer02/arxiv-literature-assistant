@@ -1,7 +1,12 @@
+"""Build citation drawer data from shared contracts without importing RAG code."""
+
+from typing import Any
+
 from scilitrag.contracts import Citation, SqlFacts
 
 
-def citation_details(citation: Citation, tables: list[SqlFacts]) -> dict:
+def citation_details(citation: Citation, tables: list[SqlFacts]) -> dict[str, Any]:
+    """Join a citation to its SQL result, when present, using the exact query ID."""
     table = (
         next((item for item in tables if item.query_id == citation.query_id), None)
         if citation.query_id

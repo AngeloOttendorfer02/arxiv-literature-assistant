@@ -1,3 +1,5 @@
+"""Parse request-local citation labels and check their structural placement."""
+
 import re
 
 from scilitrag.contracts import EvidenceMapping, SentenceStatus
@@ -8,6 +10,7 @@ TRAILING_LABELS = re.compile(r"(?:\[[1-9]\d*\]\s*)+[.!?]?\s*$")
 
 
 def citation_labels(sentence: str) -> list[int]:
+    """Reject malformed numeric brackets and return labels in first-use order."""
     for match in NUMERIC_BRACKET.finditer(sentence):
         if not LABEL.fullmatch(match.group(0)):
             raise ValueError("Use one positive integer per citation, for example [1][2].")
@@ -15,6 +18,11 @@ def citation_labels(sentence: str) -> list[int]:
 
 
 def citation_status(sentence: str, mapping: EvidenceMapping) -> SentenceStatus:
+    """Check label syntax, membership and placement before semantic validation.
+
+    An ``ok`` result establishes structure only; semantic validation checks
+    whether the source supports the claim.
+    """
     try:
         labels = citation_labels(sentence)
     except ValueError:

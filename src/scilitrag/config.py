@@ -12,11 +12,13 @@ REQUIRED_WITHOUT_MOCKS = ("DATABASE_URL", "LLM_BASE_URL", "LLM_MODEL")
 
 
 class ConfigError(RuntimeError):
-    pass
+    """A missing or invalid runtime setting that should stop component startup."""
 
 
 @dataclass(frozen=True)
 class Settings:
+    """One immutable configuration snapshot shared by the selected components."""
+
     database_url: str | None
     llm_base_url: str | None
     llm_model: str | None
@@ -60,6 +62,7 @@ def _parse_int(name: str, value: str, low: int, high: int) -> int:
 
 
 def load_settings(env: Mapping[str, str] | None = None) -> Settings:
+    """Load and validate settings, using explicit mappings without reading .env."""
     if env is None:
         # Existing environment variables win over .env.
         load_dotenv(find_dotenv(usecwd=True))
