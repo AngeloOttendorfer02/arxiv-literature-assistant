@@ -67,5 +67,7 @@ def get_components(settings: Settings | None = None, token_delay: float = 0.02) 
     mocks = mock_components(token_delay)
     selected = {name: getattr(mocks, name) for name in REAL}
     for name in REAL.keys() if not settings.use_mocks else settings.real_components:
-        selected[name] = getattr(importlib.import_module(REAL[name]), name)
+        module = importlib.import_module(REAL[name])
+        factory = getattr(module, "build_component", None)
+        selected[name] = factory(settings) if factory is not None else getattr(module, name)
     return Components(**selected)
