@@ -104,13 +104,19 @@ Ollama runs on the host, outside compose. Keep it bound to localhost (default `1
 ## Tests
 
 ```
-uv run pytest
+uv run --locked --group data pytest
 uv run python scripts/smoke.py
 uv run ruff check .
 uv run ruff format --check .
 ```
 
-The UI tests need the `ui` group and are skipped without it: `uv run --group ui pytest`.
+The UI tests also need the `ui` group and are skipped without it:
+`uv run --locked --group data --group ui pytest`.
+
+The Arrow integration tests for profiling and quality filtering need the `data` group:
+`uv run --locked --group data pytest`. Missing or broken PyArrow installations fail
+these tests rather than skipping them. CI installs the `data` group and runs
+the Arrow integration tests with small synthetic datasets, without downloading LitSearch.
 
 The smoke test runs the scenarios S1 to S4 and attacks in-process, no server needed. It uses the mocks except for the components in `REAL_COMPONENTS`, e.g. `REAL_COMPONENTS=retrieve uv run python scripts/smoke.py` tests a real `retrieve` with everything else mocked.
 
