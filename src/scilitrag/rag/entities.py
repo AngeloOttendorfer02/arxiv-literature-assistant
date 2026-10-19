@@ -1,6 +1,13 @@
+import re
+import unicodedata
 from dataclasses import dataclass
 
 from scilitrag.rag.errors import RagUserError
+
+
+def normalize_name(value: str) -> str:
+    value = unicodedata.normalize("NFKC", value).casefold()
+    return " ".join(re.sub(r"[^\w\s]", " ", value).split())
 
 
 @dataclass(frozen=True)
@@ -77,3 +84,39 @@ class EntityLinker:
         if len(rows) != 1:
             raise RagUserError("The selected paper is no longer present in this database.")
         return rows[0]
+
+    def author(self, reference: str, *, paper_ref: str | None = None) -> int:
+        raw = reference.strip()
+        if not raw or len(raw) > 512:
+            raise RagUserError("Provide the author's complete name or numeric author ID.")
+        paper_id = self.paper(paper_ref) if paper_ref else None
+        name = normalize_name(raw)
+        key = ("author", name, paper_id)
+        if key in self._cache:
+            return self._cache[key]
+        params = {"name": name, "paper_id": paper_id}
+        if raw.isdigit():
+            params["id"] = int(raw)
+            if params["id"] > 9223372036854775807:
+                raise RagUserError("The author ID is outside the database ID range.")
+            where = "a.author_id=%(id)s"
+        else:
+            where = "a.normalized_name=%(name)s"
+        rows = self.reader(
+            "SELECT a.author_id,a.name FROM authors a WHERE "
+            + where
+            + " AND (%(paper_id)s::bigint IS NULL OR EXISTS (SELECT 1 FROM paper_authors pa "
+            "WHERE pa.author_id=a.author_id AND pa.corpus_id=%(paper_id)s)) "
+            "ORDER BY a.author_id LIMIT 6",
+            params,
+        )
+        if not rows:
+            raise RagUserError(
+                "Author not found for these filters. Use the complete indexed name or author ID."
+            )
+        if len(rows) > 1:
+            choices = "; ".join(f"{row['author_id']}: {row['name']}" for row in rows[:5])
+            raise RagUserError(f"Which author do you mean? Use an author ID: {choices}")
+        result = int(rows[0]["author_id"])
+        self._cache[key] = result
+        return result
