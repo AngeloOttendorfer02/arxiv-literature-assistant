@@ -25,16 +25,16 @@ jobs:
         run: uv python install
 
       - name: Install dependencies
-        run: uv sync --locked --group data
+        run: uv sync --locked --group data --group rag
 
       - name: Lint
-        run: uv run ruff check .
+        run: uv run --locked --group data --group rag ruff check .
 
       - name: Format
-        run: uv run ruff format --check .
+        run: uv run --locked --group data --group rag ruff format --check .
 
       - name: Tests
-        run: uv run --locked --group data pytest
+        run: uv run --locked --group data --group rag pytest
 
       - name: Smoke test
-        run: uv run python scripts/smoke.py
+        run: uv run --locked --group data --group rag python scripts/smoke.py

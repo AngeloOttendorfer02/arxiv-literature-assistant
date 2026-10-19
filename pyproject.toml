@@ -20,7 +20,7 @@ dev = [
 data = [
     "datasets>=3.0",
 ]
-rag = []
+rag = ["httpx>=0.28,<1"]
 guardrails = [
     "torch>=2.14.1",
 ]

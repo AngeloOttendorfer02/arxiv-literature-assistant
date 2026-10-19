@@ -5,7 +5,7 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-CONTRACT_VERSION = "0.3"
+CONTRACT_VERSION = "0.4"
 
 InputCategory = Literal["ok", "off_topic", "injection", "write_intent"]
 Scenario = Literal["S1", "S2", "S3"]
@@ -39,6 +39,8 @@ class CheckInputResult(Model):
 
 
 class Plan(Model):
+    query: str | None = None
+    require_baseline: bool = False
     scenario: Scenario
     topic: str | None = None
     year_from: int | None = None
@@ -49,6 +51,7 @@ class Plan(Model):
 
 
 class Evidence(Model):
+    author_ids: list[int] = Field(default_factory=list)
     label: int
     type: EvidenceType
     chunk_id: str | None = None
@@ -65,6 +68,9 @@ EvidenceMapping = dict[int, Evidence]
 
 
 class SqlFacts(Model):
+    parameters: dict[str, str | int | float | None] = Field(default_factory=dict)
+    scope: str | None = None
+    dataset_revision: str | None = None
     query_id: str
     sql: str
     columns: list[str]
@@ -78,6 +84,8 @@ class SentenceCheck(Model):
 
 
 class Citation(Model):
+    source_hash: str | None = None
+    author_ids: list[int] = Field(default_factory=list)
     label: int
     corpus_id: int | None = None
     chunk_id: str | None = None

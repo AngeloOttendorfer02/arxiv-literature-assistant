@@ -13,10 +13,14 @@ from scilitrag.contracts import (
     DoneEvent,
     ErrorEvent,
     Model,
+    SentenceCheck,
     SentenceEvent,
     StatusEvent,
     TableEvent,
 )
+from scilitrag.rag.citation_labels import citation_status
+from scilitrag.rag.errors import LLMClientError, RagUserError
+from scilitrag.rag.evidence_index import EvidenceIndex
 
 logger = logging.getLogger(__name__)
 
@@ -116,7 +120,7 @@ async def _run(query: str, c: Components) -> AsyncIterator[tuple[str, Model]]:
         for table in facts:
             yield "table", TableEvent(**table.model_dump())
 
-        mapping = {e.label: e for e in evidence}
+        mapping = EvidenceIndex(evidence).mapping()
         checked_count = removed = tokens = 0
         first_token = last_token = None
         ttft_user = None
@@ -126,7 +130,12 @@ async def _run(query: str, c: Components) -> AsyncIterator[tuple[str, Model]]:
         async def release(sentences: list[str]) -> AsyncIterator[tuple[str, Model]]:
             nonlocal checked_count, removed, ttft_user
             for sentence in sentences:
-                check = await run_in_threadpool(c.check_sentence, sentence, mapping)
+                structural_status = citation_status(sentence, mapping)
+                check = (
+                    SentenceCheck(status=structural_status, latency_ms=0)
+                    if structural_status != "ok"
+                    else await run_in_threadpool(c.check_sentence, sentence, mapping)
+                )
                 checked_count += 1
                 if check.status != "ok":
                     removed += 1
@@ -181,6 +190,13 @@ async def _run(query: str, c: Components) -> AsyncIterator[tuple[str, Model]]:
                 tokens=tokens,
                 tokens_per_s=rate,
             ),
+        )
+    except RagUserError as exc:
+        yield "error", ErrorEvent(code="bad_request", message=str(exc))
+    except LLMClientError as exc:
+        yield (
+            "error",
+            ErrorEvent(code="timeout" if exc.kind == "timeout" else "internal", message=str(exc)),
         )
     except NotImplementedError as exc:
         logger.warning("%s", exc)
