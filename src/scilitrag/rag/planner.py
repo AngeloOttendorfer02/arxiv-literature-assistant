@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scilitrag.config import load_settings
 from scilitrag.contracts import Plan, Scenario
 from scilitrag.rag.errors import LLMClientError, RagUserError
+from scilitrag.rag.filters import parse_filters
 from scilitrag.rag.llm_client import ChatClient
 from scilitrag.rag.structured import complete_json
 
@@ -48,7 +49,7 @@ SYSTEM = (
 )
 
 
-def build_plan(masked_query: str, client) -> Plan:
+def _model_plan(masked_query: str, client) -> Plan:
     query = masked_query.strip()
     if not query or len(query) > 6000:
         raise RagUserError("Use a nonempty literature question with at most 6000 characters.")
@@ -72,3 +73,17 @@ def build_component(settings):
 
 def plan(masked_query: str) -> Plan:
     return build_component(load_settings())(masked_query)
+
+
+def build_plan(masked_query: str, client) -> Plan:
+    filters = parse_filters(masked_query)
+    result = _model_plan(masked_query, client)
+    # Explicit user constraints are authoritative. Unsupported inferred years
+    # are removed instead of silently narrowing the search.
+    return result.model_copy(
+        update={
+            "year_from": filters.year_from,
+            "year_to": filters.year_to,
+            "k": filters.k if filters.k is not None else result.k,
+        }
+    )
