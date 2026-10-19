@@ -14,6 +14,14 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D021 D-03 quality filters and protected query targets
+
+- Context: D-02 found empty and oversized titles, extraction artifacts, missing annotations and missing years. Dropping all affected papers would also remove LitSearch evaluation targets.
+- Decision: Reject non-target papers with blank full text, a nonblank full text of exactly one Unicode character, a blank title, a title longer than 500 Unicode characters, no nonblank sectionheader annotation, or neither a nonblank authorfirstname nor authorlastname annotation. Presence is checked against the annotated text spans, including numeric-string offsets. A paper with only one name component is retained by the author rule. Keep every distinct corpusid referenced by query.corpusids regardless of these criteria and report its issues separately. Convert missing years to nullable integers, without rejecting the paper. Do not repair titles or change citation lists.
+- Reason: Explicit D-03 rules requested for this build, extending O4 with full-text and annotation checks. The narrow author rule filters missing author information without implementing D-08 name normalization. Both corpus subsets retain identical IDs; query targets remain available for evaluation. Original caches stay unchanged and filtered data are written separately. Rule counts overlap, so distinct rejected papers and protected exceptions are reported separately.
+- Validation: Actual counts and protected corpusids are generated in docs/d03_quality_filters.md and docs/d03_target_exceptions.md. An analysis-only report is labelled as such; it does not claim that filtered files were exported.
+- Date: 2026-10-19
+
 ### D020 CPU-only PyTorch
 
 - Context: Prompt Guard 2 and the NLI model need torch. On Linux, PyPI serves the CUDA build, which adds several GB to the API image and to every `uv sync`.
