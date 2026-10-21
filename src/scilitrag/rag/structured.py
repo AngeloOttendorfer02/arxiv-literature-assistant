@@ -1,25 +1,38 @@
+"""Strict JSON completions and content-free generation diagnostics."""
+
 import json
 import logging
 import time
 from dataclasses import dataclass
-from typing import TypeVar
+from typing import Any, Protocol
 
 from pydantic import BaseModel, ValidationError
 
+from scilitrag.config import Settings
 from scilitrag.rag.errors import LLMClientError
 
 logger = logging.getLogger(__name__)
-T = TypeVar("T", bound=BaseModel)
+
+
+class JsonCompletionClient(Protocol):
+    """The completion capability needed by schema validation and its test doubles."""
+
+    def complete(self, messages: list[dict[str, str]], *, schema: dict[str, Any]) -> str: ...
 
 
 @dataclass(frozen=True)
 class StructuredResult:
+    """Validation diagnostics without prompts, source passages or model output."""
+
     schema_name: str
     elapsed_ms: float
     valid: bool
 
 
-def complete_json[T: BaseModel](client, messages, model: type[T]) -> T:
+def complete_json[T: BaseModel](
+    client: JsonCompletionClient, messages: list[dict[str, str]], model: type[T]
+) -> T:
+    """Validate a model response against the caller's strict Pydantic schema."""
     start = time.perf_counter()
     valid = False
     try:
@@ -43,7 +56,8 @@ def complete_json[T: BaseModel](client, messages, model: type[T]) -> T:
         )
 
 
-def generation_metadata(settings) -> dict:
+def generation_metadata(settings: Settings) -> dict[str, str | int | float | None]:
+    """Return public generation settings for reproducible model comparisons."""
     # Reusable comparison metadata: no endpoint, API credentials or prompt text.
     return {
         "model": settings.llm_model,

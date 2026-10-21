@@ -1,28 +1,36 @@
+"""Stable source identities and consistency checks for serialized evidence ledgers."""
+
 import hashlib
 import json
+from typing import Any
 
 from scilitrag.contracts import CONTRACT_VERSION, Evidence
 from scilitrag.rag.evidence_index import EvidenceIndex
 
 
-def canonical_json(value) -> str:
+def canonical_json(value: object) -> str:
+    """Serialize JSON deterministically for hashing, rejecting non-finite numbers."""
     return json.dumps(
         value, sort_keys=True, separators=(",", ":"), ensure_ascii=False, allow_nan=False
     )
 
 
-def digest(value) -> str:
+def digest(value: object) -> str:
+    """Hash canonical UTF-8 JSON with SHA-256."""
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
 
 
 def evidence_fingerprint(item: Evidence) -> str:
-    # Label and search score can change between runs; database source content cannot.
+    """Identify a source snapshot independently of its label and retrieval score."""
+    # Labels/scores describe a retrieval result; content and metadata identify
+    # the source snapshot. Sort author IDs so their input order is irrelevant.
     payload = item.model_dump(exclude={"label", "score"})
     payload["author_ids"] = sorted(set(payload["author_ids"]))
     return digest(payload)
 
 
-def build_ledger(evidence: list[Evidence]) -> dict:
+def build_ledger(evidence: list[Evidence]) -> dict[str, Any]:
+    """Capture validated evidence, source hashes and the label-to-source mapping."""
     index = EvidenceIndex(evidence)
     entries = [
         {
@@ -36,7 +44,8 @@ def build_ledger(evidence: list[Evidence]) -> dict:
     return {**payload, "ledger_hash": digest(payload)}
 
 
-def verify_ledger(ledger: dict) -> EvidenceIndex:
+def verify_ledger(ledger: dict[str, Any]) -> EvidenceIndex:
+    """Verify ledger consistency and rebuild a defensive request evidence index."""
     payload = {key: ledger[key] for key in ("contract_version", "entries")}
     if ledger["contract_version"] != CONTRACT_VERSION or digest(payload) != ledger["ledger_hash"]:
         raise ValueError("The evidence ledger content or contract version has changed.")

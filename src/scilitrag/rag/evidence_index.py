@@ -1,3 +1,5 @@
+"""Defensive, request-scoped evidence snapshots and sequential label allocation."""
+
 from collections.abc import Iterable
 
 from scilitrag.contracts import Evidence, EvidenceMapping
@@ -6,7 +8,7 @@ from scilitrag.contracts import Evidence, EvidenceMapping
 class EvidenceIndex:
     """A defensive per-request snapshot; callers never receive the internal objects."""
 
-    def __init__(self, evidence: Iterable[Evidence]):
+    def __init__(self, evidence: Iterable[Evidence]) -> None:
         self._items: EvidenceMapping = {}
         for source in evidence:
             item = source.model_copy(deep=True)
@@ -24,18 +26,22 @@ class EvidenceIndex:
             self._items[item.label] = item
 
     def mapping(self) -> EvidenceMapping:
+        """Return independent copies so downstream code cannot mutate the index."""
         return {label: item.model_copy(deep=True) for label, item in self._items.items()}
 
     def resolve(self, label: int) -> Evidence:
+        """Resolve a request label and return an independent evidence object."""
         if label not in self._items:
             raise ValueError(f"Unknown citation label [{label}].")
         return self._items[label].model_copy(deep=True)
 
     def values(self) -> list[Evidence]:
+        """Return evidence copies in their original insertion order."""
         return list(self.mapping().values())
 
 
 def allocate_evidence(sources: Iterable[Evidence]) -> list[Evidence]:
+    """Assign labels [1]..[n] in retrieval order without mutating the sources."""
     labelled = [
         item.model_copy(update={"label": index}, deep=True) for index, item in enumerate(sources, 1)
     ]

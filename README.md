@@ -60,10 +60,40 @@ Opens http://localhost:8501. The UI reaches the API at `API_URL` (default `http:
 
 ```
 USE_MOCKS=1
-REAL_COMPONENTS=plan,retrieve
+REAL_COMPONENTS=plan,render_citations
 ```
 
 Names: `check_input`, `mask_pii`, `embed`, `plan`, `retrieve`, `sql_facts`, `generate`, `check_sentence`, `render_citations`. Unknown names stop the app at startup.
+
+### Retrieval components
+
+| Area | Responsibility |
+| --- | --- |
+| Model access | Configured completions, cancellable streaming, bounded retries and strict JSON validation. |
+| Citations | Request-local evidence snapshots, label checks, deterministic rendering, source fingerprints and ledgers. |
+| Planning and entities | Scenario planning with S1 fallback, explicit year/result filters and reader-injected paper/author linking. |
+
+Install the `rag` dependency group when working on these modules:
+
+```sh
+uv sync --locked --group rag
+```
+
+The real planner requires `LLM_BASE_URL` and `LLM_MODEL`. It validates the model's scenario plan,
+reconciles explicit year and result-count constraints, and falls back to topic search when the
+provider is unavailable or its response fails validation.
+
+`EntityLinker` accepts a synchronous reader that binds named SQL parameters and returns dictionary
+rows. The adapter must provide compatible paper, author and paper-author tables and support
+`pg_trgm` for fuzzy title matching. Ingestion and lookup must use the same name-normalization rule.
+Reader test doubles exercise matching and ambiguity handling independently of a live database.
+
+Citation rendering resolves request-local labels to source snapshots. Structural citation checks
+establish label validity and placement; semantic validation determines factual support.
+
+The selectable real entry points are `plan` and `render_citations`. Retrieval, SQL facts and
+generation expose placeholder entry points; use their mock components until implementations
+are available.
 
 ## Database
 
@@ -158,22 +188,34 @@ Ollama runs on the host, outside compose. Keep it bound to localhost (default `1
 
 ## Tests
 
+```sh
+uv run --locked --group data --group rag pytest
+uv run --locked --group data --group rag python scripts/smoke.py
+uv run --locked --group data --group rag ruff check .
+uv run --locked --group data --group rag ruff format --check .
 ```
-uv run --locked --group data pytest
-uv run python scripts/smoke.py
-uv run ruff check .
-uv run ruff format --check .
+
+The UI tests also require the `ui` group and are skipped without it:
+
+```sh
+uv run --locked --group data --group rag --group ui pytest
 ```
 
-The UI tests also need the `ui` group and are skipped without it:
-`uv run --locked --group data --group ui pytest`.
+The Arrow integration tests for profiling and quality filtering require the
+`data` group. Missing or broken PyArrow installations fail these tests rather
+than skipping them. CI installs the `data` and `rag` groups and runs the Arrow
+integration tests with small synthetic datasets, without downloading LitSearch.
 
-The Arrow integration tests for profiling and quality filtering need the `data` group:
-`uv run --locked --group data pytest`. Missing or broken PyArrow installations fail
-these tests rather than skipping them. CI installs the `data` group and runs
-the Arrow integration tests with small synthetic datasets, without downloading LitSearch.
+Set `USE_MOCKS=1` and clear `REAL_COMPONENTS` for offline checks. The role-play
+jailbreak case is an expected failure while the keyword input-check mock is
+selected. Passing these checks does not establish live database compatibility
+or measured model quality.
 
-The smoke test runs the scenarios S1 to S4 and attacks in-process, no server needed. It uses the mocks except for the components in `REAL_COMPONENTS`, e.g. `REAL_COMPONENTS=retrieve uv run python scripts/smoke.py` tests a real `retrieve` with everything else mocked.
+The smoke test runs scenarios S1 to S4 and attacks in-process, without a server.
+It uses mocks except for components selected through `REAL_COMPONENTS`.
+For example, `REAL_COMPONENTS=plan uv run --locked --group data --group rag python scripts/smoke.py`
+exercises the real planner with the other components mocked. A successful
+fallback plan does not prove that the model service was reached.
 
 ## Layout
 

@@ -20,7 +20,7 @@ dev = [
 data = [
     "datasets>=3.0",
 ]
-rag = ["httpx>=0.28,<1"]
+rag = ["httpx>=0.28,<1", "psycopg[binary]>=3.2,<4"]
 guardrails = [
     "torch>=2.14.1",
 ]
