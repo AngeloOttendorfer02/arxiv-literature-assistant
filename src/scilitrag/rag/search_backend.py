@@ -1,10 +1,17 @@
+import logging
+import time
+
 from scilitrag.config import load_settings
 from scilitrag.contracts import Plan
 from scilitrag.rag.database import DatabaseReader, vector_literal
 from scilitrag.rag.database_contract import validate_database
 from scilitrag.rag.entities import EntityLinker
 from scilitrag.rag.errors import RagUserError
+from scilitrag.rag.ranking import reciprocal_rank_fusion
 from scilitrag.rag.search_readiness import validate_search_indexes
+from scilitrag.rag.search_trace import SearchTrace
+
+logger = logging.getLogger(__name__)
 
 PAPER_COLUMNS = """
     p.corpus_id, COALESCE(p.title, 'Untitled paper') AS title, p.year, COALESCE(p.abstract, '') AS abstract,
@@ -81,6 +88,32 @@ class SearchBackend:
         if not params["topic"]:
             return []
         return self.reader(BM25_SQL, params)
+
+    def hybrid(self, plan: Plan, limit: int | None = None) -> list[dict]:
+        wanted = plan.k if limit is None else limit
+        if not 1 <= wanted <= 20:
+            raise RagUserError("Choose a result limit between 1 and 20.")
+        candidates = max(50, wanted * 5)
+        start = time.perf_counter()
+        params = self.params(plan, candidates)
+        params["vector"] = self.query_vector(params["topic"])
+        dense = self.reader(DENSE_SQL, params)
+        dense_ms = (time.perf_counter() - start) * 1000
+        start = time.perf_counter()
+        sparse = self.reader(BM25_SQL, params) if params["topic"] else []
+        sparse_ms = (time.perf_counter() - start) * 1000
+        start = time.perf_counter()
+        rows = reciprocal_rank_fusion(dense, sparse, limit=wanted, k=60)
+        self.last_trace = SearchTrace(
+            len(dense),
+            len(sparse),
+            len(rows),
+            dense_ms,
+            sparse_ms,
+            (time.perf_counter() - start) * 1000,
+        )
+        logger.info("hybrid_search %s", self.last_trace.public_fields())
+        return rows
 
 
 def default_backend(settings=None) -> SearchBackend:
