@@ -3,6 +3,7 @@ import time
 
 from scilitrag.config import load_settings
 from scilitrag.contracts import Plan
+from scilitrag.rag.chunk_selection import select_passages
 from scilitrag.rag.database import DatabaseReader, vector_literal
 from scilitrag.rag.database_contract import validate_database
 from scilitrag.rag.entities import EntityLinker
@@ -42,6 +43,25 @@ BM25_SQL = (
     + PAPER_FILTERS
     + " ORDER BY pdb.score(p.corpus_id) DESC, p.corpus_id LIMIT %(limit)s"
 )
+
+
+CHUNK_DENSE_SQL = """
+    SELECT hit.* FROM unnest(%(paper_ids)s::bigint[]) AS ids(corpus_id)
+    CROSS JOIN LATERAL (
+        SELECT c.chunk_id,c.corpus_id,c.section,c.text,
+               1-(c.embedding <=> %(vector)s::vector) AS score
+        FROM chunks c WHERE c.corpus_id=ids.corpus_id AND c.embedding IS NOT NULL
+        ORDER BY c.embedding <=> %(vector)s::vector,c.chunk_id LIMIT %(candidates)s
+    ) hit ORDER BY hit.corpus_id,hit.score DESC,hit.chunk_id
+"""
+CHUNK_BM25_SQL = """
+    SELECT hit.* FROM unnest(%(paper_ids)s::bigint[]) AS ids(corpus_id)
+    CROSS JOIN LATERAL (
+        SELECT c.chunk_id,c.corpus_id,c.section,c.text,pdb.score(c.chunk_id) AS score
+        FROM chunks c WHERE c.corpus_id=ids.corpus_id AND c.text ||| %(topic)s
+        ORDER BY pdb.score(c.chunk_id) DESC,c.chunk_id LIMIT %(candidates)s
+    ) hit ORDER BY hit.corpus_id,hit.score DESC,hit.chunk_id
+"""
 
 
 class SearchBackend:
@@ -114,6 +134,38 @@ class SearchBackend:
         )
         logger.info("hybrid_search %s", self.last_trace.public_fields())
         return rows
+
+    def chunks(self, plan: Plan, paper_ids: list[int], per_paper: int = 2) -> list[dict]:
+        ids = list(dict.fromkeys(paper_ids))
+        if not ids:
+            return []
+        if len(ids) > 100 or any(item < 1 for item in ids) or not 1 <= per_paper <= 4:
+            raise RagUserError(
+                "Chunk search requires up to 100 valid paper IDs and 1..4 passages per paper."
+            )
+        query = f"{plan.topic or ''} methods metrics experimental results".strip()
+        params = {
+            "paper_ids": ids,
+            "topic": query,
+            "vector": self.query_vector(query),
+            "candidates": 10,
+        }
+        dense = self.reader(CHUNK_DENSE_SQL, params)
+        sparse = self.reader(CHUNK_BM25_SQL, params)
+        result = []
+        allowed = set(ids)
+        if any(row["corpus_id"] not in allowed for row in dense + sparse):
+            raise RagUserError("Chunk retrieval returned a source outside the selected papers.")
+        for paper_id in ids:
+            ranked = reciprocal_rank_fusion(
+                [row for row in dense if row["corpus_id"] == paper_id],
+                [row for row in sparse if row["corpus_id"] == paper_id],
+                limit=20,
+                k=60,
+                key_field="chunk_id",
+            )
+            result.extend(select_passages(ranked, limit=per_paper))
+        return result
 
 
 def default_backend(settings=None) -> SearchBackend:
