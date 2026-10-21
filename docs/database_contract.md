@@ -43,12 +43,26 @@ after data loading. BM25 requires a ParadeDB index on each searched relation.
 
 The database image is pinned in Compose. Enable `vector`, `pg_search` and
 `pg_trgm`, then explicitly apply `schema.sql`, `indexes.sql` and the retrieval
-index script when it is added. Initialization currently enables extensions only.
+index script `retrieval_indexes.sql` when it is available. Initialization currently enables extensions only.
 
-Provision the configured application login separately. Compose's `app` connection
-does not create that role. Give the application CONNECT, schema USAGE and SELECT
-on the six relations; it does not need CREATE or write privileges. Keep role
-provisioning in the database owner's deployment process.
+The explicit role setup is `docker/db/roles.sql`, applied by the schema owner
+after `schema.sql` and the existing relational indexes. It creates the configured
+`APP_DB_USER` and `INGEST_DB_USER`; Compose supplies their environment values but
+does not run role setup automatically. Application reads use the SELECT-only app
+login; import writes use the separate ingest login. Existing tables and roles are
+initialization prerequisites, so do not rerun initial creation scripts blindly.
+
+Keep `APP_DB_USER`, `APP_DB_PASSWORD`, `INGEST_DB_USER` and `INGEST_DB_PASSWORD`
+before the interpolated URLs in `.env`. The local `DATABASE_URL` uses the app
+credentials and the published host port; `INGEST_DATABASE_URL` is for data loaders.
+Compose reaches the same database through host `db`. The SQL setup files are
+mounted read-only at `/opt/scilitrag/db`; apply retrieval indexes as the database
+owner. Application code needs no CREATE, DDL or write privileges.
+
+An existing development volume is retained when adding role setup. Check actual
+app and ingest password authentication and permissions as described in README.
+Neither application nor ingest credentials are suitable for the integration
+fixture harness, which requires schema creation in a disposable test database.
 
 Every application read uses a read-only transaction and a statement timeout capped
 at ten seconds. These settings complement role grants. All SQL templates are
