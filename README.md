@@ -77,7 +77,62 @@ docker compose exec db psql -U postgres -d scilitrag -c "\dx"
 
 `\dx` lists the extensions `vector`, `pg_search` and `pg_trgm`. Stop with `docker compose down`; `docker compose down -v` also deletes the data volume.
 
-TODO: schema, roles, fixture and dump restore.
+### Schema and database roles (D-04 to D-06)
+
+Add the four role variables from `.env.example` to your local `.env`, **before**
+`DATABASE_URL`. Update `DATABASE_URL` and add `INGEST_DATABASE_URL` as in the template.
+The API uses the app role (SELECT only); imports use ingest (SELECT, INSERT,
+UPDATE, DELETE and USAGE on the author ID sequence).
+
+Use distinct role names, different from `POSTGRES_USER`: lowercase ASCII letters,
+digits and underscores, starting with a letter or underscore, at most 63 characters.
+Replace the password placeholders with different strong passwords using only
+ASCII letters, digits and `._~-`. Keep `.env` private.
+
+With the db container healthy, apply the files as the schema-owning superuser. These commands
+use the default administrator `postgres` and database `scilitrag`; adjust them if
+needed:
+
+```sh
+docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/schema.sql
+docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/indexes.sql
+docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/roles.sql
+```
+
+Skip `schema.sql` if the tables exist and `roles.sql` if the roles are already
+configured. Both are initial setup scripts and stop on existing tables or roles.
+SQL files are not run automatically. Existing volumes can be kept; do not delete
+one to apply roles. Changing passwords in `.env` does not change existing DB roles.
+Further permission details are in [D024](docs/decisions.md#d024-d-06-separate-import-and-application-database-roles).
+
+Check each login separately through host `db`; container loopback uses trust
+authentication and does not check passwords. Enter the role's password when
+prompted and exit with `\q`. A wrong password must be rejected; the correct one
+must connect. Adjust role names if yours differ:
+
+```sh
+docker compose exec db psql -X -h db -U app -d scilitrag -W -P pager=off
+docker compose exec db psql -X -h db -U ingest -d scilitrag -W -P pager=off
+```
+
+In each session, run:
+
+```sql
+SELECT current_user;
+SELECT count(*) FROM public.papers;
+INSERT INTO public.papers (corpus_id) SELECT 0::bigint WHERE false;
+UPDATE public.papers SET year = year WHERE false;
+DELETE FROM public.papers WHERE false;
+```
+
+Both roles can read. App writes must fail with permission denied; ingest must
+return `INSERT 0 0`, `UPDATE 0`, `DELETE 0`. `WHERE false` checks permissions without
+changing rows.
+
+After bulk imports, the administrator runs `ANALYZE papers, authors, paper_authors,
+citations, chunks;`. Ingest has no MAINTAIN privilege.
+
+TODO: fixture and dump restore.
 
 ## Run with Docker
 

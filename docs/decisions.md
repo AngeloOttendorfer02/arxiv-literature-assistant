@@ -14,6 +14,16 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D024 D-06 separate import and application database roles
+
+- Context: D-06 requires a writable ingest login and a read-only API login. Compose previously used hardcoded app:app credentials, without creating the role.
+- Decision: Apply docker/db/roles.sql explicitly with psql as the schema owner, after schema.sql. Create two new, distinct logins from environment variables. Grant the app SELECT on the six project tables; grant ingest SELECT, INSERT, UPDATE, DELETE and USAGE on the author ID sequence. Neither role owns objects or receives administrative privileges, role memberships, CREATE or TRUNCATE. Remove PUBLIC table/sequence grants and PUBLIC CREATE on schema public. Set default table/sequence grants for future objects created in public by the administrator running the script.
+- Configuration: APP_DB_USER, APP_DB_PASSWORD, INGEST_DB_USER and INGEST_DB_PASSWORD in .env; placeholders and local connection URLs in .env.example. Compose builds the API URL from the app credentials and mounts setup SQL read-only outside initdb. Use URL-safe passwords so the same values work in SQL and connection URLs. INGEST_DATABASE_URL is reserved for the later loader.
+- Reason: Keep import writes separate from query execution, support existing volumes without deleting data, and avoid new dependencies. Existing role names deliberately fail and roll back; password changes and migrations require explicit administrator actions.
+- Credential handling: Disable pg_stat_statements.track_utility locally within the setup transaction so password-bearing CREATE ROLE statements are not collected. This does not remove older recorded statements. Login tests use host db; the container's loopback trust rule does not verify passwords. ANALYZE after imports remains an administrator action; ingest does not receive MAINTAIN.
+- Validation: Initial setup applied locally with COMMIT; app SELECT succeeded and UPDATE was denied, while ingest INSERT/UPDATE/DELETE permission checks succeeded without changing rows. Local review confirmed the tracking setting with a rolled-back test role and identified loopback trust authentication. Successful password-authenticated app and ingest logins through host db are still pending.
+- Date: 2026-10-21
+
 ### D023 D-05 query indexes matched to entity linking
 
 - Context: D-05 lists year, both directions of citations and paper_authors, chunks by paper and a trigram title index. WP2 EntityLinker (src/scilitrag/rag/entities.py) also filters on lower(title), the title prefix before a colon and normalized_name.
