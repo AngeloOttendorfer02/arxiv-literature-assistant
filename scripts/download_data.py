@@ -3,19 +3,10 @@
 DATA_DIR comes from .env in the project root. The Hub cache is under
 DATA_DIR/hf_home, prepared datasets under DATA_DIR/hf_datasets.
 
-Usage (all three configs, or only the ones given):
+Local execution (all three configs, or only the ones given):
     uv run --group data python scripts/download_data.py
     uv run --group data python scripts/download_data.py query corpus_clean
 
-Windows Smart App Control blocks the unsigned PyArrow DLLs ("DLL load failed ...
-application control policy"). Then run it in a Linux container from the project
-root (PowerShell, Docker Desktop running). Replace <DATA_DIR> with the Windows
-path from .env, outside OneDrive (e.g. C:/Users/<name>/scai_data):
-    docker run --rm -it -v "${PWD}:/app" -v "<DATA_DIR>:/data" -v scilitrag-uv-cache:/root/.cache/uv -w /app -e DATA_DIR=/data -e UV_PROJECT_ENVIRONMENT=/opt/venv -e UV_LINK_MODE=copy ghcr.io/astral-sh/uv:python3.13-bookworm-slim uv run --locked --group data python scripts/download_data.py
-
-If a download stops (e.g. 401 from cas-server.xethub.hf.co or a dropped
-connection), rerun the same command. Finished files are reused from the cache,
-so do not delete DATA_DIR between runs.
 """
 
 import os
