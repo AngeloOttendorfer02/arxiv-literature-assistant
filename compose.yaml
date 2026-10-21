@@ -7,12 +7,19 @@ services:
       POSTGRES_USER: ${POSTGRES_USER:?set POSTGRES_USER in .env}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: ${POSTGRES_DB:?set POSTGRES_DB in .env}
+      # Used only when roles.sql is explicitly run by the administrator.
+      APP_DB_USER: ${APP_DB_USER:?set APP_DB_USER in .env}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}
+      INGEST_DB_USER: ${INGEST_DB_USER:?set INGEST_DB_USER in .env}
+      INGEST_DB_PASSWORD: ${INGEST_DB_PASSWORD:?set INGEST_DB_PASSWORD in .env}
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql
       # Single file, so the image's own bootstrap script in the same folder still runs.
       - ./docker/db/20-extensions.sql:/docker-entrypoint-initdb.d/20-extensions.sql:ro
+      # Explicit setup files; this directory is not processed by initdb.
+      - ./docker/db:/opt/scilitrag/db:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -28,7 +35,7 @@ services:
       USE_MOCKS: ${USE_MOCKS:-1}
       REAL_COMPONENTS: ${REAL_COMPONENTS:-}
       # Same app role as DATABASE_URL in .env, but reached via the compose service name.
-      DATABASE_URL: postgresql://app:app@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://${APP_DB_USER:?set APP_DB_USER in .env}:${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}@db:5432/${POSTGRES_DB}
       # Ollama runs on the host, outside compose.
       LLM_BASE_URL: http://host.docker.internal:11434/v1
       LLM_MODEL: ${LLM_MODEL:-}
