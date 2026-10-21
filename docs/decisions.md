@@ -14,6 +14,16 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D025 D-07 reproducible local fixture selection
+
+- Context: D-07 needs 200 to 500 papers around 20 LitSearch queries, without redistributing dataset records. The chosen approach is local selection by each teammate rather than a committed list of dataset IDs.
+- Decision: scripts/select_fixture.py reads D-03 Arrow files offline at the pinned revision. Defaults: 300 papers, 20 queries (five per query set), seed 42. Keep all selected query targets; fill remaining slots by rotating between shuffled outgoing-neighbor, incoming-neighbor and distractor pools within the retained corpus. Save all three selected Arrow subsets and a manifest with provenance, IDs and file hashes under DATA_DIR/fixtures/v0. Never overwrite an existing fixture.
+- Loading: scripts/load_fixture.py validates checksums and target/corpus coverage, then uses INGEST_DATABASE_URL and psycopg from the existing rag group. Mask e-mail addresses in titles and abstracts with the mask_pii mock's pattern and `<EMAIL>` placeholder (O13); full texts follow in D-11. COPY paper metadata and deduplicated citations whose two endpoints are selected, in one transaction; reject nonempty data tables. Record dataset_revision but leave embed_model NULL. Authors, chunks and embeddings remain later tasks. Queries stay in the local Arrow subset for evaluation.
+- Reason: Each teammate can reproduce the same small corpus without committing LitSearch texts or adding a dependency. The original D-03 cache stays unchanged. Synthetic unit tests cover selection/export and import refusal without requiring corpus files or a running DB.
+- Reproducibility: Both selection and offline validation print the manifest SHA-256 for comparison; the default fixture's reference is recorded in tests/fixtures/README.md. Write the fixture manifest as UTF-8 with LF endings and hash the parsed D-03 manifest as canonical JSON, so whitespace, key ordering and Windows/Linux line endings do not change the reference. Arrow checksums still cover exact file bytes. Query row indices are sufficient for this pinned fixture; stable content-based query IDs remain D-18 follow-up work.
+- Validation: The default real-data fixture contains 300 papers, 20 queries, 21 target papers and 448 internal citations. The local loader reported a successful import in 6.71 seconds, meeting the under-60-second requirement. A read-only audit confirmed that DB paper metadata and citation pairs exactly match the validated fixture, with no e-mail addresses detected by the import regex. Synthetic tests cover reproducibility, source preservation, validation and import refusal; a regression test compares LF/CRLF source manifests with different JSON formatting. Hash-format changes do not require a DB reimport.
+- Date: 2026-10-21
+
 ### D024 D-06 separate import and application database roles
 
 - Context: D-06 requires a writable ingest login and a read-only API login. Compose previously used hardcoded app:app credentials, without creating the role.
