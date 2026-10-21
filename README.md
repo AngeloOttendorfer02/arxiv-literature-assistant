@@ -133,24 +133,34 @@ Ollama runs on the host, outside compose. Keep it bound to localhost (default `1
 
 ## Tests
 
-```
-uv run --locked --group rag pytest
-uv run --locked --group rag python scripts/smoke.py
-uv run --locked --group rag ruff check .
-uv run --locked --group rag ruff format --check .
+```sh
+uv run --locked --group data --group rag pytest
+uv run --locked --group data --group rag python scripts/smoke.py
+uv run --locked --group data --group rag ruff check .
+uv run --locked --group data --group rag ruff format --check .
 ```
 
-The UI tests need the `ui` group and are skipped without it:
+The UI tests also require the `ui` group and are skipped without it:
 
 ```sh
-uv run --locked --group rag --group ui pytest
+uv run --locked --group data --group rag --group ui pytest
 ```
 
-Set `USE_MOCKS=1` and clear `REAL_COMPONENTS` for offline checks. The role-play jailbreak
-case is an expected failure while the keyword input-check mock is selected. Passing these checks
-does not establish live database compatibility or measured model quality.
+The Arrow integration tests for profiling and quality filtering require the
+`data` group. Missing or broken PyArrow installations fail these tests rather
+than skipping them. CI installs the `data` and `rag` groups and runs the Arrow
+integration tests with small synthetic datasets, without downloading LitSearch.
 
-The smoke test runs the scenarios S1 to S4 and attacks in-process, no server needed. It uses the mocks except for the components in `REAL_COMPONENTS`, e.g. `REAL_COMPONENTS=plan uv run --locked --group rag python scripts/smoke.py` exercises the real planner with the other components mocked. A successful fallback plan does not prove that the model service was reached.
+Set `USE_MOCKS=1` and clear `REAL_COMPONENTS` for offline checks. The role-play
+jailbreak case is an expected failure while the keyword input-check mock is
+selected. Passing these checks does not establish live database compatibility
+or measured model quality.
+
+The smoke test runs scenarios S1 to S4 and attacks in-process, without a server.
+It uses mocks except for components selected through `REAL_COMPONENTS`.
+For example, `REAL_COMPONENTS=plan uv run --locked --group data --group rag python scripts/smoke.py`
+exercises the real planner with the other components mocked. A successful
+fallback plan does not prove that the model service was reached.
 
 ## Layout
 
