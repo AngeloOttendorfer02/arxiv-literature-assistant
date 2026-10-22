@@ -70,7 +70,12 @@ def create_app(components: Components | None = None, settings: Settings | None =
     @app.post("/query", response_class=EventSourceResponse)
     async def query(body: QueryRequest, request: Request) -> AsyncIterable[ServerSentEvent]:
         log = RequestLog(query_chars=len(body.query), request_id=request.state.request_id)
-        events = run_query(body.query, components, settings.request_timeout_s)
+        events = run_query(
+            body.query,
+            components,
+            settings.request_timeout_s,
+            max_buffer_chars=settings.max_sentence_buffer_chars,
+        )
         try:
             async with aclosing(events):
                 async for name, event in events:

@@ -6,6 +6,7 @@ from dataclasses import asdict
 from pathlib import Path
 
 from scilitrag.contracts import Plan
+from scilitrag.rag.errors import RagUserError
 from scilitrag.rag.search_backend import BM25_SQL, DENSE_SQL, default_backend
 
 
@@ -26,11 +27,16 @@ def main() -> int:
     parser.add_argument("--year-to", type=int)
     parser.add_argument("--output", required=True, type=Path)
     args = parser.parse_args()
-    backend = default_backend()
-    plans = explain_with(
-        Plan(scenario="S1", topic=args.topic, year_from=args.year_from, year_to=args.year_to, k=5),
-        backend,
-    )
+    try:
+        backend = default_backend()
+        plans = explain_with(
+            Plan(
+                scenario="S1", topic=args.topic, year_from=args.year_from, year_to=args.year_to, k=5
+            ),
+            backend,
+        )
+    except RagUserError as error:
+        parser.exit(2, f"Cannot capture retrieval plans: {error}\n")
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps({"database": asdict(backend.metadata), "plans": plans}, indent=2) + "\n",
