@@ -72,6 +72,7 @@ Names: `check_input`, `mask_pii`, `embed`, `plan`, `retrieve`, `sql_facts`, `gen
 | Model access | Configured completions, cancellable streaming, bounded retries and strict JSON validation. |
 | Citations | Request-local evidence snapshots, label checks, deterministic rendering, source fingerprints and ledgers. |
 | Planning and entities | Scenario planning with S1 fallback, explicit year/result filters and reader-injected paper/author linking. |
+| Search and evidence | Filtered abstract search with pgvector/BM25, RRF k=60, scoped passages and explicit evidence coverage. |
 
 Install the `rag` dependency group when working on these modules:
 
@@ -91,9 +92,11 @@ Reader test doubles exercise matching and ambiguity handling independently of a 
 Citation rendering resolves request-local labels to source snapshots. Structural citation checks
 establish label validity and placement; semantic validation determines factual support.
 
-The selectable real entry points are `plan` and `render_citations`. Retrieval, SQL facts and
-generation expose placeholder entry points; use their mock components until implementations
-are available.
+The selectable real retrieval entry points are `plan`, `retrieve`, `generate`
+and `render_citations`. Real search requires the frozen corpus metadata, deployed
+search indexes and the shared query embedder. Generation additionally requires
+the configured model endpoint. SQL facts remain mocked until implemented. Input
+and sentence validators must also be integrated before all-real evaluation.
 
 ## Database
 
@@ -126,6 +129,7 @@ needed:
 ```sh
 docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/schema.sql
 docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/indexes.sql
+docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/retrieval_indexes.sql
 docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/roles.sql
 ```
 
@@ -161,6 +165,24 @@ changing rows.
 
 After bulk imports, the administrator runs `ANALYZE papers, authors, paper_authors,
 citations, chunks;`. Ingest has no MAINTAIN privilege.
+
+### Retrieval readiness
+
+Run schema-only preflight with the configured application login:
+
+```sh
+uv run --locked --group rag python scripts/check_database.py
+```
+
+Use `--require-search` after the real data and embeddings are loaded and their
+dataset/model metadata have been published. A missing-data response is a blocked
+live check, not a failed unit test. Keep the frozen metadata tied to actual data.
+
+`scripts/explain_retrieval.py` captures real query plans only when that handoff is
+ready. Missing search prerequisites produce a controlled exit with no output file.
+Optional integration tests use `RETRIEVAL_TEST_DATABASE_URL` for a disposable
+ParadeDB database with an administrative test login; the read-only app login cannot
+create the test schemas. Synthetic fixture rows are not the real project corpus.
 
 ### Local test data (D-07)
 
