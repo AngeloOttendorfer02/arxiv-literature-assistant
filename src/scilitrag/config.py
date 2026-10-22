@@ -32,6 +32,7 @@ class Settings:
     llm_max_output_tokens: int = 1024
     context_char_budget: int = 16000
     evidence_item_char_limit: int = 2400
+    max_sentence_buffer_chars: int = 32768
 
 
 def _parse_float(name: str, value: str) -> float:
@@ -94,6 +95,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         ),
         evidence_item_char_limit=_parse_int(
             "EVIDENCE_ITEM_CHAR_LIMIT", env.get("EVIDENCE_ITEM_CHAR_LIMIT", "2400"), 100, 10000
+        ),
+        max_sentence_buffer_chars=_parse_int(
+            "MAX_SENTENCE_BUFFER_CHARS", env.get("MAX_SENTENCE_BUFFER_CHARS", "32768"), 1024, 200000
         ),
         llm_max_retries=_parse_int("LLM_MAX_RETRIES", env.get("LLM_MAX_RETRIES", "1"), 0, 3),
         llm_retry_backoff_s=_parse_float(
