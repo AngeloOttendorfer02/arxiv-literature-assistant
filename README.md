@@ -8,7 +8,7 @@ Developed by Angelo Ottendorfer, Benjamin Storck, Kristof Zörenyi and Nuray Vis
 
 The project uses [LitSearch](https://huggingface.co/datasets/princeton-nlp/LitSearch) ([princeton-nlp/LitSearch](https://github.com/princeton-nlp/LitSearch)). The dataset is **not** part of this repository and must not be redistributed. Database dumps are shared privately within the team only.
 
-TODO: data loading, fixture and dump restore.
+TODO: full-corpus loading and dump restore.
 
 ## Setup
 
@@ -92,11 +92,11 @@ Reader test doubles exercise matching and ambiguity handling independently of a 
 Citation rendering resolves request-local labels to source snapshots. Structural citation checks
 establish label validity and placement; semantic validation determines factual support.
 
-The selectable real retrieval entry points are `plan`, `retrieve` and
-`render_citations`. Real search requires the frozen corpus metadata, deployed
-search indexes and the shared query embedder. Generation and SQL facts remain
-mocked until their implementations are selected. Input and sentence validators
-must also be integrated before all-real evaluation.
+The selectable real retrieval entry points are `plan`, `retrieve`, `generate`
+and `render_citations`. Real search requires the frozen corpus metadata, deployed
+search indexes and the shared query embedder. Generation additionally requires
+the configured model endpoint. SQL facts remain mocked until implemented. Input
+and sentence validators must also be integrated before all-real evaluation.
 
 ## Database
 
@@ -184,7 +184,23 @@ Optional integration tests use `RETRIEVAL_TEST_DATABASE_URL` for a disposable
 ParadeDB database with an administrative test login; the read-only app login cannot
 create the test schemas. Synthetic fixture rows are not the real project corpus.
 
-TODO: fixture and dump restore.
+### Local test data (D-07)
+
+After D-03, select a reproducible fixture from your own filtered data:
+
+```sh
+uv run --locked --group data python scripts/select_fixture.py
+uv run --locked --group data python scripts/load_fixture.py --check-only
+uv run --locked --group data --group rag python scripts/load_fixture.py
+```
+
+The default is 300 papers around 20 queries. Files stay under
+`DATA_DIR/fixtures/v0`; no LitSearch records are committed. The import uses
+`INGEST_DATABASE_URL` and requires empty data tables. It loads paper metadata and
+internal citations; authors, chunks and embeddings follow in later tasks.
+See [fixture selection and loading](tests/fixtures/README.md) for details.
+
+TODO: dump restore.
 
 ## Run with Docker
 
