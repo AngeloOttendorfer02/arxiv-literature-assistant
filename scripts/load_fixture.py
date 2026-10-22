@@ -1,8 +1,8 @@
-"""Load D-07 paper metadata and internal citations into an empty D-04 database.
+"""Load D-07 papers, internal citations and D-08 authors into an empty D-04 database.
 
 Usage: uv run --locked --group data --group rag python scripts/load_fixture.py
 Use --check-only to validate local fixture files without connecting to PostgreSQL.
-Authors, chunks and embeddings are populated by later tasks.
+Chunks and embeddings are populated by later tasks.
 """
 
 import argparse
@@ -10,18 +10,57 @@ import json
 import os
 import re
 from time import perf_counter
+from urllib.parse import quote, quote_plus
 
+from author_names import extract_authors
 from filter_data import batches
 from select_fixture import DATASET, FILES, REVISION, data_directory, digest
 
 PAPER_COPY = "COPY public.papers (corpus_id, title, abstract, year) FROM STDIN"
 CITATION_COPY = "COPY public.citations (citing_id, cited_id) FROM STDIN"
+AUTHOR_COPY = "COPY public.authors (first_name, last_name, name, normalized_name) FROM STDIN"
+PAPER_AUTHOR_COPY = "COPY public.paper_authors (author_id, corpus_id) FROM STDIN"
 # O13: e-mails are masked at import; same pattern and placeholder as the mask_pii mock.
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 
 
 def mask_emails(text):
     return EMAIL.sub("<EMAIL>", text) if text else text
+
+
+def database_error_detail(error, dsn):
+    import psycopg
+    from psycopg.conninfo import conninfo_to_dict
+
+    # Server context can include COPY row contents; prefer the primary message.
+    detail = error.diag.message_primary or str(error) or "No error details available."
+    secrets = {
+        value
+        for key, value in os.environ.items()
+        if value and (key.endswith(("PASSWORD", "TOKEN", "SECRET")) or key == "PGPASSWORD")
+    }
+    try:
+        password = conninfo_to_dict(dsn).get("password")
+        if password:
+            secrets.add(password)
+    except psycopg.Error:
+        pass
+    detail = detail.replace(dsn, "<CONNECTION>")
+    detail = re.sub(r"(?i)\bpostgres(?:ql)?://[^\s<>]+", "<CONNECTION>", detail)
+    detail = re.sub(
+        r"""(?i)\bpassword\s*=\s*(?:'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"|[^\s]+)""",
+        "password=<REDACTED>",
+        detail,
+    )
+    variants = {
+        variant
+        for value in secrets
+        for variant in (value, quote(value, safe=""), quote_plus(value))
+    }
+    for value in sorted(variants, key=len, reverse=True):
+        detail = detail.replace(value, "<REDACTED>")
+    detail = " ".join(detail.split())[:1000]
+    return f"{type(error).__name__} (SQLSTATE {error.sqlstate or 'unavailable'}): {detail}"
 
 
 def fixture_records(folder):
@@ -77,7 +116,36 @@ def fixture_records(folder):
     return sorted(papers), citations
 
 
-def import_records(connection, papers, citations):
+def fixture_authors(folder):
+    rows = (
+        row
+        for batch in batches([folder / "corpus_s2orc.arrow"])
+        for row in batch.select(["corpusid", "content"]).to_pylist()
+    )
+    return extract_authors(rows)
+
+
+def import_authors(connection, cursor, authors, links):
+    with cursor.copy(AUTHOR_COPY) as copy:
+        for author in authors:
+            copy.write_row(author)
+    rows = connection.execute(
+        "SELECT author_id, normalized_name FROM public.authors ORDER BY author_id"
+    ).fetchall()
+    # IDs follow the sorted insert order only on a fresh identity sequence.
+    if [author_id for author_id, _ in rows] != list(range(1, len(authors) + 1)) or [
+        name for _, name in rows
+    ] != [author[3] for author in authors]:
+        raise ValueError(
+            "Author IDs must start at 1; reset with TRUNCATE ... RESTART IDENTITY first."
+        )
+    ids = {name: author_id for author_id, name in rows}
+    with cursor.copy(PAPER_AUTHOR_COPY) as copy:
+        for name, corpus_id in links:
+            copy.write_row((ids[name], corpus_id))
+
+
+def import_records(connection, papers, citations, authors=(), links=()):
     connection.execute("SET LOCAL lock_timeout = '5s'")
     connection.execute("SET LOCAL statement_timeout = '50s'")
     # Prevent a concurrent import from passing the same empty-database check.
@@ -104,6 +172,8 @@ def import_records(connection, papers, citations):
             with cursor.copy(statement) as copy:
                 for record in records:
                     copy.write_row(record)
+        if authors:
+            import_authors(connection, cursor, authors, links)
     connection.execute(
         "UPDATE public.schema_metadata SET dataset_revision = %s WHERE id = 1", (REVISION,)
     )
@@ -117,8 +187,16 @@ def main():
     try:
         folder = data_directory() / "fixtures" / "v0"
         papers, citations = fixture_records(folder)
+        authors, links, author_counts = fixture_authors(folder)
     except (ValueError, KeyError, OSError) as error:
         parser.exit(1, f"Fixture validation failed: {error}\n")
+    print(
+        f"Authors: {len(authors)} with {len(links)} paper links from "
+        f"{author_counts.get('author_blocks', 0)} author blocks; dropped "
+        f"{author_counts.get('missing_first_or_last', 0)} without first or last name, "
+        f"{author_counts.get('affiliation_or_header', 0)} affiliations or headers, "
+        f"{author_counts.get('duplicate_in_paper', 0)} repeated in the same paper."
+    )
     if args.check_only:
         print(f"Valid fixture: {len(papers)} papers, 20 queries, {len(citations)} citations.")
         print(f"Manifest SHA-256: {digest(folder / 'manifest.json')}")
@@ -131,18 +209,21 @@ def main():
 
     try:
         with psycopg.connect(dsn, connect_timeout=5) as connection:
-            import_records(connection, papers, citations)
+            import_records(connection, papers, citations, authors, links)
     except ValueError as error:
         parser.exit(1, f"Fixture import refused: {error}\n")
     except psycopg.Error as error:
         parser.exit(
             1,
-            f"Database import failed (SQLSTATE {error.sqlstate or 'unavailable'}); transaction rolled back.\n",
+            f"Database import failed: {database_error_detail(error, dsn)}; transaction rolled back.\n",
         )
     elapsed = perf_counter() - started
-    print(f"Loaded {len(papers)} papers and {len(citations)} citations in {elapsed:.2f}s.")
+    print(
+        f"Loaded {len(papers)} papers, {len(citations)} citations, {len(authors)} authors "
+        f"and {len(links)} paper links in {elapsed:.2f}s."
+    )
     print("D-07 runtime target: " + ("under 60s." if elapsed < 60 else "not met (60s or longer)."))
-    print("Authors, chunks and embeddings are not populated; hybrid search is not ready yet.")
+    print("Chunks and embeddings are not populated; hybrid search is not ready yet.")
 
 
 if __name__ == "__main__":
