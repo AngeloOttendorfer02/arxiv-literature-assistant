@@ -21,10 +21,11 @@ from scilitrag.contracts import (
 from scilitrag.rag.citation_labels import citation_status
 from scilitrag.rag.errors import LLMClientError, RagUserError
 from scilitrag.rag.evidence_index import EvidenceIndex
+from scilitrag.rag.sentence_stream import SentenceBuffer
 
 logger = logging.getLogger(__name__)
 
-# Naive splitter; WP3 replaces it (S-11).
+# Fallback splitter; semantic sentence boundaries are supplied by the validation layer.
 SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
 
 _END = object()
@@ -41,7 +42,7 @@ def _ms(start: float) -> float:
 
 
 async def run_query(
-    query: str, c: Components, timeout_s: float | None = None
+    query: str, c: Components, timeout_s: float | None = None, *, max_buffer_chars: int = 32768
 ) -> AsyncIterator[tuple[str, Model]]:
     """Events of one query, ending with done or error.
 
@@ -51,15 +52,21 @@ async def run_query(
     """
     loop = asyncio.get_running_loop()
     deadline = None if timeout_s is None else loop.time() + timeout_s
-    queue: asyncio.Queue = asyncio.Queue()
+    queue: asyncio.Queue = asyncio.Queue(maxsize=32)
 
     async def produce() -> None:
         try:
-            async with aclosing(_run(query, c)) as events:
+            async with aclosing(_run(query, c, max_buffer_chars=max_buffer_chars)) as events:
                 async for event in events:
-                    queue.put_nowait(event)
-        finally:
-            queue.put_nowait(_END)
+                    await queue.put(event)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            logger.exception("pipeline producer failed")
+            await queue.put(
+                ("error", ErrorEvent(code="internal", message="The query could not be completed."))
+            )
+        await queue.put(_END)
 
     task = asyncio.create_task(produce())
     try:
@@ -81,9 +88,12 @@ async def run_query(
             yield item
     finally:
         task.cancel()
+        await asyncio.gather(task, return_exceptions=True)
 
 
-async def _run(query: str, c: Components) -> AsyncIterator[tuple[str, Model]]:
+async def _run(
+    query: str, c: Components, *, max_buffer_chars: int = 32768
+) -> AsyncIterator[tuple[str, Model]]:
     start = time.perf_counter()
     latency: dict[str, float] = {}
     try:
@@ -124,7 +134,7 @@ async def _run(query: str, c: Components) -> AsyncIterator[tuple[str, Model]]:
         checked_count = removed = tokens = 0
         first_token = last_token = None
         ttft_user = None
-        buffer = ""
+        buffer = SentenceBuffer(split_sentences, max_chars=max_buffer_chars)
         t = time.perf_counter()
 
         async def release(sentences: list[str]) -> AsyncIterator[tuple[str, Model]]:
@@ -160,10 +170,10 @@ async def _run(query: str, c: Components) -> AsyncIterator[tuple[str, Model]]:
                 if first_token is None:
                     first_token = last_token
                 tokens += 1
-                sentences, buffer = split_sentences(buffer + token)
+                sentences = buffer.feed(token)
                 async for event in release(sentences):
                     yield event
-        async for event in release([buffer.strip()] if buffer.strip() else []):
+        async for event in release(buffer.finish()):
             yield event
 
         latency["generate"] = _ms(t)
