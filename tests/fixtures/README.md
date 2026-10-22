@@ -28,8 +28,15 @@ query IDs follow in D-18.
 
 **Loading** uses `INGEST_DATABASE_URL` and only works on empty data tables. It
 copies titles, abstracts, years and the citations between selected papers in one
-transaction, with e-mail addresses replaced by `<EMAIL>` (O13). Authors, chunks
-and embeddings follow in later tasks. Afterwards the administrator runs
-`ANALYZE papers, citations;`.
+transaction, with e-mail addresses replaced by `<EMAIL>` (O13). It also loads
+authors and their paper links (D-08, see D026). Author IDs are numbered from 1 in
+`normalized_name` order, so an existing database is first reset as administrator:
+
+```sh
+docker compose exec db psql -X -U postgres -d scilitrag -c "TRUNCATE papers, authors, paper_authors, citations, chunks RESTART IDENTITY;"
+```
+
+Chunks and embeddings follow in later tasks. Afterwards the administrator runs
+`ANALYZE papers, citations, authors, paper_authors;`.
 
 Unit tests use synthetic records and need neither LitSearch nor a database.

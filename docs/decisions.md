@@ -14,6 +14,15 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D026 D-08 authors from S2ORC name annotations
+
+- Context: corpus_s2orc marks author blocks with first and last name spans, but also tags affiliations and headers as authors. WP2 entity linking looks authors up by `normalize_name` (src/scilitrag/rag/entities.py).
+- Decision: scripts/author_names.py pairs the first and last name spans of each block, unescapes HTML entities and strips edge marks; entries without both names are dropped. `normalized_name` comes from WP2's `normalize_name` (imported, not copied); equal normalized names are one author (O2), linked once per paper, shown with the most frequent spelling. Names with a word from EXCLUDED_WORDS (university, lab, google, ...), a phrase from EXCLUDED_PHRASES or a Chinese institution term from EXCLUDED_SUBSTRINGS are dropped. Authors are inserted sorted by `normalized_name` with IDs from 1, so rebuilds give the same IDs.
+- Reason: On the D-03 data the lists remove about 713 of 76,424 names; the 150 most frequent remaining names are all people. "ai" and "alexa" only count in phrases, "bosch" and one-letter first names stay, because they match real people. Known limits: same name means same person; accent variants (438 groups) and partly romanized Chinese names stay separate; person-plus-company entries ("ilya sutskever openai", 326 names) are lost. Trimming affiliation words was rejected, see R003.
+- Statistics (for D-23): All 56,115 D-03 papers: 227,528 blocks give 74,949 authors and 196,083 paper links; dropped 18,530 without first or last name, 2,463 affiliations or headers, 10,452 repeated in the same paper. 255 papers (no query target) have no author, mostly Google/DeepMind parses ("Nicholas Carlini" + "Google") and proceedings headers.
+- Validation: Fixture: 1,412 blocks give 1,125 authors and 1,242 paper links; dropped 109, 27 and 34; 1 of 300 papers has no author. Synthetic tests cover pairing, filters, spelling choice, ID order and redacted import errors. The 30 manual samples and the DB import are still pending.
+- Date: 2026-10-22
+
 ### D025 D-07 reproducible local fixture selection
 
 - Context: D-07 needs 200 to 500 papers around 20 LitSearch queries, without redistributing dataset records. The chosen approach is local selection by each teammate rather than a committed list of dataset IDs.
@@ -221,6 +230,12 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 ---
 
 ## Rejected approaches
+
+### R003 Trimming affiliation words from author last names
+
+- Approach: In D-08, remove excluded words from the end of a last name ("Quoc V Le Google Brain" to "Quoc V Le") instead of dropping the entry.
+- Why rejected: Tested on all 56,115 D-03 papers: only 76 more paper links (196,274 instead of 196,198) and 6 fewer papers without authors (247 instead of 253). It also turns institutions into authors ("Johns Hopkins University" to "Johns Hopkins", "Peng Cheng Laboratory" to "Peng Cheng"). Most lost people are not recovered, because the parser puts them entirely into the first name and the company into the last name; splitting first names would be an even less reliable guess. See D026.
+- Date: 2026-10-21
 
 ### R002 Makefile for the smoke test
 
