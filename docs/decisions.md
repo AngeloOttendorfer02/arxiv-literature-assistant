@@ -14,6 +14,16 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D026 D-08 authors from S2ORC name annotations
+
+- Context: corpus_s2orc marks each author block and the first and last name spans inside it. WP2 entity linking looks authors up by `normalize_name` (src/scilitrag/rag/entities.py) and shows `name`. The parser also tags affiliations and headers as authors.
+- Decision: scripts/author_names.py pairs all first and last name spans inside one author block, unescapes HTML entities (`&apos;`) and strips leading and trailing marks. Entries without both names are dropped. `normalized_name` comes from WP2's `normalize_name`, imported rather than copied; equal normalized names are one author (O2) and appear once per paper. `name`, `first_name` and `last_name` keep the most frequent original spelling, ties broken alphabetically, matching WP2's test data. Names containing an affiliation word (university, school, lab, research, google, microsoft, bytedance, language and others in EXCLUDED_WORDS), a phrase in EXCLUDED_PHRASES or a Chinese institution term in EXCLUDED_SUBSTRINGS (大學, 研究所, 實驗室, 公司 and others; matched as substrings because Chinese has no spaces) are dropped. The loader inserts authors sorted by `normalized_name` and refuses IDs that do not start at 1, so every rebuild gives the same IDs.
+- Reason: Measured on the D-03 data: the list removes about 713 of 76,424 names and 1,940 of 199,128 paper links; the 150 most frequent remaining names are all people. "ai" and "alexa" are only excluded within phrases ("alexa ai"), because alone they also match real people (AiTi Aw, Alexa Y. Pan). "bosch" and one-letter first names stay, because they match real people (Antal van den Bosch, R Sangal). Known limits: Chinese names with a romanized first name ("蕭博元" + "Po-Yuan") stay separate from fully romanized spellings; entries that merge a person with an affiliation ("ilya sutskever openai", 326 names) are lost; same name means same person; accent variants ("jörg tiedemann", "jorg tiedemann", 438 groups) stay separate because the shared rule keeps accents.
+- Statistics (for D-23): All 56,115 D-03 papers: 227,528 author blocks give 74,949 authors and 196,083 paper links; dropped 18,530 blocks without first or last name, 2,463 affiliations or headers, 10,452 repeated in the same paper. 255 papers (none of them a query target) end up without authors and stay in the corpus. Most of them are Google or DeepMind papers where the parser put the whole person into the first name and the company into the last name ("Nicholas Carlini" + "Google"), or proceedings headers ("Actes de la conférence conjointe"). Trimming affiliation words was rejected, see R003.
+- Validation: Fixture: 1,412 author blocks give 1,125 authors and 1,242 paper links; dropped 109 without first or last name, 27 affiliations or headers, 34 repeated in the same paper; 1 of 300 papers has no author. Synthetic tests cover pairing, filters, entities, spelling choice and ID order. The 30 manual samples and the DB import are still pending.
+- Diagnostics: Import errors show the exception class, SQLSTATE when available and a sanitized primary message. Connection URLs, known passwords/tokens and password assignments are redacted; server COPY row context is not displayed. Simulated connection and COPY failures test the output without importing data.
+- Date: 2026-10-21
+
 ### D025 D-07 reproducible local fixture selection
 
 - Context: D-07 needs 200 to 500 papers around 20 LitSearch queries, without redistributing dataset records. The chosen approach is local selection by each teammate rather than a committed list of dataset IDs.
@@ -221,6 +231,12 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 ---
 
 ## Rejected approaches
+
+### R003 Trimming affiliation words from author last names
+
+- Approach: In D-08, remove excluded words from the end of a last name ("Quoc V Le Google Brain" to "Quoc V Le") instead of dropping the entry.
+- Why rejected: Tested on all 56,115 D-03 papers: only 76 more paper links (196,274 instead of 196,198) and 6 fewer papers without authors (247 instead of 253). It also turns institutions into authors ("Johns Hopkins University" to "Johns Hopkins", "Peng Cheng Laboratory" to "Peng Cheng"). Most lost people are not recovered, because the parser puts them entirely into the first name and the company into the last name; splitting first names would be an even less reliable guess. See D026.
+- Date: 2026-10-21
 
 ### R002 Makefile for the smoke test
 

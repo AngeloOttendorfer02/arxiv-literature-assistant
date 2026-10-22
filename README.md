@@ -174,8 +174,15 @@ uv run --locked --group data --group rag python scripts/load_fixture.py
 
 The default is 300 papers around 20 queries. Files stay under
 `DATA_DIR/fixtures/v0`; no LitSearch records are committed. The import uses
-`INGEST_DATABASE_URL` and requires empty data tables. It loads paper metadata and
-internal citations; authors, chunks and embeddings follow in later tasks.
+`INGEST_DATABASE_URL` and requires empty data tables with a fresh author ID
+sequence. It loads paper metadata, internal citations and authors; chunks and
+embeddings follow in later tasks. To reload, reset the tables first as
+administrator; a failed or rolled-back import also needs this reset:
+
+```sh
+docker compose exec db psql -X -U postgres -d scilitrag -c "TRUNCATE papers, authors, paper_authors, citations, chunks RESTART IDENTITY;"
+```
+
 See [fixture selection and loading](tests/fixtures/README.md) for details.
 
 TODO: dump restore.
