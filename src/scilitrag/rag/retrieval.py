@@ -1,8 +1,9 @@
 from scilitrag.config import load_settings
 from scilitrag.contracts import Evidence, Plan
 from scilitrag.rag.errors import RagUserError
-from scilitrag.rag.evidence_index import allocate_evidence
-from scilitrag.rag.search_backend import default_backend
+from scilitrag.rag.evidence.index import allocate_evidence
+from scilitrag.rag.scenarios.citation_path import retrieve_s2
+from scilitrag.rag.search.backend import default_backend
 
 
 def paper_evidence(row: dict, *, has_passages: bool) -> Evidence:
@@ -27,8 +28,6 @@ def paper_evidence(row: dict, *, has_passages: bool) -> Evidence:
 def retrieve_s1(plan: Plan, backend) -> list[Evidence]:
     papers = backend.hybrid(plan)
     if not papers:
-        if plan.scenario == "S3":
-            return []
         raise RagUserError(
             "No matching papers were found in the indexed corpus. Try fewer filters."
         )
@@ -61,6 +60,9 @@ def retrieve_s1(plan: Plan, backend) -> list[Evidence]:
 
 
 def retrieve_with(plan: Plan, backend) -> list[Evidence]:
+    if plan.scenario == "S2":
+        return retrieve_s2(plan, backend)
+    # S3 uses the same topic-paper seeds; SQL aggregates their outgoing edges.
     return retrieve_s1(plan, backend)
 
 

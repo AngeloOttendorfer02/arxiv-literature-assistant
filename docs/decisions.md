@@ -23,9 +23,49 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Validation: Fixture: 2,971 list entries give 447 pairs (manifest 448 before dropping 1 self-citation); dropped 2,523 outside the fixture. `load_fixture.py --check-only` prints the direction check: 447 of 447 pairs in the citing paper's bibliography; citing paper newer in 435, same year in 11, year missing in 1. Synthetic tests cover direction, dropped cases, bibliography and year comparison. 
 - Date: 2026-10-23
 
+### D030 S-10 check_sentence: number check and NLI
+
+- Context: The pipeline already checks label syntax and placement (`citation_status`). `check_sentence` adds the semantic checks before release.
+- Options: all cited sources must support the sentence, or one is enough; numbers only, or also author names against the tables; provisional thresholds of 0.5 or stricter ones (0.8).
+- Decision: Stage 1 requires every number and year of the sentence (labels removed) to occur in the cited sources, otherwise `fact_mismatch`; for SQL evidence only the `rows` and `parameters` of the stored table count, not the SQL text. Stage 2 scores each cited chunk or paper with the NLI model (chunk as premise, sentence as hypothesis). One source with entailment of at least `NLI_ENTAILMENT_THRESHOLD` (0.5) gives `ok`. Otherwise a contradiction of at least `NLI_CONTRADICTION_THRESHOLD` (0.5) gives `fact_mismatch`, else `unsupported`. `nli_scores` holds the probabilities of the source with the highest entailment. Sentences that cite only SQL evidence pass after stage 1. Model ID `NLI_MODEL` (D029) and both thresholds are configurable and provisional until S-13.
+- Reason: One supporting source fits sentences that cite two papers. The number check is deterministic and catches changed figures, which NLI sometimes misses. Not covered: wrong author names or wrong claims about SQL rows that contain no number; S-15 measures what is missed.
+- Date: 2026-10-23
+
+---
+
+### D029 S-09 NLI model for sentence validation
+
+- Context: `check_sentence` needs an NLI cross-encoder (chunk as premise, sentence as hypothesis, E15) that runs on CPU per released sentence.
+- Options: `dleemiller/EttinX-nli-s` (68M); `dleemiller/ModernCE-large-nli` (395M); both configurable with the small one as default.
+- Decision: `dleemiller/EttinX-nli-s`, model ID in the configuration so it can be swapped. Both cards list MIT licence, no gating and a context of 8192 tokens. The label order is [contradiction, entailment, neutral] (index 0, 1, 2), fixed in code and covered by a test. The `config.json` of ModernCE lists entailment, neutral, contradiction, which disagrees with its card and with its outputs; EttinX has only LABEL_0 to LABEL_2.
+- Reason: On 7 hand-made pairs (changed number, wrong hardware, negation, neutral) both models were right. On 4 CPU threads with a 466-token premise EttinX needs about 250 ms per pair, ModernCE about 1700 ms. Seven pairs say nothing about accuracy; precision and recall come from S-15. If they are too low, ModernCE (MNLI mismatched 92.0 vs 88.0 on the cards) is the fallback.
+- Date: 2026-10-23
+
+---
+
+### D028 S-04 Prompt Guard 2 on the query
+
+- Context: `check_input` must refuse injections and jailbreaks before any DB or LLM call (E12). The model has a 512-token window.
+- Options: threshold 0.5 fixed, 0.5 provisional then tuned on the tuning set, 0.3 stricter from the start; fixed windows with overlap or splitting at sentence borders.
+- Decision: `meta-llama/Llama-Prompt-Guard-2-86M` on CPU via `transformers`, loaded on first use (needs `HF_TOKEN`; a missing token raises instead of letting the query pass). The query is tokenized without truncation and cut into windows of 510 tokens with 64 tokens overlap; the result is the highest malicious probability over all windows. A score of at least `PROMPT_GUARD_THRESHOLD` (default 0.5, provisional) refuses the query as `injection`; the value is chosen on the tuning set in S-13. The checkpoint config only has LABEL_0 and LABEL_1; index 1 is malicious (checked on sample prompts). The stage list of the real `check_input` is `prompt_guard` and `pii`; topic gate and write-intent refusal follow in S-06 and S-07.
+- Reason: Windows with overlap keep an instruction that straddles a border detectable and match the model card advice to scan segments. The real model catches the role-play jailbreak (smoke case A2). It scores "Delete all papers by Yann LeCun from the database." at 0.001, so S4 needs S-07 and the real `check_input` does not refuse it yet.
+- Date: 2026-10-23
+
+---
+
+### D027 S-03 PII masking with Presidio on a blank tokenizer
+
+- Context: `mask_pii` must mask e-mail, phone and similar data in queries, answers and logs. Author names are search terms and must stay.
+- Options: `en_core_web_sm` (model wheel from GitHub, NER unused); `spacy.blank("en")` with a custom engine; `en_core_web_lg` (about 400 MB).
+- Decision: Presidio `AnalyzerEngine` with a spaCy engine that loads `spacy.blank("en")` and only the e-mail, phone, credit card, IBAN and IP recognizers (placeholders `<EMAIL>`, `<PHONE>`, `<CARD>`, `<IBAN>`, `<IP>`, minimum score 0.4). PERSON and other NER entities are not enabled. The analyzer is built once per process.
+- Reason: All enabled recognizers are pattern based, so no model download and no extra image size. A model can be added later if LOCATION or similar entities are wanted.
+- Date: 2026-10-23
+
+---
+
 ### D026 D-08 authors from S2ORC name annotations
 
-- Context: corpus_s2orc marks author blocks with first and last name spans, but also tags affiliations and headers as authors. WP2 entity linking looks authors up by `normalize_name` (src/scilitrag/rag/entities.py).
+- Context: corpus_s2orc marks author blocks with first and last name spans, but also tags affiliations and headers as authors. WP2 entity linking looks authors up by `normalize_name` (src/scilitrag/rag/search/entities.py).
 - Decision: scripts/author_names.py pairs the first and last name spans of each block, unescapes HTML entities and strips edge marks; entries missing a first or last name are dropped; the paper is kept. `normalized_name` comes from WP2's `normalize_name` (imported, not copied); equal normalized names are one author (O2), linked once per paper, shown with the most frequent spelling. Names with a word from EXCLUDED_WORDS (university, lab, google, ...), a phrase from EXCLUDED_PHRASES or a Chinese institution term from EXCLUDED_SUBSTRINGS are dropped. Authors are inserted sorted by `normalized_name` with IDs from 1, so rebuilds give the same IDs.
 - Reason: On the D-03 data the lists remove 797 of 75,746 distinct names. "ai" and "alexa" only count in phrases, "bosch" and one-letter first names stay, because they match real people. Known limits: same name means same person; accent variants (438 groups) and partly romanized Chinese names stay separate; person-plus-company entries ("ilya sutskever openai", 326 names) are lost. Trimming affiliation words was rejected, see R003.
 - Statistics (for D-23): All 56,115 D-03 papers: 227,528 blocks give 74,949 authors and 196,083 paper links; dropped 18,530 without first or last name, 2,463 affiliations or headers, 10,452 repeated in the same paper. 255 papers (no query target) have no author and stay in the corpus, mostly Google/DeepMind parses ("Nicholas Carlini" + "Google") and proceedings headers.
@@ -55,7 +95,7 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ### D023 D-05 query indexes matched to entity linking
 
-- Context: D-05 lists year, both directions of citations and paper_authors, chunks by paper and a trigram title index. WP2 EntityLinker (src/scilitrag/rag/entities.py) also filters on lower(title), the title prefix before a colon and normalized_name.
+- Context: D-05 lists year, both directions of citations and paper_authors, chunks by paper and a trigram title index. WP2 EntityLinker (src/scilitrag/rag/search/entities.py) also filters on lower(title), the title prefix before a colon and normalized_name.
 - Options: only the D-05 indexes; also the expressions used by WP2.
 - Decision: docker/db/indexes.sql, run after schema.sql. B-tree on papers(year), citations(cited_id, citing_id), paper_authors(corpus_id, author_id), both title expressions and authors(normalized_name), each with the ID used for ordering; GIN trigram on papers(title). The script creates pg_trgm itself, since the Docker init file only runs on a fresh volume.
 - Reason: The primary keys cover the other directions, UNIQUE (corpus_id, seq_no) covers chunks by paper. Expression indexes only help while the WP2 queries use the same expressions, so query changes need a review with WP2. IF NOT EXISTS checks names only; a changed definition needs DROP INDEX first. Repeat ANALYZE after bulk imports.
@@ -258,3 +298,21 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Approach: dependencies in `requirements.txt` (initial repo state).
 - Why rejected: no lockfile, no separation of heavy model dependencies. Replaced by D002.
 - Date: 2026-10-17
+
+
+## Retrieval evaluation structure and acceptance (2026-10-23)
+
+- Group public examples under eval/retrieval and reusable evaluation under
+  scilitrag.evaluation. Keep command scripts thin and name them by their feature:
+  build_reference_set.py and evaluate_retrieval.py. Remove script imports from tests.
+- Validate reference sets before accessing services. Require known database IDs and
+  a frozen revision when exporting real reference data. Keep real sources and outputs
+  under ignored eval/private; do not redistribute dataset text.
+- Exclude refusals and empty answers from completed evaluations. Require compatible
+  revisions for reference metrics and identical seed scopes for author-count comparisons.
+  Missing years are unscored. Reject empty or mismatched saved reports.
+- Preserve the distinction between structural citation validity and human-reviewed
+  semantic support. Unreviewed metrics remain null; mock guards remain explicitly marked.
+- SQL facts and S1/S2/S3 implementation are present. Shared embedder/index provisioning,
+  real semantic guardrails, model measurements and human labels remain integration and
+  acceptance work. See retrieval.md, evaluation.md and execution_flow.md.

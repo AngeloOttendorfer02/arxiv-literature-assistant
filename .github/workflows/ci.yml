@@ -38,3 +38,6 @@ jobs:
 
       - name: Smoke test
         run: uv run --locked --group data --group rag python scripts/smoke.py
+
+      - name: Retrieval evaluation smoke
+        run: uv run --locked --group data --group rag python scripts/evaluate_retrieval.py eval/retrieval/cases.example.json --allow-mocks --output "$RUNNER_TEMP/retrieval-evaluation.json"
