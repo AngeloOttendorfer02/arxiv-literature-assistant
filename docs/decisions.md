@@ -14,6 +14,16 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D028 S-04 Prompt Guard 2 on the query
+
+- Context: `check_input` must refuse injections and jailbreaks before any DB or LLM call (E12). The model has a 512-token window.
+- Options: threshold 0.5 fixed, 0.5 provisional then tuned on the tuning set, 0.3 stricter from the start; fixed windows with overlap or splitting at sentence borders.
+- Decision: `meta-llama/Llama-Prompt-Guard-2-86M` on CPU via `transformers`, loaded on first use (needs `HF_TOKEN`; a missing token raises instead of letting the query pass). The query is tokenized without truncation and cut into windows of 510 tokens with 64 tokens overlap; the result is the highest malicious probability over all windows. A score of at least `PROMPT_GUARD_THRESHOLD` (default 0.5, provisional) refuses the query as `injection`; the value is chosen on the tuning set in S-13. The checkpoint config only has LABEL_0 and LABEL_1; index 1 is malicious (checked on sample prompts). The stage list of the real `check_input` is `prompt_guard` and `pii`; topic gate and write-intent refusal follow in S-06 and S-07.
+- Reason: Windows with overlap keep an instruction that straddles a border detectable and match the model card advice to scan segments. The real model catches the role-play jailbreak (smoke case A2). It scores "Delete all papers by Yann LeCun from the database." at 0.001, so S4 needs S-07 and the real `check_input` does not refuse it yet.
+- Date: 2026-10-23
+
+---
+
 ### D027 S-03 PII masking with Presidio on a blank tokenizer
 
 - Context: `mask_pii` must mask e-mail, phone and similar data in queries, answers and logs. Author names are search terms and must stay.
