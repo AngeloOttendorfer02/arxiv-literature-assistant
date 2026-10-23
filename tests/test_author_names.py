@@ -35,6 +35,16 @@ def paper(corpus_id, blocks, numeric_strings=False):
     return {"corpusid": corpus_id, "content": {"text": text, "annotations": annotations}}
 
 
+def test_repeated_identical_spans_are_joined_once():
+    row = paper(1, [(["Han"], ["Shi"], "University X")])
+    annotations = row["content"]["annotations"]
+    for field in ("authorfirstname", "authorlastname"):
+        annotations[field] = json.dumps(json.loads(annotations[field]) * 2)
+    authors, links, _ = extract_authors([row])
+    assert authors == [("Han", "Shi", "Han Shi", "han shi")]
+    assert links == [("han shi", 1)]
+
+
 def test_names_are_paired_per_block_filtered_and_deduplicated():
     rows = [
         paper(

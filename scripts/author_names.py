@@ -30,7 +30,8 @@ EDGE_NOISE = re.compile(r"^[\W_]+|[^\w.]+$")
 
 
 def join_spans(text, spans, start, end):
-    value = " ".join(text[s:e] for s, e in spans if start <= s and e <= end)
+    # S2ORC repeats identical spans, which would turn "Han Shi" into "Han Han Shi Shi".
+    value = " ".join(text[s:e] for s, e in dict.fromkeys(spans) if start <= s and e <= end)
     # The source keeps HTML entities such as &apos;; leading and trailing marks are parser noise.
     value = EDGE_NOISE.sub("", html.unescape(value))
     return " ".join(value.split())
