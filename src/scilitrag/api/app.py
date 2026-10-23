@@ -75,6 +75,7 @@ def create_app(components: Components | None = None, settings: Settings | None =
             components,
             settings.request_timeout_s,
             max_buffer_chars=settings.max_sentence_buffer_chars,
+            metrics=log.metrics,
         )
         try:
             async with aclosing(events):

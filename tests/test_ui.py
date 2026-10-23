@@ -1,6 +1,6 @@
 import pytest
 
-pytest.importorskip("streamlit")  # CI installs only the dev group; run with --group ui
+pytest.importorskip("streamlit")  # needs --group ui
 
 from scilitrag.contracts import (
     SENTENCE_REMOVED,
