@@ -14,6 +14,36 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D030 S-10 check_sentence: number check and NLI
+
+- Context: The pipeline already checks label syntax and placement (`citation_status`). `check_sentence` adds the semantic checks before release.
+- Options: all cited sources must support the sentence, or one is enough; numbers only, or also author names against the tables; provisional thresholds of 0.5 or stricter ones (0.8).
+- Decision: Stage 1 requires every number and year of the sentence (labels removed) to occur in the cited sources, otherwise `fact_mismatch`; for SQL evidence only the `rows` and `parameters` of the stored table count, not the SQL text. Stage 2 scores each cited chunk or paper with the NLI model (chunk as premise, sentence as hypothesis). One source with entailment of at least `NLI_ENTAILMENT_THRESHOLD` (0.5) gives `ok`. Otherwise a contradiction of at least `NLI_CONTRADICTION_THRESHOLD` (0.5) gives `fact_mismatch`, else `unsupported`. `nli_scores` holds the probabilities of the source with the highest entailment. Sentences that cite only SQL evidence pass after stage 1. Model ID `NLI_MODEL` (D029) and both thresholds are configurable and provisional until S-13.
+- Reason: One supporting source fits sentences that cite two papers. The number check is deterministic and catches changed figures, which NLI sometimes misses. Not covered: wrong author names or wrong claims about SQL rows that contain no number; S-15 measures what is missed.
+- Date: 2026-10-23
+
+---
+
+### D029 S-09 NLI model for sentence validation
+
+- Context: `check_sentence` needs an NLI cross-encoder (chunk as premise, sentence as hypothesis, E15) that runs on CPU per released sentence.
+- Options: `dleemiller/EttinX-nli-s` (68M); `dleemiller/ModernCE-large-nli` (395M); both configurable with the small one as default.
+- Decision: `dleemiller/EttinX-nli-s`, model ID in the configuration so it can be swapped. Both cards list MIT licence, no gating and a context of 8192 tokens. The label order is [contradiction, entailment, neutral] (index 0, 1, 2), fixed in code and covered by a test. The `config.json` of ModernCE lists entailment, neutral, contradiction, which disagrees with its card and with its outputs; EttinX has only LABEL_0 to LABEL_2.
+- Reason: On 7 hand-made pairs (changed number, wrong hardware, negation, neutral) both models were right. On 4 CPU threads with a 466-token premise EttinX needs about 250 ms per pair, ModernCE about 1700 ms. Seven pairs say nothing about accuracy; precision and recall come from S-15. If they are too low, ModernCE (MNLI mismatched 92.0 vs 88.0 on the cards) is the fallback.
+- Date: 2026-10-23
+
+---
+
+### D028 S-04 Prompt Guard 2 on the query
+
+- Context: `check_input` must refuse injections and jailbreaks before any DB or LLM call (E12). The model has a 512-token window.
+- Options: threshold 0.5 fixed, 0.5 provisional then tuned on the tuning set, 0.3 stricter from the start; fixed windows with overlap or splitting at sentence borders.
+- Decision: `meta-llama/Llama-Prompt-Guard-2-86M` on CPU via `transformers`, loaded on first use (needs `HF_TOKEN`; a missing token raises instead of letting the query pass). The query is tokenized without truncation and cut into windows of 510 tokens with 64 tokens overlap; the result is the highest malicious probability over all windows. A score of at least `PROMPT_GUARD_THRESHOLD` (default 0.5, provisional) refuses the query as `injection`; the value is chosen on the tuning set in S-13. The checkpoint config only has LABEL_0 and LABEL_1; index 1 is malicious (checked on sample prompts). The stage list of the real `check_input` is `prompt_guard` and `pii`; topic gate and write-intent refusal follow in S-06 and S-07.
+- Reason: Windows with overlap keep an instruction that straddles a border detectable and match the model card advice to scan segments. The real model catches the role-play jailbreak (smoke case A2). It scores "Delete all papers by Yann LeCun from the database." at 0.001, so S4 needs S-07 and the real `check_input` does not refuse it yet.
+- Date: 2026-10-23
+
+---
+
 ### D027 S-03 PII masking with Presidio on a blank tokenizer
 
 - Context: `mask_pii` must mask e-mail, phone and similar data in queries, answers and logs. Author names are search terms and must stay.
