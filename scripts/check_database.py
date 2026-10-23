@@ -5,10 +5,10 @@ import json
 from dataclasses import asdict
 
 from scilitrag.config import load_settings
-from scilitrag.rag.database import DatabaseReader
-from scilitrag.rag.database_contract import validate_database
 from scilitrag.rag.errors import RagUserError
-from scilitrag.rag.search_readiness import validate_search_indexes
+from scilitrag.rag.search.contract import validate_database
+from scilitrag.rag.search.database import DatabaseReader
+from scilitrag.rag.search.readiness import validate_search_indexes
 
 
 def main() -> int:

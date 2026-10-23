@@ -171,6 +171,8 @@ def render_answer(answer: Answer, index: int) -> None:
         return
     st.markdown(answer_text(answer) or "_No answer._")
     for table in answer.tables:
+        if table.scope:
+            st.caption(table.scope)
         st.dataframe([dict(zip(table.columns, row)) for row in table.rows], hide_index=True)
         st.caption(f"SQL query `{table.query_id}`")
     citations = answer.citations()

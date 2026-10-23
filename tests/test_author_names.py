@@ -7,7 +7,7 @@ import pytest
 from author_names import extract_authors, is_excluded
 from load_fixture import AUTHOR_COPY, PAPER_AUTHOR_COPY, import_authors
 
-from scilitrag.rag.entities import normalize_name
+from scilitrag.rag.search.entities import normalize_name
 
 
 def paper(corpus_id, blocks, numeric_strings=False):

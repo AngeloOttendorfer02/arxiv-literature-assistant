@@ -7,7 +7,7 @@ from pathlib import Path
 
 from scilitrag.contracts import Plan
 from scilitrag.rag.errors import RagUserError
-from scilitrag.rag.search_backend import BM25_SQL, DENSE_SQL, default_backend
+from scilitrag.rag.search.backend import BM25_SQL, DENSE_SQL, default_backend
 
 
 def explain_with(plan: Plan, backend) -> dict:
