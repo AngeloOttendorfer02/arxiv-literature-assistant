@@ -95,7 +95,7 @@ def test_invalid_targets_or_budget_are_rejected(targets, count):
 def test_export_preserves_sources_targets_nulls_and_alignment(source):
     before = {path.name: path.read_bytes() for path in (source / "filtered/d03").iterdir()}
     folder, manifest = build_fixture(source, count=200)
-    papers, citations = fixture_records(folder)
+    papers, citations, _ = fixture_records(folder)
     assert len(papers) == 200
     assert {cid for cid, *_ in papers} >= set(range(1, 21))
     assert {row[0]: row[1] for row in papers}[1] is None

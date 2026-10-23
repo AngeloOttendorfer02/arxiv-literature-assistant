@@ -21,6 +21,51 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Decision: `guardrails/sentences.py`, no new dependency. A boundary is only reported once the next character is known and it is a capital letter, digit, quote, bracket or list marker. No boundary after listed abbreviations (e.g., i.e., vs., Fig., Eq., Dr., ...), single initials and a lone list number; after "et al." and "etc." only when a capital letter follows. Citation labels directly after the punctuation belong to the sentence (`claim. [1]`). A newline before `-`, `*` or a numbered marker also ends a sentence. `api/pipeline.py` imports the function, the `SentenceBuffer` interface is unchanged.
 - Reason: When unsure the splitter does not split. A merged sentence is still checked as a whole, a fragment would lose its label and be removed. A library would not know the label placement and the streaming rule, so both would still be our code.
 - Known gap: `SentenceBuffer.finish()` rejects a last bullet without final punctuation as incomplete; this is not changed here.
+### D032 D-09 citation pairs from corpus_clean.citations
+
+- Context: corpus_clean.citations lists corpus IDs per paper. D-09 requires deduplicated pairs and a direction check. The schema needs both papers in `papers` (foreign keys).
+- Decision: scripts/citations.py builds (citing_id, cited_id) pairs, where the list owner is the citing paper, and checks the direction against the citing paper's S2ORC bibliography and the publication years. Self-citations, pairs with either paper outside the loaded corpus and duplicate pairs are dropped and counted; papers are never dropped. Pairs where the citing paper is older, and mutual citations, are kept. load_fixture.py uses the same function; the fixture manifest still counts source pairs, so its hash is unchanged.
+- Reason: Direction checked on all 56,115 D-03 papers: every kept pair is in the citing paper's own S2ORC bibliography (`bibentry` with `matched_paper_id`, 328,622 of 328,622). Years agree: citing paper newer in 305,854 pairs, same year in 14,692, older in 288 (likely preprints), year missing in 7,788. Self-citations are parser errors and would inflate citation counts (S3). Targets outside the corpus all point to papers removed by D-03, mostly for empty titles; incoming counts of retained papers are unaffected.
+- Statistics (for D-23): 340,484 list entries give 328,622 pairs; dropped 11,767 outside the corpus (2,727 papers removed by D-03), 95 self-citations, 0 duplicates. 964 mutual pairs. 10,037 papers cite no corpus paper, 23,117 are not cited, 6,233 have no link in either direction.
+- Validation: Fixture: 2,971 list entries give 447 pairs (manifest 448 before dropping 1 self-citation); dropped 2,523 outside the fixture. `load_fixture.py --check-only` prints the direction check: 447 of 447 pairs in the citing paper's bibliography; citing paper newer in 435, same year in 11, year missing in 1. Synthetic tests cover direction, dropped cases, bibliography and year comparison. 
+- Date: 2026-10-23
+
+### D030 S-10 check_sentence: number check and NLI
+
+- Context: The pipeline already checks label syntax and placement (`citation_status`). `check_sentence` adds the semantic checks before release.
+- Options: all cited sources must support the sentence, or one is enough; numbers only, or also author names against the tables; provisional thresholds of 0.5 or stricter ones (0.8).
+- Decision: Stage 1 requires every number and year of the sentence (labels removed) to occur in the cited sources, otherwise `fact_mismatch`; for SQL evidence only the `rows` and `parameters` of the stored table count, not the SQL text. Stage 2 scores each cited chunk or paper with the NLI model (chunk as premise, sentence as hypothesis). One source with entailment of at least `NLI_ENTAILMENT_THRESHOLD` (0.5) gives `ok`. Otherwise a contradiction of at least `NLI_CONTRADICTION_THRESHOLD` (0.5) gives `fact_mismatch`, else `unsupported`. `nli_scores` holds the probabilities of the source with the highest entailment. Sentences that cite only SQL evidence pass after stage 1. Model ID `NLI_MODEL` (D029) and both thresholds are configurable and provisional until S-13.
+- Reason: One supporting source fits sentences that cite two papers. The number check is deterministic and catches changed figures, which NLI sometimes misses. Not covered: wrong author names or wrong claims about SQL rows that contain no number; S-15 measures what is missed.
+- Date: 2026-10-23
+
+---
+
+### D029 S-09 NLI model for sentence validation
+
+- Context: `check_sentence` needs an NLI cross-encoder (chunk as premise, sentence as hypothesis, E15) that runs on CPU per released sentence.
+- Options: `dleemiller/EttinX-nli-s` (68M); `dleemiller/ModernCE-large-nli` (395M); both configurable with the small one as default.
+- Decision: `dleemiller/EttinX-nli-s`, model ID in the configuration so it can be swapped. Both cards list MIT licence, no gating and a context of 8192 tokens. The label order is [contradiction, entailment, neutral] (index 0, 1, 2), fixed in code and covered by a test. The `config.json` of ModernCE lists entailment, neutral, contradiction, which disagrees with its card and with its outputs; EttinX has only LABEL_0 to LABEL_2.
+- Reason: On 7 hand-made pairs (changed number, wrong hardware, negation, neutral) both models were right. On 4 CPU threads with a 466-token premise EttinX needs about 250 ms per pair, ModernCE about 1700 ms. Seven pairs say nothing about accuracy; precision and recall come from S-15. If they are too low, ModernCE (MNLI mismatched 92.0 vs 88.0 on the cards) is the fallback.
+- Date: 2026-10-23
+
+---
+
+### D028 S-04 Prompt Guard 2 on the query
+
+- Context: `check_input` must refuse injections and jailbreaks before any DB or LLM call (E12). The model has a 512-token window.
+- Options: threshold 0.5 fixed, 0.5 provisional then tuned on the tuning set, 0.3 stricter from the start; fixed windows with overlap or splitting at sentence borders.
+- Decision: `meta-llama/Llama-Prompt-Guard-2-86M` on CPU via `transformers`, loaded on first use (needs `HF_TOKEN`; a missing token raises instead of letting the query pass). The query is tokenized without truncation and cut into windows of 510 tokens with 64 tokens overlap; the result is the highest malicious probability over all windows. A score of at least `PROMPT_GUARD_THRESHOLD` (default 0.5, provisional) refuses the query as `injection`; the value is chosen on the tuning set in S-13. The checkpoint config only has LABEL_0 and LABEL_1; index 1 is malicious (checked on sample prompts). The stage list of the real `check_input` is `prompt_guard` and `pii`; topic gate and write-intent refusal follow in S-06 and S-07.
+- Reason: Windows with overlap keep an instruction that straddles a border detectable and match the model card advice to scan segments. The real model catches the role-play jailbreak (smoke case A2). It scores "Delete all papers by Yann LeCun from the database." at 0.001, so S4 needs S-07 and the real `check_input` does not refuse it yet.
+- Date: 2026-10-23
+
+---
+
+### D027 S-03 PII masking with Presidio on a blank tokenizer
+
+- Context: `mask_pii` must mask e-mail, phone and similar data in queries, answers and logs. Author names are search terms and must stay.
+- Options: `en_core_web_sm` (model wheel from GitHub, NER unused); `spacy.blank("en")` with a custom engine; `en_core_web_lg` (about 400 MB).
+- Decision: Presidio `AnalyzerEngine` with a spaCy engine that loads `spacy.blank("en")` and only the e-mail, phone, credit card, IBAN and IP recognizers (placeholders `<EMAIL>`, `<PHONE>`, `<CARD>`, `<IBAN>`, `<IP>`, minimum score 0.4). PERSON and other NER entities are not enabled. The analyzer is built once per process.
+- Reason: All enabled recognizers are pattern based, so no model download and no extra image size. A model can be added later if LOCATION or similar entities are wanted.
 - Date: 2026-10-23
 
 ---
