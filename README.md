@@ -227,7 +227,7 @@ Starts `db`, `api` (http://127.0.0.1:8000/health) and `ui` (chat at http://127.0
 
 ## Request log
 
-The API writes one JSON line per query to stdout and to `logs/requests.jsonl` (folder set by `LOG_DIR`): request id, status (`ok`, `refused`, `error`, `timeout`, `cancelled`), latencies per stage, TTFT, tokens per second, guardrail events. The query text is never logged, only its length. The id is also sent as `X-Request-ID` and shown under each answer in the UI.
+The API writes one JSON line per query to stdout and to `logs/requests.jsonl` (folder set by `LOG_DIR`): request id, status (`ok`, `refused`, `error`, `timeout`, `cancelled`), latencies per stage, TTFT, tokens per second, guardrail events with score. `component_ms` holds steps inside a stage that components report with `scilitrag.timings.record_timing` (dense, BM25 and fusion time of the paper and chunk search). The query text is never logged, only its length. The id is also sent as `X-Request-ID` and shown under each answer in the UI.
 
 ```
 docker compose logs -f api

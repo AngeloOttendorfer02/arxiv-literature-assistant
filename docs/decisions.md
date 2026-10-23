@@ -14,6 +14,14 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D047 Component timings in the request log
+
+- Context: A-08 asks for dense, BM25 and SQL time and guardrail scores per request. The pipeline only sees whole stages; the search backend measures dense, BM25 and fusion time, and the input check returns scores that the status events do not carry.
+- Options: a per-request context that components write to; new contract fields for timings (e.g. `Retrieve` returning a result with `timings_ms` instead of `list[Evidence]`); keep the separate log line of the search backend and join by request id.
+- Decision: `scilitrag.timings` holds a per-request `RequestMetrics` in a context variable. The API passes it to the pipeline task; components call `record_timing(name, ms)` (summed per request). The input check scores are already in the contract (`CheckInputResult.stages[].score`), so the pipeline writes them into the same object explicitly. The request log adds `component_ms` and a score per guardrail event. Outside a request `record_timing` does nothing. Scores stay out of `StatusEvent`, since a client could tune a jailbreak against the Prompt Guard threshold.
+- Reason: Timings are telemetry, not domain data; in the contract every caller, mock and scenario would carry them, and nested calls (hybrid and chunk search inside retrieve) would pass them up by hand. A context per request is the usual pattern for this (OpenTelemetry spans work the same way). Limit: timings from threads a component starts itself are lost, since only `run_in_threadpool` copies the context. SQL time is already the `sql` stage.
+- Date: 2026-10-23
+
 ### D045 D-10 clean full texts from S2ORC annotations
 
 - Context: corpus_s2orc texts start with title, author block (names, e-mails, affiliations) and abstract and end with the bibliography. D-10 removes the author block and bibliography and keeps section boundaries for the D-13 chunker. Title and abstract are already in `papers` and embedded there (D-14).
