@@ -16,6 +16,7 @@ from urllib.parse import quote, quote_plus
 
 from author_names import extract_authors
 from citations import bibliography_counts, bibliography_ids, build_citations, direction_counts
+from email_masking import count_emails, mask_emails
 from filter_data import batches
 from fulltext import fulltext_counts
 from select_fixture import DATASET, FILES, REVISION, data_directory, digest
@@ -24,12 +25,6 @@ PAPER_COPY = "COPY public.papers (corpus_id, title, abstract, year) FROM STDIN"
 CITATION_COPY = "COPY public.citations (citing_id, cited_id) FROM STDIN"
 AUTHOR_COPY = "COPY public.authors (first_name, last_name, name, normalized_name) FROM STDIN"
 PAPER_AUTHOR_COPY = "COPY public.paper_authors (author_id, corpus_id) FROM STDIN"
-# O13: e-mails are masked at import; same pattern and placeholder as the mask_pii mock.
-EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
-
-
-def mask_emails(text):
-    return EMAIL.sub("<EMAIL>", text) if text else text
 
 
 def database_error_detail(error, dsn):
@@ -236,6 +231,17 @@ def main():
         f"{full.get('no_numbered_section', 0)} papers without numbered sections, "
         f"{full.get('no_bibliography', 0)} without bibliography."
     )
+    left = full.get("emails_left", 0) + sum(
+        count_emails(title) + count_emails(abstract) for _, title, abstract, _ in papers
+    )
+    print(
+        f"E-mails: {full.get('emails_masked', 0)} masked in full-text sections; "
+        f"{left} recognized email expressions remain in titles, abstracts and full texts."
+    )
+    if left:
+        parser.exit(
+            1, "Fixture validation failed: recognized email expressions remain after masking.\n"
+        )
     print(
         f"Authors: {len(authors)} with {len(links)} paper links from "
         f"{author_counts.get('author_blocks', 0)} author blocks; dropped "

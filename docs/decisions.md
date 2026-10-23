@@ -14,6 +14,17 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D046 D-11 e-mail masking in full texts (extends D025, D040)
+
+- Context: D-10 leaves contact e-mails in retained sections; D025 already masks titles and abstracts.
+- Decision: `scripts/email_masking.py` supplies the shared import regex to `load_fixture.py` and `fulltext.py`. Each expression becomes one `<EMAIL>` and counts once; author names outside it are preserved. The WP3 mock shares the placeholder but keeps its simpler pattern. `--check-only` fails on remaining recognized expressions; DB validation follows in D-17.
+- Matched: Ordinary addresses and groups in matching `{}` or `()` with one or more names separated by commas or `|`, e.g. `{alice|bob}@uni.edu`, `(alice | bob)@uni.edu` and `{alice}@uni.edu`. Whitespace and line breaks around names/separators and before `@` are allowed.
+- Limitations: Dotless domains (`user@localhost`) are not matched. Slash forms are only partially masked (`alice/bob@uni.edu` becomes `alice/<EMAIL>`); broader matching could consume URL/path text. Zero recognized matches does not establish that all contact formats are absent.
+- Statistics (D-23): Current pattern, all 56,115 D-03 papers: 1,694 expressions masked in sections of 948 papers; 177 in titles/abstracts of 141 papers; 1,871 total. Zero recognized expressions remain. Independent audit: zero remaining checked brace/parenthesis/pipe groups; all four previously missed groups are now masked. Ten slash-form candidates remain partially masked (nine in sections, one in titles/abstracts); not all are confirmed contact shorthand.
+- Fixture: 300 papers; 12 expressions masked in sections of seven papers and one in titles/abstracts of one paper. Zero recognized expressions or independently detected groups remain; no slash candidates.
+- Validation: Regression tests cover comma/pipe groups, single addresses, whitespace, repeated masking, preserved names, mismatched delimiters and section boundaries. The corpus audit found no pipe-separated groups, so the recorded masking totals are unchanged. Full pytest: 345 passed, 28 skipped, one xfailed; Ruff lint and formatting pass.
+- Date: 2026-10-23
+
 ### D045 D-10 clean full texts from S2ORC annotations
 
 - Context: corpus_s2orc texts start with title, author block (names, e-mails, affiliations) and abstract and end with the bibliography. D-10 removes the author block and bibliography and keeps section boundaries for the D-13 chunker. Title and abstract are already in `papers` and embedded there (D-14).
