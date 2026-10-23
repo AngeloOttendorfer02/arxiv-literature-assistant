@@ -18,9 +18,9 @@ from scilitrag.contracts import (
     StatusEvent,
     TableEvent,
 )
-from scilitrag.rag.citation_labels import citation_status
 from scilitrag.rag.errors import LLMClientError, RagUserError
-from scilitrag.rag.evidence_index import EvidenceIndex
+from scilitrag.rag.evidence.index import EvidenceIndex
+from scilitrag.rag.evidence.labels import citation_status
 from scilitrag.rag.sentence_stream import SentenceBuffer
 
 logger = logging.getLogger(__name__)

@@ -3,8 +3,8 @@ from contextlib import aclosing
 
 from scilitrag.config import load_settings
 from scilitrag.contracts import Evidence, Plan
-from scilitrag.rag.context import build_context
-from scilitrag.rag.llm_client import ChatClient
+from scilitrag.rag.evidence.context import build_context
+from scilitrag.rag.llm.client import ChatClient
 
 
 async def generate_with(

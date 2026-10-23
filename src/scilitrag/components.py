@@ -27,7 +27,7 @@ REAL = {
     "sql_facts": "scilitrag.rag.sql_facts",
     "generate": "scilitrag.rag.generation",
     "check_sentence": "scilitrag.guardrails.validation",
-    "render_citations": "scilitrag.rag.citations",
+    "render_citations": "scilitrag.rag.evidence.citations",
 }
 
 

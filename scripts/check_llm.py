@@ -18,7 +18,7 @@ import httpx
 
 from scilitrag.config import ConfigError, load_settings
 from scilitrag.rag.errors import LLMClientError
-from scilitrag.rag.llm_client import ChatClient
+from scilitrag.rag.llm.client import ChatClient
 
 MESSAGES = [
     {"role": "system", "content": "Give a short answer. Do not include analysis or explanations."},

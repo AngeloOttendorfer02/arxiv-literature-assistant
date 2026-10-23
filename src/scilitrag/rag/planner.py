@@ -8,9 +8,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from scilitrag.config import Settings, load_settings
 from scilitrag.contracts import Plan, PlanQuery, Scenario
 from scilitrag.rag.errors import LLMClientError, RagUserError
-from scilitrag.rag.filters import parse_filters
-from scilitrag.rag.llm_client import ChatClient
-from scilitrag.rag.structured import JsonCompletionClient, complete_json
+from scilitrag.rag.llm.client import ChatClient
+from scilitrag.rag.llm.structured import JsonCompletionClient, complete_json
+from scilitrag.rag.search.filters import parse_filters
 
 logger = logging.getLogger(__name__)
 MAX_QUERY_CHARS = 6000
