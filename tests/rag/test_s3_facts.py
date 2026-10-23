@@ -1,7 +1,11 @@
+import asyncio
 import json
+from dataclasses import replace
 
 import pytest
 
+from scilitrag.api.pipeline import run_query
+from scilitrag.components import mock_components
 from scilitrag.config import load_settings
 from scilitrag.contracts import Evidence, Plan
 from scilitrag.rag.errors import RagUserError
@@ -83,6 +87,39 @@ def test_non_s3_sql_component_never_opens_database():
     assert component.with_evidence(Plan(scenario="S2", k=1), []) == []
 
 
+def test_pipeline_passes_retrieved_scope_and_table_precedes_generated_sentences():
+    class Facts:
+        def __call__(self, plan):
+            raise AssertionError("Standalone SQL must not repeat retrieval")
+
+        def with_evidence(self, plan, evidence):
+            assert evidence == SEEDS
+            return facts()
+
+    async def generate(plan, evidence):
+        assert evidence[-1].query_id == facts()[0].query_id
+        yield "The ranking uses the indexed citation pairs [4]. "
+
+    c = replace(
+        mock_components(0),
+        plan=lambda _: PLAN,
+        retrieve=lambda _: SEEDS,
+        sql_facts=Facts(),
+        generate=generate,
+        render_citations=render_citations,
+    )
+
+    async def collect():
+        return [event async for event in run_query("retrieval", c)]
+
+    events = asyncio.run(collect())
+    names = [name for name, _ in events]
+    assert names.index("table") < names.index("sentence")
+    sentence = next(e for name, e in events if name == "sentence")
+    assert sentence.citations[0].query_id == facts()[0].query_id
+    assert names[-1] == "done"
+
+
 def test_real_sql_matches_independent_pair_credits_and_tie_order(fixture_reader):
     table = author_facts(PLAN, SEEDS, fixture_reader, dataset_revision="synthetic-v1")[0]
     assert [row[:3] for row in table.rows] == [[20, "Bob", 4], [10, "Alice", 2], [30, "Carol", 2]]
@@ -94,3 +131,24 @@ def test_real_sql_matches_independent_pair_credits_and_tie_order(fixture_reader)
 def test_real_s3_author_filter_restricts_credited_authors_not_seeds(fixture_reader):
     table = author_facts(PLAN.model_copy(update={"author_ref": "Alice"}), SEEDS, fixture_reader)[0]
     assert table.rows == [[10, "Alice", 2, "1: BERT"]]
+
+
+def test_real_generation_keeps_sql_out_of_model_context_and_emits_rule_template():
+    from scilitrag.rag.generation import generate_with
+
+    class Client:
+        async def stream(self, messages):
+            payload = json.loads(messages[1]["content"])
+            assert all(item["type"] != "sql" for item in payload["evidence"])
+            assert "citation_count" not in messages[1]["content"]
+            yield "The selected paper describes retrieval [1]. "
+
+    async def collect():
+        return [
+            token
+            async for token in generate_with(PLAN, attach_sql_evidence(SEEDS, facts()), Client())
+        ]
+
+    output = asyncio.run(collect())
+    assert "one credit per author" in output[0] and "[4]" in output[0]
+    assert "describes retrieval" in output[-1]

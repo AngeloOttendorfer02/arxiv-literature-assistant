@@ -21,6 +21,7 @@ from scilitrag.contracts import (
 from scilitrag.rag.errors import LLMClientError, RagUserError
 from scilitrag.rag.evidence.index import EvidenceIndex
 from scilitrag.rag.evidence.labels import citation_status
+from scilitrag.rag.scenarios.authors import attach_sql_evidence
 from scilitrag.rag.sentence_stream import SentenceBuffer
 
 logger = logging.getLogger(__name__)
@@ -121,7 +122,13 @@ async def _run(
         )
 
         t = time.perf_counter()
-        facts = await run_in_threadpool(c.sql_facts, plan)
+        facts_with_evidence = getattr(c.sql_facts, "with_evidence", None)
+        facts = (
+            await run_in_threadpool(facts_with_evidence, plan, evidence)
+            if facts_with_evidence
+            else await run_in_threadpool(c.sql_facts, plan)
+        )
+        evidence = attach_sql_evidence(evidence, facts)
         latency["sql"] = _ms(t)
         yield (
             "status",
