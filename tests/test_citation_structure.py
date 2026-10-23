@@ -1,7 +1,7 @@
 import pytest
 
 from scilitrag.contracts import Evidence
-from scilitrag.rag.citation_labels import citation_labels, citation_status
+from scilitrag.rag.evidence.labels import citation_labels, citation_status
 
 MAPPING = {1: Evidence(label=1, type="paper", corpus_id=1, text="source")}
 

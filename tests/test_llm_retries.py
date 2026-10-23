@@ -5,8 +5,8 @@ import httpx
 import pytest
 
 from scilitrag.config import load_settings
-from scilitrag.rag.llm_client import ChatClient, LLMClientError
-from scilitrag.rag.retry import RetryBudget
+from scilitrag.rag.llm.client import ChatClient, LLMClientError
+from scilitrag.rag.llm.retry import RetryBudget
 
 SETTINGS = load_settings(
     {

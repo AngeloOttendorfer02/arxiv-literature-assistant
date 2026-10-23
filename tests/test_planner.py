@@ -5,7 +5,7 @@ import pytest
 from scilitrag.components import get_components
 from scilitrag.config import load_settings
 from scilitrag.rag.errors import RagUserError
-from scilitrag.rag.llm_client import ChatClient, LLMClientError
+from scilitrag.rag.llm.client import ChatClient, LLMClientError
 from scilitrag.rag.planner import build_plan
 
 

@@ -1,7 +1,7 @@
 import pytest
 
-from scilitrag.rag.entities import EntityLinker
 from scilitrag.rag.errors import RagUserError
+from scilitrag.rag.search.entities import EntityLinker
 
 
 def test_numeric_ids_are_bound_and_cached():

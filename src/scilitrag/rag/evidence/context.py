@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 from scilitrag.contracts import Evidence, Plan
 from scilitrag.rag.errors import RagUserError
-from scilitrag.rag.evidence_index import EvidenceIndex
-from scilitrag.rag.provenance import evidence_fingerprint
+from scilitrag.rag.evidence.index import EvidenceIndex
+from scilitrag.rag.evidence.provenance import evidence_fingerprint
 
 logger = logging.getLogger(__name__)
 SYSTEM = (

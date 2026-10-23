@@ -1,5 +1,5 @@
 from scilitrag.contracts import Plan
-from scilitrag.rag.search_backend import SearchBackend
+from scilitrag.rag.search.backend import SearchBackend
 
 
 def test_hybrid_embeds_once_and_binds_one_shared_filter_set():

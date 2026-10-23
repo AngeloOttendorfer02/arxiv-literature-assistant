@@ -1,8 +1,8 @@
 from scilitrag.config import load_settings
 from scilitrag.contracts import Evidence, Plan
 from scilitrag.rag.errors import RagUserError
-from scilitrag.rag.evidence_index import allocate_evidence
-from scilitrag.rag.search_backend import default_backend
+from scilitrag.rag.evidence.index import allocate_evidence
+from scilitrag.rag.search.backend import default_backend
 
 
 def paper_evidence(row: dict, *, has_passages: bool) -> Evidence:

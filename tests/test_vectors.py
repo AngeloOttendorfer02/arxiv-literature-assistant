@@ -1,7 +1,7 @@
 import pytest
 
-from scilitrag.rag.database import vector_literal
 from scilitrag.rag.errors import RagUserError
+from scilitrag.rag.search.database import vector_literal
 
 
 @pytest.mark.parametrize("vector", [[0, 0], [float("nan"), 1], [1], [True, 0], ["1", "0"], None])

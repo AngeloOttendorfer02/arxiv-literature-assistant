@@ -1,8 +1,8 @@
 """Render citation metadata deterministically from the current request's evidence."""
 
 from scilitrag.contracts import Citation, EvidenceMapping, RenderedSentence
-from scilitrag.rag.citation_labels import citation_labels
-from scilitrag.rag.provenance import evidence_fingerprint
+from scilitrag.rag.evidence.labels import citation_labels
+from scilitrag.rag.evidence.provenance import evidence_fingerprint
 
 
 def render_citations(sentence: str, mapping: EvidenceMapping) -> RenderedSentence:

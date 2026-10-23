@@ -3,14 +3,14 @@ import time
 
 from scilitrag.config import load_settings
 from scilitrag.contracts import Plan
-from scilitrag.rag.chunk_selection import select_passages
-from scilitrag.rag.database import DatabaseReader, vector_literal
-from scilitrag.rag.database_contract import validate_database
-from scilitrag.rag.entities import EntityLinker
 from scilitrag.rag.errors import RagUserError
-from scilitrag.rag.ranking import reciprocal_rank_fusion
-from scilitrag.rag.search_readiness import validate_search_indexes
-from scilitrag.rag.search_trace import SearchTrace
+from scilitrag.rag.search.contract import validate_database
+from scilitrag.rag.search.database import DatabaseReader, vector_literal
+from scilitrag.rag.search.entities import EntityLinker
+from scilitrag.rag.search.passages import select_passages
+from scilitrag.rag.search.ranking import reciprocal_rank_fusion
+from scilitrag.rag.search.readiness import validate_search_indexes
+from scilitrag.rag.search.trace import SearchTrace
 
 logger = logging.getLogger(__name__)
 

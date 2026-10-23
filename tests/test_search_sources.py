@@ -1,5 +1,5 @@
 from scilitrag.contracts import Plan
-from scilitrag.rag.search_backend import SearchBackend
+from scilitrag.rag.search.backend import SearchBackend
 
 
 def test_dense_and_bm25_bind_identical_filters():

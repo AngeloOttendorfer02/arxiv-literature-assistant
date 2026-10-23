@@ -2,9 +2,9 @@ import psycopg
 import pytest
 
 from scilitrag.config import load_settings
-from scilitrag.rag.database import DatabaseReader
-from scilitrag.rag.database_contract import REQUIRED_COLUMNS, validate_database
 from scilitrag.rag.errors import RagUserError
+from scilitrag.rag.search.contract import REQUIRED_COLUMNS, validate_database
+from scilitrag.rag.search.database import DatabaseReader
 
 
 def metadata_reader(*, model="model", revision="r1", dimension=768, missing=None):

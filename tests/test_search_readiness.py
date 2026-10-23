@@ -1,7 +1,7 @@
 import pytest
 
 from scilitrag.rag.errors import RagUserError
-from scilitrag.rag.search_readiness import SEARCH_INDEXES, validate_search_indexes
+from scilitrag.rag.search.readiness import SEARCH_INDEXES, validate_search_indexes
 
 
 def test_missing_search_indexes_have_an_installation_hint():

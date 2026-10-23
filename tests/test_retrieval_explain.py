@@ -1,7 +1,7 @@
 from explain_retrieval import explain_with
 
 from scilitrag.contracts import Plan
-from scilitrag.rag.search_backend import SearchBackend
+from scilitrag.rag.search.backend import SearchBackend
 
 
 def test_explain_uses_real_templates_and_parameterized_filters():

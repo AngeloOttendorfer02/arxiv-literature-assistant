@@ -1,7 +1,7 @@
 import pytest
 
 from scilitrag.contracts import Evidence, Plan, SqlFacts
-from scilitrag.rag.evidence_index import EvidenceIndex, allocate_evidence
+from scilitrag.rag.evidence.index import EvidenceIndex, allocate_evidence
 
 
 def test_snapshot_is_isolated_from_callers_and_other_requests():

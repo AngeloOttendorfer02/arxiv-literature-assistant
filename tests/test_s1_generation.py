@@ -5,7 +5,7 @@ from dataclasses import replace
 from scilitrag.api.pipeline import run_query
 from scilitrag.components import mock_components
 from scilitrag.contracts import Evidence, Plan
-from scilitrag.rag.citations import render_citations
+from scilitrag.rag.evidence.citations import render_citations
 from scilitrag.rag.generation import generate_with
 
 

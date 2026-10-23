@@ -1,9 +1,9 @@
 import pytest
 
 from scilitrag.contracts import Plan
-from scilitrag.rag.chunk_selection import select_passages
 from scilitrag.rag.errors import RagUserError
-from scilitrag.rag.search_backend import SearchBackend
+from scilitrag.rag.search.backend import SearchBackend
+from scilitrag.rag.search.passages import select_passages
 
 
 def test_two_queries_cover_multiple_papers_with_scoped_results():

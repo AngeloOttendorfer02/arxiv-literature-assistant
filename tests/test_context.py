@@ -3,8 +3,8 @@ import json
 import pytest
 
 from scilitrag.contracts import Evidence, Plan
-from scilitrag.rag.context import build_context
 from scilitrag.rag.errors import RagUserError
+from scilitrag.rag.evidence.context import build_context
 
 
 def test_complete_serialized_context_obeys_budget():

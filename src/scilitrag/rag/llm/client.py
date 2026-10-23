@@ -15,7 +15,7 @@ import httpx
 
 from scilitrag.config import Settings
 from scilitrag.rag.errors import LLMClientError
-from scilitrag.rag.retry import RetryBudget
+from scilitrag.rag.llm.retry import RetryBudget
 
 MAX_COMPLETION_BYTES = 2_000_000
 MAX_STREAM_FRAME_CHARS = 131_072

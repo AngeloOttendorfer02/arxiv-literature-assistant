@@ -5,7 +5,7 @@ import json
 from typing import Any
 
 from scilitrag.contracts import CONTRACT_VERSION, Evidence
-from scilitrag.rag.evidence_index import EvidenceIndex
+from scilitrag.rag.evidence.index import EvidenceIndex
 
 
 def canonical_json(value: object) -> str:

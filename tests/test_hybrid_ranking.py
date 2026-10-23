@@ -1,8 +1,8 @@
 import pytest
 
 from scilitrag.contracts import Plan
-from scilitrag.rag.ranking import reciprocal_rank_fusion
-from scilitrag.rag.search_backend import SearchBackend
+from scilitrag.rag.search.backend import SearchBackend
+from scilitrag.rag.search.ranking import reciprocal_rank_fusion
 
 
 def test_rrf_rewards_consensus_without_raw_score_mixing():

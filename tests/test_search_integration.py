@@ -1,5 +1,5 @@
 from scilitrag.contracts import Plan
-from scilitrag.rag.search_backend import SearchBackend
+from scilitrag.rag.search.backend import SearchBackend
 
 
 def test_real_dense_and_bm25_apply_year_bounds(fixture_reader):

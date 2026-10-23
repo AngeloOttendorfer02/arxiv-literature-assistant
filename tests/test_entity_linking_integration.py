@@ -15,10 +15,10 @@ from scilitrag.api.app import create_app
 from scilitrag.components import mock_components
 from scilitrag.config import load_settings
 from scilitrag.contracts import Plan
-from scilitrag.rag.entities import EntityLinker, normalize_name
 from scilitrag.rag.errors import RagUserError
 from scilitrag.rag.retrieval import retrieve_with
-from scilitrag.rag.search_backend import SearchBackend
+from scilitrag.rag.search.backend import SearchBackend
+from scilitrag.rag.search.entities import EntityLinker, normalize_name
 from scilitrag.ui.sse import iter_events
 
 PAPERS = [

@@ -1,9 +1,9 @@
 import pytest
 
 from scilitrag.rag.errors import RagUserError
-from scilitrag.rag.filters import parse_filters
-from scilitrag.rag.llm_client import LLMClientError
+from scilitrag.rag.llm.client import LLMClientError
 from scilitrag.rag.planner import build_plan
+from scilitrag.rag.search.filters import parse_filters
 
 
 @pytest.mark.parametrize(

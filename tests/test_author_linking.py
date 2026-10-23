@@ -1,7 +1,7 @@
 import pytest
 
-from scilitrag.rag.entities import EntityLinker, normalize_name
 from scilitrag.rag.errors import RagUserError
+from scilitrag.rag.search.entities import EntityLinker, normalize_name
 
 
 def test_normalization_matches_shared_ingestion_rule():

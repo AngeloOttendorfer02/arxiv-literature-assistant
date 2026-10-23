@@ -5,7 +5,7 @@ import json
 import re
 from collections import Counter, defaultdict
 
-from scilitrag.rag.entities import normalize_name
+from scilitrag.rag.search.entities import normalize_name
 
 # Affiliations and headers that the parser tags as authors, chosen on the D-03 data.
 # "ai" and "alexa" alone also match real people, so they only appear in phrases.

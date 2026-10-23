@@ -16,7 +16,7 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ### D026 D-08 authors from S2ORC name annotations
 
-- Context: corpus_s2orc marks author blocks with first and last name spans, but also tags affiliations and headers as authors. WP2 entity linking looks authors up by `normalize_name` (src/scilitrag/rag/entities.py).
+- Context: corpus_s2orc marks author blocks with first and last name spans, but also tags affiliations and headers as authors. WP2 entity linking looks authors up by `normalize_name` (src/scilitrag/rag/search/entities.py).
 - Decision: scripts/author_names.py pairs the first and last name spans of each block, unescapes HTML entities and strips edge marks; entries missing a first or last name are dropped; the paper is kept. `normalized_name` comes from WP2's `normalize_name` (imported, not copied); equal normalized names are one author (O2), linked once per paper, shown with the most frequent spelling. Names with a word from EXCLUDED_WORDS (university, lab, google, ...), a phrase from EXCLUDED_PHRASES or a Chinese institution term from EXCLUDED_SUBSTRINGS are dropped. Authors are inserted sorted by `normalized_name` with IDs from 1, so rebuilds give the same IDs.
 - Reason: On the D-03 data the lists remove 797 of 75,746 distinct names. "ai" and "alexa" only count in phrases, "bosch" and one-letter first names stay, because they match real people. Known limits: same name means same person; accent variants (438 groups) and partly romanized Chinese names stay separate; person-plus-company entries ("ilya sutskever openai", 326 names) are lost. Trimming affiliation words was rejected, see R003.
 - Statistics (for D-23): All 56,115 D-03 papers: 227,528 blocks give 74,949 authors and 196,083 paper links; dropped 18,530 without first or last name, 2,463 affiliations or headers, 10,452 repeated in the same paper. 255 papers (no query target) have no author and stay in the corpus, mostly Google/DeepMind parses ("Nicholas Carlini" + "Google") and proceedings headers.
@@ -46,7 +46,7 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ### D023 D-05 query indexes matched to entity linking
 
-- Context: D-05 lists year, both directions of citations and paper_authors, chunks by paper and a trigram title index. WP2 EntityLinker (src/scilitrag/rag/entities.py) also filters on lower(title), the title prefix before a colon and normalized_name.
+- Context: D-05 lists year, both directions of citations and paper_authors, chunks by paper and a trigram title index. WP2 EntityLinker (src/scilitrag/rag/search/entities.py) also filters on lower(title), the title prefix before a colon and normalized_name.
 - Options: only the D-05 indexes; also the expressions used by WP2.
 - Decision: docker/db/indexes.sql, run after schema.sql. B-tree on papers(year), citations(cited_id, citing_id), paper_authors(corpus_id, author_id), both title expressions and authors(normalized_name), each with the ID used for ordering; GIN trigram on papers(title). The script creates pg_trgm itself, since the Docker init file only runs on a fresh volume.
 - Reason: The primary keys cover the other directions, UNIQUE (corpus_id, seq_no) covers chunks by paper. Expression indexes only help while the WP2 queries use the same expressions, so query changes need a review with WP2. IF NOT EXISTS checks names only; a changed definition needs DROP INDEX first. Repeat ANALYZE after bulk imports.

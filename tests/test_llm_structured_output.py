@@ -4,8 +4,8 @@ import pytest
 from pydantic import BaseModel, ConfigDict
 
 from scilitrag.config import load_settings
-from scilitrag.rag.llm_client import LLMClientError
-from scilitrag.rag.structured import complete_json, generation_metadata
+from scilitrag.rag.llm.client import LLMClientError
+from scilitrag.rag.llm.structured import complete_json, generation_metadata
 
 
 class Decision(BaseModel):

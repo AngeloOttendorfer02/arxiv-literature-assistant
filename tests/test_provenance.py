@@ -3,8 +3,8 @@ from copy import deepcopy
 import pytest
 
 from scilitrag.contracts import Evidence
-from scilitrag.rag.citations import render_citations
-from scilitrag.rag.provenance import build_ledger, evidence_fingerprint, verify_ledger
+from scilitrag.rag.evidence.citations import render_citations
+from scilitrag.rag.evidence.provenance import build_ledger, evidence_fingerprint, verify_ledger
 
 
 def source():

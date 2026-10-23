@@ -8,7 +8,7 @@ import pytest
 from scilitrag.api.pipeline import run_query
 from scilitrag.components import mock_components
 from scilitrag.config import load_settings
-from scilitrag.rag.llm_client import ChatClient, LLMClientError
+from scilitrag.rag.llm.client import ChatClient, LLMClientError
 
 SETTINGS = load_settings({"USE_MOCKS": "1", "LLM_BASE_URL": "http://model/v1", "LLM_MODEL": "test"})
 

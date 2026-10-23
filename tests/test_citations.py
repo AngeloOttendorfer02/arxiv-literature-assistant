@@ -1,8 +1,8 @@
 import pytest
 
 from scilitrag.contracts import Evidence
-from scilitrag.rag.citation_labels import citation_labels
-from scilitrag.rag.citations import render_citations
+from scilitrag.rag.evidence.citations import render_citations
+from scilitrag.rag.evidence.labels import citation_labels
 
 
 def test_labels_are_unique_and_ordered():
