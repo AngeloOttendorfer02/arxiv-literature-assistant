@@ -2,6 +2,7 @@ from scilitrag.config import load_settings
 from scilitrag.contracts import Evidence, Plan
 from scilitrag.rag.errors import RagUserError
 from scilitrag.rag.evidence.index import allocate_evidence
+from scilitrag.rag.scenarios.citation_path import retrieve_s2
 from scilitrag.rag.search.backend import default_backend
 
 
@@ -61,6 +62,8 @@ def retrieve_s1(plan: Plan, backend) -> list[Evidence]:
 
 
 def retrieve_with(plan: Plan, backend) -> list[Evidence]:
+    if plan.scenario == "S2":
+        return retrieve_s2(plan, backend)
     return retrieve_s1(plan, backend)
 
 
