@@ -11,6 +11,7 @@ from scilitrag.rag.search.passages import select_passages
 from scilitrag.rag.search.ranking import reciprocal_rank_fusion
 from scilitrag.rag.search.readiness import validate_search_indexes
 from scilitrag.rag.search.trace import SearchTrace
+from scilitrag.timings import record_timing
 
 logger = logging.getLogger(__name__)
 
@@ -133,6 +134,9 @@ class SearchBackend:
             (time.perf_counter() - start) * 1000,
         )
         logger.info("hybrid_search %s", self.last_trace.public_fields())
+        record_timing("paper_dense_ms", dense_ms)
+        record_timing("paper_bm25_ms", sparse_ms)
+        record_timing("paper_fusion_ms", self.last_trace.fusion_ms)
         return rows
 
     def chunks(self, plan: Plan, paper_ids: list[int], per_paper: int = 2) -> list[dict]:
@@ -150,8 +154,12 @@ class SearchBackend:
             "vector": self.query_vector(query),
             "candidates": 10,
         }
+        start = time.perf_counter()
         dense = self.reader(CHUNK_DENSE_SQL, params)
+        record_timing("chunk_dense_ms", (time.perf_counter() - start) * 1000)
+        start = time.perf_counter()
         sparse = self.reader(CHUNK_BM25_SQL, params)
+        record_timing("chunk_bm25_ms", (time.perf_counter() - start) * 1000)
         result = []
         allowed = set(ids)
         if any(row["corpus_id"] not in allowed for row in dense + sparse):
