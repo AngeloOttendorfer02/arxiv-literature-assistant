@@ -36,7 +36,7 @@ def entity_reader():
     if not dsn:
         pytest.skip("Set RETRIEVAL_TEST_DATABASE_URL to a disposable ParadeDB database.")
     schema = "entity_test_" + uuid4().hex
-    root = Path(__file__).resolve().parents[1]
+    root = Path(__file__).resolve().parents[2]
     with psycopg.connect(dsn, autocommit=True, row_factory=dict_row) as connection:
         for extension in ("vector", "pg_trgm"):
             connection.execute(
