@@ -14,6 +14,13 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D031 S-11 rule-based sentence splitter
+
+- Context: The regex splitter in `api/pipeline.py` cut after every `.`, `!` or `?` followed by a space, so "et al.", "e.g." and numbered lists produced fragments that failed the citation check.
+- Options: own rule-based splitter; a library such as pysbd.
+- Decision: `guardrails/sentences.py`, no new dependency. A boundary is only reported once the next character is known and it is a capital letter, digit, quote, bracket or list marker. No boundary after listed abbreviations (e.g., i.e., vs., Fig., Eq., Dr., ...), single initials and a lone list number; after "et al." and "etc." only when a capital letter follows. Citation labels directly after the punctuation belong to the sentence (`claim. [1]`). A newline before `-`, `*` or a numbered marker also ends a sentence. `api/pipeline.py` imports the function, the `SentenceBuffer` interface is unchanged.
+- Reason: When unsure the splitter does not split. A merged sentence is still checked as a whole, a fragment would lose its label and be removed. A library would not know the label placement and the streaming rule, so both would still be our code.
+- Known gap: `SentenceBuffer.finish()` rejects a last bullet without final punctuation as incomplete; this is not changed here.
 ### D032 D-09 citation pairs from corpus_clean.citations
 
 - Context: corpus_clean.citations lists corpus IDs per paper. D-09 requires deduplicated pairs and a direction check. The schema needs both papers in `papers` (foreign keys).

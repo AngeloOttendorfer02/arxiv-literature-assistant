@@ -1,6 +1,5 @@
 import asyncio
 import logging
-import re
 import time
 from collections.abc import AsyncIterator
 from contextlib import aclosing
@@ -18,6 +17,7 @@ from scilitrag.contracts import (
     StatusEvent,
     TableEvent,
 )
+from scilitrag.guardrails.sentences import split_sentences
 from scilitrag.rag.errors import LLMClientError, RagUserError
 from scilitrag.rag.evidence.index import EvidenceIndex
 from scilitrag.rag.evidence.labels import citation_status
@@ -26,16 +26,7 @@ from scilitrag.rag.sentence_stream import SentenceBuffer
 
 logger = logging.getLogger(__name__)
 
-# Fallback splitter; semantic sentence boundaries are supplied by the validation layer.
-SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
-
 _END = object()
-
-
-def split_sentences(buffer: str) -> tuple[list[str], str]:
-    """Return the complete sentences in buffer and the incomplete rest."""
-    parts = SENTENCE_END.split(buffer)
-    return [p.strip() for p in parts[:-1] if p.strip()], parts[-1]
 
 
 def _ms(start: float) -> float:
