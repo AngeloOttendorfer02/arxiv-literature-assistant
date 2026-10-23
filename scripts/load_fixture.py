@@ -1,4 +1,4 @@
-"""Load D-07 papers, internal citations and D-08 authors into an empty D-04 database.
+"""Load D-07 papers, D-09 internal citations and D-08 authors into an empty D-04 database.
 
 Usage: uv run --locked --group data --group rag python scripts/load_fixture.py
 Use --check-only to validate local fixture files without connecting to PostgreSQL.
@@ -13,6 +13,7 @@ from time import perf_counter
 from urllib.parse import quote, quote_plus
 
 from author_names import extract_authors
+from citations import bibliography_counts, bibliography_ids, build_citations, direction_counts
 from filter_data import batches
 from select_fixture import DATASET, FILES, REVISION, data_directory, digest
 
@@ -94,7 +95,7 @@ def fixture_records(folder):
             papers.append(
                 (cid, mask_emails(row["title"]), mask_emails(row["abstract"]), row["year"])
             )
-            graph[cid] = set(row["citations"])
+            graph[cid] = row["citations"]
     ids = set(graph)
     if not 200 <= len(ids) <= 500 or sorted(ids) != manifest["corpusids"]:
         raise ValueError("Fixture must have 200 to 500 papers matching the manifest.")
@@ -110,10 +111,19 @@ def fixture_records(folder):
     ]
     if len(s2orc_ids) != len(ids) or set(s2orc_ids) != ids:
         raise ValueError("Fixture corpora are not aligned.")
-    citations = sorted((citing, cited) for citing in ids for cited in graph[citing] & ids)
-    if len(citations) != manifest["citation_count"]:
+    # The manifest counts source pairs before D-09 drops self-citations.
+    if sum(len(set(graph[cid]) & ids) for cid in ids) != manifest["citation_count"]:
         raise ValueError("Fixture citation count differs from the manifest.")
-    return sorted(papers), citations
+    citations, citation_counts = build_citations(graph, ids)
+    return sorted(papers), citations, citation_counts
+
+
+def fixture_bibliographies(folder):
+    return {
+        row["corpusid"]: bibliography_ids(row)
+        for batch in batches([folder / "corpus_s2orc.arrow"])
+        for row in batch.select(["corpusid", "content"]).to_pylist()
+    }
 
 
 def fixture_authors(folder):
@@ -186,10 +196,25 @@ def main():
     started = perf_counter()
     try:
         folder = data_directory() / "fixtures" / "v0"
-        papers, citations = fixture_records(folder)
+        papers, citations, citation_counts = fixture_records(folder)
         authors, links, author_counts = fixture_authors(folder)
+        years = {paper[0]: paper[3] for paper in papers}
+        direction = direction_counts(citations, years)
+        direction.update(bibliography_counts(citations, fixture_bibliographies(folder)))
     except (ValueError, KeyError, OSError) as error:
         parser.exit(1, f"Fixture validation failed: {error}\n")
+    print(
+        f"Citations: {len(citations)} from {citation_counts.get('entries', 0)} list entries; "
+        f"dropped {citation_counts.get('outside_corpus', 0)} outside the fixture, "
+        f"{citation_counts.get('self_citation', 0)} self-citations, "
+        f"{citation_counts.get('duplicate', 0)} duplicates."
+    )
+    print(
+        f"Direction: {direction.get('in_bibliography', 0)} of {len(citations)} in the citing "
+        f"paper's S2ORC bibliography; citing paper newer in {direction.get('citing_newer', 0)}, "
+        f"same year in {direction.get('same_year', 0)}, older in "
+        f"{direction.get('citing_older', 0)}, year missing in {direction.get('year_missing', 0)}."
+    )
     print(
         f"Authors: {len(authors)} with {len(links)} paper links from "
         f"{author_counts.get('author_blocks', 0)} author blocks; dropped "
