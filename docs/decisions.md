@@ -14,6 +14,91 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D044 O19 embedding model: granite-embedding-english-r2 (confirms D033)
+
+- Context: D033 proposed granite-embedding-english-r2 based on D-22, to be confirmed by the team.
+- Decision: `ibm-granite/granite-embedding-english-r2` replaces bge-base-en-v1.5 (D011, E8) as the embedding model for papers, chunks, queries and topic gating.
+- Reason: Team decision on the D-22 results in D033. 768 dimensions, schema unchanged.
+- Date: 2026-10-23
+
+### D043 O18 load test with one Ollama instance and parallel slots
+
+- Context: O18 proposed 1 / 2 / 4 / 8 parallel requests on Modal. With the default `OLLAMA_NUM_PARALLEL=1` Ollama processes one request per model at a time and queues the rest (docs.ollama.com/faq, read 2026-10-23); the same model cannot be loaded twice in one server.
+- Options: one instance with `OLLAMA_NUM_PARALLEL` above 1; several Ollama processes on separate ports with a load balancer.
+- Decision: One Ollama instance with `qwen3.8:27b-q4_K_M` (D037) on the A100 80 GB (D038), `OLLAMA_NUM_PARALLEL=8`, levels 1 / 2 / 4 / 8 concurrent requests. Measured metrics (throughput, latency, TTFT under concurrency) follow the technical report requirements.
+- Reason: The weights are held only once and no load balancer is needed; parallel slots only cost KV cache per slot.
+- Date: 2026-10-23
+
+### D042 O17 LitSearch license unclear
+
+- Context: The mail to the LitSearch authors about the dataset license got no reply.
+- Decision: The license is treated as unclear and stated as a limitation in the report. The dataset was used for this project and is not redistributed; dumps are shared privately.
+- Reason: Team decision.
+- Date: 2026-10-23
+
+### D041 O15 S3 counting rule
+
+- Decision: The O15 proposal is accepted: per (citing paper, cited paper) pair every author of the cited paper gets +1; ties are ordered alphabetically; the rule is shown in the UI.
+- Reason: Team decision.
+- Date: 2026-10-23
+
+### D040 O13 PII masking at import and on input
+
+- Context: O13 proposed regex masking at import and Presidio for query, answer and logs.
+- Decision: Current state: e-mail addresses are masked by regex at import (D025, D-11); Presidio (D027) masks the query input. Author names are never masked.
+- Reason: Presidio is too slow for the full texts; the regex covers the PII that occurs in papers.
+- Date: 2026-10-23
+
+### D039 O8 Llama Guard dropped
+
+- Context: O8 left open whether Llama Guard runs on input, output or not at all (COULD, S-17).
+- Decision: Llama Guard is not used. Injection and jailbreak detection rely on Prompt Guard 2 (D028, E12); S-17 is dropped.
+- Reason: Team decision.
+- Date: 2026-10-23
+
+### D038 O7 benchmark platform: Modal with A100 80 GB
+
+- Context: E11 runs the benchmark on Colab or Modal; O7 requires one fixed GPU type for all three precisions.
+- Decision: Modal with an NVIDIA A100 80 GB for all precisions (D037) and the load test (D043).
+- Reason: Team decision. 80 GB holds the bf16 variant (56 GB) with room for KV cache.
+- Date: 2026-10-23
+
+### D037 O6 LLM: qwen3.8:27b in bf16, q8_0 and q4_K_M
+
+- Context: O6 requires an Ollama model with fp16, q8_0 and q4_K_M tags. E10 compares ready-made GGUF variants of one model.
+- Decision: `qwen3.8:27b` via Ollama for demo and benchmark, variants `qwen3.8:27b-bf16` (56 GB), `qwen3.8:27b-q8_0` (30 GB) and `qwen3.8:27b-q4_K_M` (18 GB). The CPU development model stays D012.
+- Reason: Team decision. The model has no fp16 tag (ollama.com/library/qwen3.8/tags, read 2026-10-23), so bf16 is the 16-bit variant; the comparison stays 16 bit vs. 8 bit vs. 4 bit. The comparison uses one engine with GGUF F16 / Q8_0 / Q4_K_M rather than AWQ/GPTQ on vLLM (E10).
+- Date: 2026-10-23
+
+### D036 O5 NLI model: ModernCE-large-nli (replaces D029)
+
+- Context: O5 requires that chunk plus sentence fit into the context window of the NLI model. D029 chose EttinX-nli-s with ModernCE-large-nli as fallback.
+- Decision: `dleemiller/ModernCE-large-nli` (395M) is the NLI model for `check_sentence`. Chunk plus sentence must fit into 8192 tokens, the context of both ModernCE and granite-embedding-english-r2 (D044). Chunk size and overlap are still chosen by experiment (D-20).
+- Reason: Team decision; ModernCE scores higher on the card (MNLI mismatched 92.0 vs 88.0). It needed about 1700 ms per pair on CPU in D029 (EttinX about 250 ms), so the latency per sentence is measured in S-13/S-15.
+- Date: 2026-10-23
+
+### D035 O4 outliers and gaps (confirms D021)
+
+- Decision: Blank titles and titles over 500 characters are excluded, missing years become NULL, all counts are documented. Query targets stay as in D021.
+- Reason: Team decision; already implemented in D-03.
+- Date: 2026-10-23
+
+### D034 O3 full-text chunks for 1,000 papers
+
+- Context: O3 proposed full-text chunks for the targets of the 597 queries, the demo papers and a random sample, sized by compute cost.
+- Decision: 1,000 papers get full-text chunks: the query targets, the demo papers and a random sample that fills up to 1,000. The ID list is saved in D-12. Retrieval evaluation uses title and abstract only.
+- Reason: Team decision. Evaluating on full texts would favour the selected papers.
+- Date: 2026-10-23
+
+### D033 D-22 embedding comparison: granite-embedding-english-r2 (proposal for O19)
+
+- Context: D011/E8 keep bge-base-en-v1.5 unless D-22 shows a clearly better candidate before D-14. Compared on paper level (title + abstract), the unit D-14 embeds for papers; chunk-level behavior (D-19/D-20) is not covered.
+- Options: bge-base-en-v1.5 (with and without query instruction), ibm-granite/granite-embedding-english-r2, manveertamber/cadet-embed-base-v1, each at a pinned HF revision with the prefixes from its model card.
+- Decision: Proposal, to be confirmed by WP1: switch the default to granite-embedding-english-r2 (no query or passage prefix). Results in [D-22 embedding comparison](d22_embedding_comparison.md). Confirmed by D044.
+- Reason: On the D-03 corpus (56,115 papers, 597 queries, exact search) granite has the best NDCG@10 on dev and test (all: 0.510 vs 0.453 for bge, +0.057). The paired bootstrap interval for NDCG@10 is above 0 on both splits (dev +0.076 [+0.041, +0.112], test +0.037 [+0.004, +0.070]); Recall@20 gains are smaller and not significant. cadet is second (0.483) with no significant gain on either split. The bge query instruction helps (test -0.032 without it), so bge without instruction is not an option. All have 768 dimensions; the schema stays unchanged. Truncation at 512 tokens affects about 2% of documents for every model. Costs: GPU encoding at about 420 docs/s vs 970 for bge (one-off at build time), CPU query latency 25 ms vs 19 ms. cadet's NDCG@10 (0.483) is close to its MTEB LitSearchRetrieval score (47.9), which supports the setup.
+- Open: S-06 topic gating uses the same embedding; chunk sizes (O5) must be measured with granite's tokenizer. granite supports up to 8192 tokens, but the comparison used 512 for every model.
+- Date: 2026-10-23
+
 ### D031 S-11 rule-based sentence splitter
 
 - Context: The regex splitter in `api/pipeline.py` cut after every `.`, `!` or `?` followed by a space, so "et al.", "e.g." and numbered lists produced fragments that failed the citation check.
@@ -45,7 +130,7 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Context: `check_sentence` needs an NLI cross-encoder (chunk as premise, sentence as hypothesis, E15) that runs on CPU per released sentence.
 - Options: `dleemiller/EttinX-nli-s` (68M); `dleemiller/ModernCE-large-nli` (395M); both configurable with the small one as default.
 - Decision: `dleemiller/EttinX-nli-s`, model ID in the configuration so it can be swapped. Both cards list MIT licence, no gating and a context of 8192 tokens. The label order is [contradiction, entailment, neutral] (index 0, 1, 2), fixed in code and covered by a test. The `config.json` of ModernCE lists entailment, neutral, contradiction, which disagrees with its card and with its outputs; EttinX has only LABEL_0 to LABEL_2.
-- Reason: On 7 hand-made pairs (changed number, wrong hardware, negation, neutral) both models were right. On 4 CPU threads with a 466-token premise EttinX needs about 250 ms per pair, ModernCE about 1700 ms. Seven pairs say nothing about accuracy; precision and recall come from S-15. If they are too low, ModernCE (MNLI mismatched 92.0 vs 88.0 on the cards) is the fallback.
+- Reason: On 7 hand-made pairs (changed number, wrong hardware, negation, neutral) both models were right. On 4 CPU threads with a 466-token premise EttinX needs about 250 ms per pair, ModernCE about 1700 ms. Seven pairs say nothing about accuracy; precision and recall come from S-15. If they are too low, ModernCE (MNLI mismatched 92.0 vs 88.0 on the cards) is the fallback. Replaced by D036.
 - Date: 2026-10-23
 
 ---
