@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from dotenv import find_dotenv, load_dotenv
 
 DEFAULT_EMBED_MODEL = "BAAI/bge-base-en-v1.5"
+DEFAULT_NLI_MODEL = "dleemiller/EttinX-nli-s"
 DEFAULT_REQUEST_TIMEOUT_S = 120.0
 DEFAULT_LOG_DIR = "logs"
 REQUIRED_WITHOUT_MOCKS = ("DATABASE_URL", "LLM_BASE_URL", "LLM_MODEL")
@@ -34,6 +35,9 @@ class Settings:
     evidence_item_char_limit: int = 2400
     max_sentence_buffer_chars: int = 32768
     prompt_guard_threshold: float = 0.5
+    nli_model: str = DEFAULT_NLI_MODEL
+    nli_entailment_threshold: float = 0.5
+    nli_contradiction_threshold: float = 0.5
 
 
 def _parse_float(name: str, value: str) -> float:
@@ -109,6 +113,13 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         ),
         prompt_guard_threshold=_parse_unit_float(
             "PROMPT_GUARD_THRESHOLD", env.get("PROMPT_GUARD_THRESHOLD", "0.5")
+        ),
+        nli_model=env.get("NLI_MODEL") or DEFAULT_NLI_MODEL,
+        nli_entailment_threshold=_parse_unit_float(
+            "NLI_ENTAILMENT_THRESHOLD", env.get("NLI_ENTAILMENT_THRESHOLD", "0.5")
+        ),
+        nli_contradiction_threshold=_parse_unit_float(
+            "NLI_CONTRADICTION_THRESHOLD", env.get("NLI_CONTRADICTION_THRESHOLD", "0.5")
         ),
         llm_max_retries=_parse_int("LLM_MAX_RETRIES", env.get("LLM_MAX_RETRIES", "1"), 0, 3),
         llm_retry_backoff_s=_parse_float(
