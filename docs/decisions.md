@@ -14,6 +14,15 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D027 D-09 citation pairs from corpus_clean.citations
+
+- Context: corpus_clean.citations lists corpus IDs per paper. D-09 requires deduplicated pairs and a direction check. The schema needs both papers in `papers` (foreign keys).
+- Decision: scripts/citations.py builds (citing_id, cited_id) pairs, where the list owner is the citing paper, and checks the direction against the citing paper's S2ORC bibliography and the publication years. Self-citations, pairs with either paper outside the loaded corpus and duplicate pairs are dropped and counted; papers are never dropped. Pairs where the citing paper is older, and mutual citations, are kept. load_fixture.py uses the same function; the fixture manifest still counts source pairs, so its hash is unchanged.
+- Reason: Direction checked on all 56,115 D-03 papers: every kept pair is in the citing paper's own S2ORC bibliography (`bibentry` with `matched_paper_id`, 328,622 of 328,622). Years agree: citing paper newer in 305,854 pairs, same year in 14,692, older in 288 (likely preprints), year missing in 7,788. Self-citations are parser errors and would inflate citation counts (S3). Targets outside the corpus all point to papers removed by D-03, mostly for empty titles; incoming counts of retained papers are unaffected.
+- Statistics (for D-23): 340,484 list entries give 328,622 pairs; dropped 11,767 outside the corpus (2,727 papers removed by D-03), 95 self-citations, 0 duplicates. 964 mutual pairs. 10,037 papers cite no corpus paper, 23,117 are not cited, 6,233 have no link in either direction.
+- Validation: Fixture: 2,971 list entries give 447 pairs (manifest 448 before dropping 1 self-citation); dropped 2,523 outside the fixture. `load_fixture.py --check-only` prints the direction check: 447 of 447 pairs in the citing paper's bibliography; citing paper newer in 435, same year in 11, year missing in 1. Synthetic tests cover direction, dropped cases, bibliography and year comparison. The DB reload is pending.
+- Date: 2026-10-23
+
 ### D026 D-08 authors from S2ORC name annotations
 
 - Context: corpus_s2orc marks author blocks with first and last name spans, but also tags affiliations and headers as authors. WP2 entity linking looks authors up by `normalize_name` (src/scilitrag/rag/entities.py).

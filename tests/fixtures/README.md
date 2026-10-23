@@ -16,7 +16,7 @@ does not make them irrelevant. `--papers` (200 to 500) and `--seed` change the
 selection. Output goes to `DATA_DIR/fixtures/v0` and is never overwritten.
 
 **Team check**: both scripts print a `Manifest SHA-256`. With the defaults (20
-queries, 448 internal citations) it must be:
+queries, 448 internal citations in the manifest) it must be:
 
 ```
 727bae1cdf2d0affdd8e140ef53d2e31e01f9fca0c6623575c951ee6c438ce35
@@ -29,7 +29,8 @@ query IDs follow in D-18.
 **Loading** uses `INGEST_DATABASE_URL` and only works on empty data tables. It
 copies titles, abstracts, years and the citations between selected papers in one
 transaction, with e-mail addresses replaced by `<EMAIL>` (O13). It also loads
-authors and their paper links (D-08, see D026). Author IDs are numbered from 1 in
+authors and their paper links (D-08, see D026). Self-citations are dropped (D-09,
+see D027), so 447 citations are loaded. Author IDs are numbered from 1 in
 `normalized_name` order, so an existing database is first reset as administrator:
 
 ```sh
