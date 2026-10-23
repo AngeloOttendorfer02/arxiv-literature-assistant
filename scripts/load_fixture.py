@@ -1,5 +1,7 @@
 """Load D-07 papers, D-09 internal citations and D-08 authors into an empty D-04 database.
 
+D-10 full-text cleaning is only checked here; chunks follow in D-13.
+
 Usage: uv run --locked --group data --group rag python scripts/load_fixture.py
 Use --check-only to validate local fixture files without connecting to PostgreSQL.
 Chunks and embeddings are populated by later tasks.
@@ -15,6 +17,7 @@ from urllib.parse import quote, quote_plus
 from author_names import extract_authors
 from citations import bibliography_counts, bibliography_ids, build_citations, direction_counts
 from filter_data import batches
+from fulltext import fulltext_counts
 from select_fixture import DATASET, FILES, REVISION, data_directory, digest
 
 PAPER_COPY = "COPY public.papers (corpus_id, title, abstract, year) FROM STDIN"
@@ -126,6 +129,14 @@ def fixture_bibliographies(folder):
     }
 
 
+def fixture_fulltext(folder):
+    return fulltext_counts(
+        row
+        for batch in batches([folder / "corpus_s2orc.arrow"])
+        for row in batch.select(["corpusid", "content"]).to_pylist()
+    )
+
+
 def fixture_authors(folder):
     rows = (
         row
@@ -201,6 +212,7 @@ def main():
         years = {paper[0]: paper[3] for paper in papers}
         direction = direction_counts(citations, years)
         direction.update(bibliography_counts(citations, fixture_bibliographies(folder)))
+        full = fixture_fulltext(folder)
     except (ValueError, KeyError, OSError) as error:
         parser.exit(1, f"Fixture validation failed: {error}\n")
     print(
@@ -214,6 +226,15 @@ def main():
         f"paper's S2ORC bibliography; citing paper newer in {direction.get('citing_newer', 0)}, "
         f"same year in {direction.get('same_year', 0)}, older in "
         f"{direction.get('citing_older', 0)}, year missing in {direction.get('year_missing', 0)}."
+    )
+    total = full.get("text_chars") or 1
+    print(
+        f"Full texts: {full.get('sections', 0)} sections from {full.get('papers', 0)} papers; "
+        f"kept {full.get('kept_chars', 0) / total:.1%} of characters, removed "
+        f"{full.get('front_chars', 0) / total:.1%} front matter and "
+        f"{full.get('bibliography_chars', 0) / total:.1%} bibliography; "
+        f"{full.get('no_numbered_section', 0)} papers without numbered sections, "
+        f"{full.get('no_bibliography', 0)} without bibliography."
     )
     print(
         f"Authors: {len(authors)} with {len(links)} paper links from "
