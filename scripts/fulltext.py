@@ -1,7 +1,10 @@
-"""D-10 full-text sections from S2ORC annotations, without front matter and bibliography."""
+"""D-10 full-text sections from S2ORC annotations, without front matter and bibliography.
+
+E-mail addresses in the sections are masked at import (D-11)."""
 
 from collections import Counter
 
+from email_masking import count_emails, mask_emails
 from s2orc_annotations import annotation_entries, annotation_spans
 
 
@@ -37,7 +40,13 @@ def clean_sections(row):
         title, position = f"{number} {name}" if name else number, end
     sections.append((title, text[position:body_end]))
     sections = [(title, body.strip()) for title, body in sections if body.strip()]
-    removed = {"front_chars": body_start, "bibliography_chars": len(text) - body_end}
+    emails = sum(count_emails(title) + count_emails(body) for title, body in sections)
+    sections = [(mask_emails(title), mask_emails(body)) for title, body in sections]
+    removed = {
+        "front_chars": body_start,
+        "bibliography_chars": len(text) - body_end,
+        "emails_masked": emails,
+    }
     return sections, removed
 
 
@@ -53,4 +62,7 @@ def fulltext_counts(rows):
         counts.update(removed)
         counts["no_numbered_section"] += all(title is None for title, _ in sections)
         counts["no_bibliography"] += removed["bibliography_chars"] == 0
+        counts["emails_left"] += sum(
+            count_emails(title) + count_emails(body) for title, body in sections
+        )
     return dict(counts)
