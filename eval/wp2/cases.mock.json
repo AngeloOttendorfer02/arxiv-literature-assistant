@@ -1,0 +1,7 @@
+{
+  "cases": [
+    {"id": "s1-development", "scenario": "S1", "query": "Find retrieval papers from 2020 to 2023."},
+    {"id": "s2-development", "scenario": "S2", "query": "Which papers cite BERT as a baseline?"},
+    {"id": "s3-development", "scenario": "S3", "query": "Who is the most cited author for retrieval?"}
+  ]
+}

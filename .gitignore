@@ -37,3 +37,7 @@ dist/
 .coverage
 htmlcov/
 .vscode
+
+# Private evaluation sources, annotations and model outputs
+# May contain LitSearch text; never redistribute with the repository.
+eval/private/
