@@ -38,6 +38,14 @@ dist/
 htmlcov/
 .vscode
 
+# LaTeX build output of the report
+docs/report/*
+!docs/report/*.tex
+!docs/report/*.bib
+!docs/report/.latexmkrc
+!docs/report/sections/
+!docs/report/figures/
+
 # Private evaluation sources, annotations and model outputs
 # May contain LitSearch text; never redistribute with the repository.
 eval/private/
