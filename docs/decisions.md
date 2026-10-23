@@ -14,7 +14,18 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
-### D030 S-10 check_sentence: number check and NLI
+### D032 S-05 evidence guard against indirect injection (contracts 0.5)
+
+- Context: Retrieved chunks and abstracts go into the prompt and could carry instructions. The pipeline had no place to check them, and the contracts had no interface for it.
+- Options: new contract interface; direct call in the pipeline without a contract; filtering inside `retrieve` (WP2). Own threshold or the query threshold. Continue or abort when every source is removed.
+- Decision: Contracts 0.5 (additive): `CheckEvidence`, `EvidenceCheckResult` (kept evidence, removed labels, scores, latency) and stage `evidence_guard`; `Components.check_evidence`, a mock that drops sources matching the injection keywords, and a real module `guardrails/evidence.py`. The real check scores title and text of every chunk and paper source with the shared Prompt Guard instance (windows as in D028) and drops sources at or above `EVIDENCE_GUARD_THRESHOLD` (default 0.5, provisional, tuned in S-13). SQL evidence is built by our code and not scored. The pipeline runs the check between `retrieve` and `sql_facts`, so SQL facts only see the kept sources. It sends a `status` event (`ok` or `k of n removed`), the stage is in the request log as a guardrail event, and the UI shows it as "Source check". Labels are not renumbered. If all sources are removed the pipeline continues with empty evidence and `generate` answers with no evidence (R-12).
+- Reason: A checked interface keeps `USE_MOCKS=1` and the swap per component working. Removing sources before SQL facts keeps tables free of flagged papers. Measured on CPU with 17 sources of about 400 tokens: 4.3 s in total, about 250 ms per source, all of it before the first token.
+- Known limits: A paper abstract about prompt injection that quotes an attack sentence scored 0.98 and is removed, so such papers disappear from answers; no threshold helps, because the legitimate and the attack text score alike. Three poisoned test sources (instruction at the end of a chunk, role-play, plain override) scored 0.998 and above. Latency can be cut by scoring fewer sources or in parallel; not done here.
+- Date: 2026-10-23
+
+---
+
+## D030 S-10 check_sentence: number check and NLI
 
 - Context: The pipeline already checks label syntax and placement (`citation_status`). `check_sentence` adds the semantic checks before release.
 - Options: all cited sources must support the sentence, or one is enough; numbers only, or also author names against the tables; provisional thresholds of 0.5 or stricter ones (0.8).

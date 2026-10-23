@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from scilitrag.config import ConfigError, Settings, load_settings
 from scilitrag.contracts import (
+    CheckEvidence,
     CheckInput,
     CheckSentence,
     Embed,
@@ -21,6 +22,7 @@ from scilitrag.mocks import rag as mock_rag
 REAL = {
     "check_input": "scilitrag.guardrails.input",
     "mask_pii": "scilitrag.guardrails.pii",
+    "check_evidence": "scilitrag.guardrails.evidence",
     "embed": "scilitrag.data.embedding",
     "plan": "scilitrag.rag.planner",
     "retrieve": "scilitrag.rag.retrieval",
@@ -35,6 +37,7 @@ REAL = {
 class Components:
     check_input: CheckInput
     mask_pii: MaskPii
+    check_evidence: CheckEvidence
     embed: Embed
     plan: PlanQuery
     retrieve: Retrieve
@@ -48,6 +51,7 @@ def mock_components(token_delay: float = 0.02) -> Components:
     return Components(
         check_input=mock_guardrails.check_input,
         mask_pii=mock_guardrails.mask_pii,
+        check_evidence=mock_guardrails.check_evidence,
         embed=mock_data.embed,
         plan=mock_rag.plan,
         retrieve=mock_rag.retrieve,

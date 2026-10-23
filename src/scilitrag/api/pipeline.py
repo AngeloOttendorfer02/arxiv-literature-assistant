@@ -122,6 +122,21 @@ async def _run(
         )
 
         t = time.perf_counter()
+        screened = await run_in_threadpool(c.check_evidence, evidence)
+        latency["evidence_guard"] = _ms(t)
+        evidence = screened.evidence
+        yield (
+            "status",
+            StatusEvent(
+                stage="evidence_guard",
+                result="ok"
+                if not screened.removed
+                else f"{len(screened.removed)} of {len(evidence) + len(screened.removed)} removed",
+                latency_ms=latency["evidence_guard"],
+            ),
+        )
+
+        t = time.perf_counter()
         facts_with_evidence = getattr(c.sql_facts, "with_evidence", None)
         facts = (
             await run_in_threadpool(facts_with_evidence, plan, evidence)

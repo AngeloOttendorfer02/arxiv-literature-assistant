@@ -35,6 +35,7 @@ class Settings:
     evidence_item_char_limit: int = 2400
     max_sentence_buffer_chars: int = 32768
     prompt_guard_threshold: float = 0.5
+    evidence_guard_threshold: float = 0.5
     nli_model: str = DEFAULT_NLI_MODEL
     nli_entailment_threshold: float = 0.5
     nli_contradiction_threshold: float = 0.5
@@ -113,6 +114,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         ),
         prompt_guard_threshold=_parse_unit_float(
             "PROMPT_GUARD_THRESHOLD", env.get("PROMPT_GUARD_THRESHOLD", "0.5")
+        ),
+        evidence_guard_threshold=_parse_unit_float(
+            "EVIDENCE_GUARD_THRESHOLD", env.get("EVIDENCE_GUARD_THRESHOLD", "0.5")
         ),
         nli_model=env.get("NLI_MODEL") or DEFAULT_NLI_MODEL,
         nli_entailment_threshold=_parse_unit_float(

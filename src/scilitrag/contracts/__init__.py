@@ -5,13 +5,15 @@ from typing import Literal, Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-CONTRACT_VERSION = "0.4"
+CONTRACT_VERSION = "0.5"
 
 InputCategory = Literal["ok", "off_topic", "injection", "write_intent"]
 Scenario = Literal["S1", "S2", "S3"]
 EvidenceType = Literal["chunk", "paper", "sql"]
 SentenceStatus = Literal["ok", "no_citation", "unknown_label", "fact_mismatch", "unsupported"]
-Stage = Literal["prompt_guard", "topic_gate", "pii", "plan", "retrieve", "sql", "generate"]
+Stage = Literal[
+    "prompt_guard", "topic_gate", "pii", "plan", "retrieve", "evidence_guard", "sql", "generate"
+]
 ErrorCode = Literal["internal", "timeout", "bad_request"]
 
 
@@ -67,6 +69,13 @@ class Evidence(Model):
 EvidenceMapping = dict[int, Evidence]
 
 
+class EvidenceCheckResult(Model):
+    evidence: list[Evidence]
+    removed: list[int] = Field(default_factory=list)
+    scores: dict[int, float] = Field(default_factory=dict)
+    latency_ms: float
+
+
 class SqlFacts(Model):
     parameters: dict[str, str | int | float | None] = Field(default_factory=dict)
     scope: str | None = None
@@ -114,6 +123,10 @@ class MaskPii(Protocol):
 
 class Embed(Protocol):
     def __call__(self, texts: list[str]) -> list[list[float]]: ...
+
+
+class CheckEvidence(Protocol):
+    def __call__(self, evidence: list[Evidence]) -> EvidenceCheckResult: ...
 
 
 class PlanQuery(Protocol):

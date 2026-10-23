@@ -65,7 +65,7 @@ USE_MOCKS=1
 REAL_COMPONENTS=plan,render_citations
 ```
 
-Names: `check_input`, `mask_pii`, `embed`, `plan`, `retrieve`, `sql_facts`, `generate`, `check_sentence`, `render_citations`. Unknown names stop the app at startup.
+Names: `check_input`, `mask_pii`, `check_evidence`, `embed`, `plan`, `retrieve`, `sql_facts`, `generate`, `check_sentence`, `render_citations`. Unknown names stop the app at startup.
 
 ### Retrieval components
 
