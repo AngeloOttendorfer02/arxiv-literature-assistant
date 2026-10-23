@@ -14,7 +14,7 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
-### D027 D-09 citation pairs from corpus_clean.citations
+### D031 D-09 citation pairs from corpus_clean.citations
 
 - Context: corpus_clean.citations lists corpus IDs per paper. D-09 requires deduplicated pairs and a direction check. The schema needs both papers in `papers` (foreign keys).
 - Decision: scripts/citations.py builds (citing_id, cited_id) pairs, where the list owner is the citing paper, and checks the direction against the citing paper's S2ORC bibliography and the publication years. Self-citations, pairs with either paper outside the loaded corpus and duplicate pairs are dropped and counted; papers are never dropped. Pairs where the citing paper is older, and mutual citations, are kept. load_fixture.py uses the same function; the fixture manifest still counts source pairs, so its hash is unchanged.
