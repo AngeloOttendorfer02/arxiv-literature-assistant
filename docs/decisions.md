@@ -14,6 +14,16 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D027 S-03 PII masking with Presidio on a blank tokenizer
+
+- Context: `mask_pii` must mask e-mail, phone and similar data in queries, answers and logs. Author names are search terms and must stay.
+- Options: `en_core_web_sm` (model wheel from GitHub, NER unused); `spacy.blank("en")` with a custom engine; `en_core_web_lg` (about 400 MB).
+- Decision: Presidio `AnalyzerEngine` with a spaCy engine that loads `spacy.blank("en")` and only the e-mail, phone, credit card, IBAN and IP recognizers (placeholders `<EMAIL>`, `<PHONE>`, `<CARD>`, `<IBAN>`, `<IP>`, minimum score 0.4). PERSON and other NER entities are not enabled. The analyzer is built once per process.
+- Reason: All enabled recognizers are pattern based, so no model download and no extra image size. A model can be added later if LOCATION or similar entities are wanted.
+- Date: 2026-10-23
+
+---
+
 ### D026 D-08 authors from S2ORC name annotations
 
 - Context: corpus_s2orc marks author blocks with first and last name spans, but also tags affiliations and headers as authors. WP2 entity linking looks authors up by `normalize_name` (src/scilitrag/rag/search/entities.py).
