@@ -22,6 +22,8 @@ data = [
 ]
 rag = ["httpx>=0.28,<1", "psycopg[binary]>=3.2,<4"]
 guardrails = [
+    "presidio-analyzer>=2.2.364",
+    "spacy>=3.8.16",
     "torch>=2.14.1",
 ]
 ui = [
