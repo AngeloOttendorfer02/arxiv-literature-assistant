@@ -1,0 +1,43 @@
+% Technical report, single column (O1). Build: cd docs/report && latexmk
+% One file per section in sections/; each file names its owner and the tasks it reports on.
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{microtype}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+
+\graphicspath{{figures/}}
+
+% Placeholder text, shown in red so nothing unfinished slips into the submission.
+\newcommand{\todo}[1]{\textcolor{red}{[TODO: #1]}}
+
+\title{SciLitRAG: A Guarded Hybrid RAG Assistant for Scientific Literature}
+\author{\todo{full names}}
+\date{\todo{submission date, due 1 November 2026}}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\todo{Three to four sentences: task, data (LitSearch~\cite{ajith2024litsearch}), approach, key numbers.}
+\end{abstract}
+
+\input{sections/1_architecture}
+\input{sections/2_retrieval}
+\input{sections/3_guardrails}
+\input{sections/4_benchmarks}
+\input{sections/5_tradeoffs}
+\input{sections/6_artifacts}
+
+\bibliographystyle{plain}
+\bibliography{scilitrag}
+
+\appendix
+\input{sections/appendix}
+
+\end{document}

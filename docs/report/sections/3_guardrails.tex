@@ -1,0 +1,31 @@
+% Owner: WP3. Tasks: S-13, S-14, S-18.
+% Required: how injection and jailbreak attacks were detected, categorized and mitigated;
+% exact algorithm for answer faithfulness and mapping citations to chunk IDs;
+% confusion matrix or table with DSR, FRR and guardrail latency overhead.
+\section{Guardrail Verification and Security Harness}
+\label{sec:guardrails}
+
+\paragraph{Adversarial input defense.}
+\todo{Prompt Guard 2, topic gate, write-intent refusal, PII masking; categories and what happens per category.}
+
+\paragraph{Output groundedness.}
+\todo{check\_sentence: structure, DB facts, NLI; how citation labels map to chunk IDs.}
+
+\paragraph{Efficacy.}
+Table~\ref{tab:guardrails} reports defense success rate (DSR) on adversarial prompts,
+false rejection rate (FRR) on benign queries and the latency each stage adds.
+
+\begin{table}[ht]
+\centering
+\caption{Guardrail efficacy on the held-out test set. \todo{set sizes}}
+\label{tab:guardrails}
+\begin{tabular}{lrrrr}
+\toprule
+Stage & DSR (\%) & FRR (\%) & Median latency (ms) & p95 latency (ms) \\
+\midrule
+Prompt Guard 2 & \todo{} & \todo{} & \todo{} & \todo{} \\
+Topic gate & \todo{} & \todo{} & \todo{} & \todo{} \\
+Sentence validation & \todo{} & \todo{} & \todo{} & \todo{} \\
+\bottomrule
+\end{tabular}
+\end{table}

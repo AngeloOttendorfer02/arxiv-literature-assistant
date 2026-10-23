@@ -1,0 +1,12 @@
+% Owner: WP4 (Ben) with WP2 (Angelo). Tasks: A-14, R-16.
+% Required: end-to-end component diagram separating client UI, FastAPI orchestration,
+% inference engine, vector store and relational database; request lifecycle of a
+% multi-hop query with token transfer and guardrail validation steps.
+\section{System Architecture and Component Decoupling}
+\label{sec:architecture}
+
+\paragraph{Architecture.}
+\todo{Diagram (A-14): Streamlit UI, FastAPI, Ollama on Modal, ParadeDB with pgvector and BM25, relational tables. Put the file in figures/.}
+
+\paragraph{Execution flow.}
+\todo{Lifecycle of one multi-hop query (R-16, see docs/execution\_flow.md): check\_input, plan, retrieve, sql\_facts, generate, check\_sentence, citations; where tokens flow and where guardrails can stop the request.}
