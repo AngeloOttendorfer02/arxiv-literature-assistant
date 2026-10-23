@@ -33,6 +33,7 @@ class Settings:
     context_char_budget: int = 16000
     evidence_item_char_limit: int = 2400
     max_sentence_buffer_chars: int = 32768
+    prompt_guard_threshold: float = 0.5
 
 
 def _parse_float(name: str, value: str) -> float:
@@ -42,6 +43,13 @@ def _parse_float(name: str, value: str) -> float:
         raise ConfigError(f"{name} must be a number, got {value!r}") from None
     if not math.isfinite(number) or number <= 0:
         raise ConfigError(f"{name} must be a positive finite number, got {value!r}")
+    return number
+
+
+def _parse_unit_float(name: str, value: str) -> float:
+    number = _parse_float(name, value)
+    if number > 1:
+        raise ConfigError(f"{name} must be in (0, 1], got {value!r}")
     return number
 
 
@@ -98,6 +106,9 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         ),
         max_sentence_buffer_chars=_parse_int(
             "MAX_SENTENCE_BUFFER_CHARS", env.get("MAX_SENTENCE_BUFFER_CHARS", "32768"), 1024, 200000
+        ),
+        prompt_guard_threshold=_parse_unit_float(
+            "PROMPT_GUARD_THRESHOLD", env.get("PROMPT_GUARD_THRESHOLD", "0.5")
         ),
         llm_max_retries=_parse_int("LLM_MAX_RETRIES", env.get("LLM_MAX_RETRIES", "1"), 0, 3),
         llm_retry_backoff_s=_parse_float(
