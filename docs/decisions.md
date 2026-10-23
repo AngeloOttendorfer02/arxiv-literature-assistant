@@ -14,6 +14,15 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D045 D-10 clean full texts from S2ORC annotations
+
+- Context: corpus_s2orc texts start with title, author block (names, e-mails, affiliations) and abstract and end with the bibliography. D-10 removes the author block and bibliography and keeps section boundaries for the D-13 chunker. Title and abstract are already in `papers` and embedded there (D-14).
+- Decision: scripts/fulltext.py returns (section, text) pairs per paper. The body starts at the first `paragraph` or numbered `sectionheader` and ends before the first `bibentry`; title, author block and abstract before it are removed. Only headings with a section number (`n`) start a section, named "n heading"; table and figure captions and unnumbered headings stay as text in the current section. Papers without numbered headings get one section with no name. Bibliography spans past the end of a truncated text are clipped.
+- Reason: In the fixture, all 2,139 captions tagged as headings lack `n`, while 4,160 real headings have one; unnumbered headings mix real ones (Limitations, Ethics Statement) with parser noise ("as shown in", "-4-"). The bibliography is always at the end: no paragraph, heading, table or caption follows its first entry, and its region is fully covered by `bibentry` spans. In 278 of 300 papers the first numbered heading precedes the first paragraph, so the body starts at whichever comes first.
+- Statistics (for D-23): All 56,115 D-03 papers: 70.5 % of characters kept, 4.0 % front matter and 24.7 % bibliography removed; 623,896 sections (11.1 per paper); 1,745 papers without numbered headings, 1,409 without bibliography. 5 papers have bibliography spans past the text end (253 spans); 4 of them have shifted annotations, so a few reference lines stay or a few body lines are cut. Up to 168 papers (0.3 %) have unannotated reference lines before the first `bibentry`; they stay in the last section, since removing them would need pattern guessing.
+- Validation: Fixture: 3,855 sections, 67.1 % kept, 3.7 % front matter and 28.4 % bibliography removed, 8 papers without numbered headings; printed by `load_fixture.py --check-only`. Synthetic tests cover front matter, bibliography, captions, unnumbered headings, empty parent sections and truncated texts. Nothing is written to the DB yet; chunks follow in D-13.
+- Date: 2026-10-23
+
 ### D044 O19 embedding model: granite-embedding-english-r2 (confirms D033)
 
 - Context: D033 proposed granite-embedding-english-r2 based on D-22, to be confirmed by the team.

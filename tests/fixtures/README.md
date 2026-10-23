@@ -30,7 +30,8 @@ query IDs follow in D-18.
 copies titles, abstracts, years and the citations between selected papers in one
 transaction, with e-mail addresses replaced by `<EMAIL>` (O13). It also loads
 authors and their paper links (D-08, see D026). Self-citations are dropped (D-09,
-see D032), so 447 citations are loaded. Author IDs are numbered from 1 in
+see D032), so 447 citations are loaded. `--check-only` also reports the D-10
+full-text cleaning (D045); chunks are not loaded yet. Author IDs are numbered from 1 in
 `normalized_name` order, so an existing database is first reset as administrator:
 
 ```sh
