@@ -1,1 +1,1 @@
-"""WP2 evidence components."""
+"""evidence components."""

@@ -1,1 +1,1 @@
-"""WP2 search components."""
+"""search components."""

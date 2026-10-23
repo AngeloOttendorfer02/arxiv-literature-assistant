@@ -1,1 +1,1 @@
-"""WP2 llm components."""
+"""llm components."""

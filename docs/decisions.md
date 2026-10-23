@@ -249,3 +249,21 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Approach: dependencies in `requirements.txt` (initial repo state).
 - Why rejected: no lockfile, no separation of heavy model dependencies. Replaced by D002.
 - Date: 2026-10-17
+
+
+## Retrieval evaluation structure and acceptance (2026-10-23)
+
+- Group public examples under eval/retrieval and reusable evaluation under
+  scilitrag.evaluation. Keep command scripts thin and name them by their feature:
+  build_reference_set.py and evaluate_retrieval.py. Remove script imports from tests.
+- Validate reference sets before accessing services. Require known database IDs and
+  a frozen revision when exporting real reference data. Keep real sources and outputs
+  under ignored eval/private; do not redistribute dataset text.
+- Exclude refusals and empty answers from completed evaluations. Require compatible
+  revisions for reference metrics and identical seed scopes for author-count comparisons.
+  Missing years are unscored. Reject empty or mismatched saved reports.
+- Preserve the distinction between structural citation validity and human-reviewed
+  semantic support. Unreviewed metrics remain null; mock guards remain explicitly marked.
+- SQL facts and S1/S2/S3 implementation are present. Shared embedder/index provisioning,
+  real semantic guardrails, model measurements and human labels remain integration and
+  acceptance work. See retrieval.md, evaluation.md and execution_flow.md.

@@ -5,13 +5,36 @@ import json
 from collections import Counter
 from pathlib import Path
 
-from scilitrag.config import load_settings
+from scilitrag.config import ConfigError, load_settings
+from scilitrag.evaluation.datasets import MAX_DATABASE_ID, ReferenceSet
+from scilitrag.rag.errors import RagUserError
 from scilitrag.rag.search.database import DatabaseReader
 
 
-def build_goldens(reader, targets, seed_ids, topic):
+def build_reference_set(reader, targets, seed_ids, topic):
+    if not targets and not seed_ids:
+        raise ValueError("Provide at least one target or seed paper")
+    if any(
+        isinstance(value, bool) or not isinstance(value, int) or not 1 <= value <= MAX_DATABASE_ID
+        for value in targets + seed_ids
+    ):
+        raise ValueError("Paper IDs must be positive database IDs")
+    targets = list(dict.fromkeys(targets))
+    seed_ids = sorted(set(seed_ids))
+    if len(seed_ids) > 20 or not topic.strip():
+        raise ValueError("Use at most 20 seed papers and a nonempty topic")
+    selected_ids = sorted(set(targets + seed_ids))
+    known = reader(
+        "SELECT corpus_id FROM papers WHERE corpus_id=ANY(%(ids)s)", {"ids": selected_ids}
+    )
+    if {row["corpus_id"] for row in known} != set(selected_ids):
+        raise RagUserError(
+            "Reference export contains unknown paper IDs. Check the selected corpus."
+        )
     metadata = reader("SELECT dataset_revision FROM schema_metadata WHERE id=1")
     revision = metadata[0]["dataset_revision"] if metadata else None
+    if not revision:
+        raise RagUserError("Publish the frozen dataset revision before exporting references.")
     cases, annotations = [], []
     for target in targets:
         papers = reader(
@@ -62,23 +85,35 @@ def build_goldens(reader, targets, seed_ids, topic):
                 "expected_author_counts": {str(author): counts[author] for author in order},
             }
         )
-    return {"dataset_revision": revision, "cases": cases, "baseline_annotations": annotations}
+    bundle = {"dataset_revision": revision, "cases": cases, "baseline_annotations": annotations}
+    ReferenceSet.model_validate(bundle)
+    ending = reader("SELECT dataset_revision FROM schema_metadata WHERE id=1")
+    if len(ending) != 1 or ending[0]["dataset_revision"] != revision:
+        raise RagUserError(
+            "Dataset revision changed during reference export; retry against a frozen corpus."
+        )
+    return bundle
 
 
-def main():
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--target-paper", type=int, action="append", default=[])
     parser.add_argument("--seed-paper", type=int, action="append", default=[])
     parser.add_argument("--topic", default="retrieval")
     parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     if not args.target_paper and not args.seed_paper:
         parser.error("Provide at least one --target-paper or --seed-paper")
-    if len(set(args.seed_paper)) > 20 or any(i < 1 for i in args.seed_paper + args.target_paper):
+    if len(set(args.seed_paper)) > 20 or any(
+        not 1 <= i <= MAX_DATABASE_ID for i in args.seed_paper + args.target_paper
+    ):
         parser.error("IDs must be positive; use at most 20 seed papers")
-    result = build_goldens(
-        DatabaseReader(load_settings()), args.target_paper, args.seed_paper, args.topic
-    )
+    try:
+        result = build_reference_set(
+            DatabaseReader(load_settings()), args.target_paper, args.seed_paper, args.topic
+        )
+    except (ConfigError, RagUserError, ValueError) as error:
+        parser.error(str(error))
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(
         json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

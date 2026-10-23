@@ -1,6 +1,8 @@
 # SciLitRAG
 
-A locally hosted literature assistant for ML and NLP papers. It answers questions with hybrid retrieval (dense vectors, BM25 and SQL over citation and author data), backs every statement with a deterministic citation, and blocks unsafe requests before any database or LLM call.
+A locally hosted ML and NLP literature assistant with hybrid retrieval, citation-path exploration, author citation rankings and deterministic sentence-level citations. An asynchronous API streams checked sentences and SQL tables to a separate chat UI.
+
+The default mock configuration runs offline. Real retrieval requires the shared embedding adapter and indexed corpus; real input and semantic guardrails still require integration. See [retrieval implementation and acceptance](docs/retrieval.md).
 
 Developed by Angelo Ottendorfer, Benjamin Storck, Kristof Zörenyi and Nuray Visne.
 
@@ -73,6 +75,9 @@ Names: `check_input`, `mask_pii`, `embed`, `plan`, `retrieve`, `sql_facts`, `gen
 | Citations | Request-local evidence snapshots, label checks, deterministic rendering, source fingerprints and ledgers. |
 | Planning and entities | Scenario planning with S1 fallback, explicit year/result filters and reader-injected paper/author linking. |
 | Search and evidence | Filtered abstract search with pgvector/BM25, RRF k=60, scoped passages and explicit evidence coverage. |
+| Citation paths | Incoming citation traversal with target-specific experimental baseline candidates. |
+| Author rankings | SQL credits over the exact selected topic-paper set, with dataset revision, scope and examples. |
+| Evaluation | Validated frozen references, pipeline model runs and separate structural/reference/human support metrics. |
 
 Install the `rag` dependency group when working on these modules:
 
@@ -92,11 +97,14 @@ Reader test doubles exercise matching and ambiguity handling independently of a 
 Citation rendering resolves request-local labels to source snapshots. Structural citation checks
 establish label validity and placement; semantic validation determines factual support.
 
-The selectable real retrieval entry points are `plan`, `retrieve`, `generate`
-and `render_citations`. Real search requires the frozen corpus metadata, deployed
-search indexes and the shared query embedder. Generation additionally requires
-the configured model endpoint. SQL facts remain mocked until implemented. Input
-and sentence validators must also be integrated before all-real evaluation.
+The real entry points are `plan`, `retrieve`, `sql_facts`, `generate` and
+`render_citations`. Real search requires frozen corpus metadata, deployed indexes
+and the shared query embedder. Generation requires the configured model endpoint.
+Select real retrieve and sql_facts together for S3; mock IDs are not real ranking seeds.
+Input and semantic sentence validators must also be integrated before all-real evaluation.
+
+Implementation details and acceptance requirements: [retrieval](docs/retrieval.md),
+[evaluation](docs/evaluation.md) and [multi-hop execution](docs/execution_flow.md).
 
 ## Database
 
@@ -268,22 +276,42 @@ fallback plan does not prove that the model service was reached.
 src/scilitrag/
   api/          FastAPI app and request pipeline
   ui/           Streamlit app (talks to the API over HTTP only)
-  rag/          planner, retrieval, SQL facts, generation, citations
+  rag/          planner, retrieval, SQL facts, generation; llm/, evidence/, search/, scenarios/
+  evaluation/   reference datasets, pipeline runner and quality metrics
   guardrails/   input checks, PII masking, sentence validation
-  data/         loading, cleaning, chunking, indexing
+  data/         shared embedding adapter (pending data-pipeline integration)
   contracts/    shared data types and interfaces
   mocks/        mock implementation of every interface
   config.py     environment configuration
   components.py selects mocks or real components
-eval/           evaluation scripts
+eval/retrieval/ synthetic public evaluation examples
+eval/private/   ignored references, source passages, annotations and results
 bench/          quantization benchmark
 docker/         container configuration
 scripts/        helper scripts (data download, smoke test)
-tests/          pytest tests
+tests/rag/      retrieval, generation and citation tests
+tests/evaluation/ reference validation, runner and metric tests
+tests/          shared/API/UI/data tests and fixtures
 docs/           decisions and diagrams
 ```
 
 The UI imports nothing from the package except `scilitrag.contracts`.
+
+## Evaluate retrieval
+
+Run the synthetic cases with mocks before using real references or models:
+
+```powershell
+$env:USE_MOCKS = "1"
+$env:REAL_COMPONENTS = ""
+uv run --locked --group rag python scripts/evaluate_retrieval.py eval/retrieval/cases.example.json --allow-mocks --output eval/private/development.json
+```
+
+Export real references with `scripts/build_reference_set.py`, then compare installed model
+candidates or re-score human-reviewed runs with `scripts/evaluate_retrieval.py`.
+The [evaluation guide](docs/evaluation.md) explains frozen revisions, seed scopes, labels
+and undefined metrics. A refused or empty response does not count as a completed evaluation.
+Synthetic success does not establish real model quality.
 
 ## Decisions
 
