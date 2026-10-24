@@ -14,6 +14,14 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D049 D-13 section-based chunker with granite tokens (O5)
+
+- Context: D-13 needs section-based chunks with a fixed window and overlap. O5 leaves size (256, 384, 512 tokens) and overlap (0, 10, 20 %) to the D-20 experiment; chunk plus sentence must fit the NLI context, 8,192 tokens for ModernCE-large-nli (D036) and granite-embedding-english-r2 (D044).
+- Decision: scripts/chunker.py splits each D-10/D-11 section into windows of `size` tokens; consecutive windows share `overlap` % of them, and the last window may be shorter. Chunks never cross a section boundary. `chunk_id` is `"{corpus_id}-{seq_no}"`, with `seq_no` running across the paper. Tokens come from the `EMBED_MODEL` tokenizer via `transformers` (now also in the `data` group), pinned to revision `47ea694b257b703fee9253d75c2b1f2985180498` of granite-embedding-english-r2 so that chunk IDs keep their boundaries; unpinned models are refused. Each chunk is re-encoded and its window shortened until it fits, because a character can map to several tokens; `.env.example`, compose.yaml and config.py default to granite (D044). Only the O5 values are accepted; the default is 512 tokens with 10 % overlap until D-20 decides. `load_fixture.py` loads chunks for all 300 fixture papers (`--chunk-tokens`, `--overlap`); the full build uses the D-12 selection. Embeddings follow in D-14.
+- Reason: Counting with the embedder's own tokenizer makes the O5 sizes exact. The largest chunk leaves ample room in the NLI context, but the combined chunk, generated sentence and special tokens must still fit within 8,192 tokens when counted with the NLI tokenizer. Smaller chunks make each NLI check faster (about 1,700 ms per pair for ModernCE in D029), so D-20 should report latency next to Hit@k.
+- Validation: Synthetic tests with a whitespace tokenizer cover window positions, all nine O5 combinations, section boundaries, IDs, full text coverage, multi-token characters and the COPY into `chunks`; a Unicode test with the cached granite tokenizer runs when it is available. Fixture with the granite tokenizer: 6,918 chunks from 300 papers at 512 tokens with 10 % overlap, none above 512 tokens after re-encoding (17 were before the fix); validation takes about 22 s, mostly tokenization. The DB import is pending.
+- Date: 2026-10-24
+
 ### D048 D-12 full-text subset of 1,000 papers (implements D034)
 
 - Context: D034 gives 1,000 papers full-text chunks: query targets, demo papers and a random sample. All papers stay in `papers`, `authors`, `paper_authors` and `citations`; only chunks (D-13) are limited. S1 needs metrics from full texts of topic papers, S2 needs baseline passages in the full texts of papers that cite Paper X, S3 uses abstracts, citations and authors only.

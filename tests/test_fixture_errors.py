@@ -82,6 +82,8 @@ def test_cli_reports_redacted_connection_or_copy_failure(
     monkeypatch.setattr(load_fixture, "fixture_authors", lambda folder: ([], [], {}))
     monkeypatch.setattr(load_fixture, "fixture_bibliographies", lambda folder: {})
     monkeypatch.setattr(load_fixture, "fixture_fulltext", lambda folder: {})
+    monkeypatch.setattr(load_fixture, "token_offsets", lambda model: None)
+    monkeypatch.setattr(load_fixture, "fixture_chunks", lambda *args: [])
     monkeypatch.setattr("sys.argv", ["load_fixture.py"])
 
     def fail(*args, **kwargs):

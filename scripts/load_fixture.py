@@ -1,10 +1,10 @@
-"""Load D-07 papers, D-09 internal citations and D-08 authors into an empty D-04 database.
+"""Load D-07 papers, D-09 citations, D-08 authors and D-13 chunks into an empty D-04 database.
 
-D-10 full-text cleaning is only checked here; chunks follow in D-13.
+Chunks use the D-10/D-11 cleaned and e-mail-masked full-text sections.
 
 Usage: uv run --locked --group data --group rag python scripts/load_fixture.py
 Use --check-only to validate local fixture files without connecting to PostgreSQL.
-Chunks and embeddings are populated by later tasks.
+Embeddings follow in D-14.
 """
 
 import argparse
@@ -15,16 +15,20 @@ from time import perf_counter
 from urllib.parse import quote, quote_plus
 
 from author_names import extract_authors
+from chunker import TOKENIZER_REVISIONS, chunk_sections, token_offsets
 from citations import bibliography_counts, bibliography_ids, build_citations, direction_counts
 from email_masking import count_emails, mask_emails
 from filter_data import batches
-from fulltext import fulltext_counts
+from fulltext import clean_sections, fulltext_counts
 from select_fixture import DATASET, FILES, REVISION, data_directory, digest
+
+from scilitrag.config import DEFAULT_EMBED_MODEL
 
 PAPER_COPY = "COPY public.papers (corpus_id, title, abstract, year) FROM STDIN"
 CITATION_COPY = "COPY public.citations (citing_id, cited_id) FROM STDIN"
 AUTHOR_COPY = "COPY public.authors (first_name, last_name, name, normalized_name) FROM STDIN"
 PAPER_AUTHOR_COPY = "COPY public.paper_authors (author_id, corpus_id) FROM STDIN"
+CHUNK_COPY = "COPY public.chunks (chunk_id, corpus_id, section, seq_no, text) FROM STDIN"
 
 
 def database_error_detail(error, dsn):
@@ -132,6 +136,17 @@ def fixture_fulltext(folder):
     )
 
 
+def fixture_chunks(folder, offsets, size, overlap):
+    return [
+        chunk
+        for batch in batches([folder / "corpus_s2orc.arrow"])
+        for row in batch.select(["corpusid", "content"]).to_pylist()
+        for chunk in chunk_sections(
+            row["corpusid"], clean_sections(row)[0], offsets, size=size, overlap=overlap
+        )
+    ]
+
+
 def fixture_authors(folder):
     rows = (
         row
@@ -161,7 +176,7 @@ def import_authors(connection, cursor, authors, links):
             copy.write_row((ids[name], corpus_id))
 
 
-def import_records(connection, papers, citations, authors=(), links=()):
+def import_records(connection, papers, citations, authors=(), links=(), chunks=()):
     connection.execute("SET LOCAL lock_timeout = '5s'")
     connection.execute("SET LOCAL statement_timeout = '50s'")
     # Prevent a concurrent import from passing the same empty-database check.
@@ -190,6 +205,10 @@ def import_records(connection, papers, citations, authors=(), links=()):
                     copy.write_row(record)
         if authors:
             import_authors(connection, cursor, authors, links)
+        if chunks:
+            with cursor.copy(CHUNK_COPY) as copy:
+                for chunk in chunks:
+                    copy.write_row(chunk)
     connection.execute(
         "UPDATE public.schema_metadata SET dataset_revision = %s WHERE id = 1", (REVISION,)
     )
@@ -198,6 +217,8 @@ def import_records(connection, papers, citations, authors=(), links=()):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check-only", action="store_true")
+    parser.add_argument("--chunk-tokens", type=int, default=512)
+    parser.add_argument("--overlap", type=int, default=10, help="Chunk overlap in percent.")
     args = parser.parse_args()
     started = perf_counter()
     try:
@@ -208,7 +229,9 @@ def main():
         direction = direction_counts(citations, years)
         direction.update(bibliography_counts(citations, fixture_bibliographies(folder)))
         full = fixture_fulltext(folder)
-    except (ValueError, KeyError, OSError) as error:
+        model = os.environ.get("EMBED_MODEL") or DEFAULT_EMBED_MODEL
+        chunks = fixture_chunks(folder, token_offsets(model), args.chunk_tokens, args.overlap)
+    except (ValueError, KeyError, OSError, ImportError) as error:
         parser.exit(1, f"Fixture validation failed: {error}\n")
     print(
         f"Citations: {len(citations)} from {citation_counts.get('entries', 0)} list entries; "
@@ -243,6 +266,11 @@ def main():
             1, "Fixture validation failed: recognized email expressions remain after masking.\n"
         )
     print(
+        f"Chunks: {len(chunks)} from {len({chunk[1] for chunk in chunks})} papers; "
+        f"{args.chunk_tokens} tokens with {args.overlap} % overlap "
+        f"({model} tokenizer, revision {TOKENIZER_REVISIONS[model][:12]})."
+    )
+    print(
         f"Authors: {len(authors)} with {len(links)} paper links from "
         f"{author_counts.get('author_blocks', 0)} author blocks; dropped "
         f"{author_counts.get('missing_first_or_last', 0)} without first or last name, "
@@ -261,7 +289,7 @@ def main():
 
     try:
         with psycopg.connect(dsn, connect_timeout=5) as connection:
-            import_records(connection, papers, citations, authors, links)
+            import_records(connection, papers, citations, authors, links, chunks)
     except ValueError as error:
         parser.exit(1, f"Fixture import refused: {error}\n")
     except psycopg.Error as error:
@@ -272,10 +300,10 @@ def main():
     elapsed = perf_counter() - started
     print(
         f"Loaded {len(papers)} papers, {len(citations)} citations, {len(authors)} authors "
-        f"and {len(links)} paper links in {elapsed:.2f}s."
+        f"and {len(links)} paper links and {len(chunks)} chunks in {elapsed:.2f}s."
     )
     print("D-07 runtime target: " + ("under 60s." if elapsed < 60 else "not met (60s or longer)."))
-    print("Chunks and embeddings are not populated; hybrid search is not ready yet.")
+    print("Embeddings are not populated (D-14); hybrid search is not ready yet.")
 
 
 if __name__ == "__main__":

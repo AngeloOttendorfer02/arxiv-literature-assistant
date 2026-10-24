@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from dotenv import find_dotenv, load_dotenv
 
-DEFAULT_EMBED_MODEL = "BAAI/bge-base-en-v1.5"
+DEFAULT_EMBED_MODEL = "ibm-granite/granite-embedding-english-r2"
 DEFAULT_NLI_MODEL = "dleemiller/EttinX-nli-s"
 DEFAULT_REQUEST_TIMEOUT_S = 120.0
 DEFAULT_LOG_DIR = "logs"
