@@ -2,6 +2,7 @@
 
 import json
 import random
+import re
 from collections import Counter
 from unittest.mock import MagicMock
 
@@ -202,14 +203,20 @@ def test_import_uses_copy_values_and_parameterized_metadata():
     assert connection.execute.call_args.args[1] == (REVISION,)
 
 
+def words(text):
+    return [match.span() for match in re.finditer(r"\S+", text)]
+
+
 def test_check_only_never_connects_to_database(source, monkeypatch, capsys):
     folder, _ = build_fixture(source, count=200)
     monkeypatch.setattr(load_fixture, "data_directory", lambda: source)
+    monkeypatch.setattr(load_fixture, "token_offsets", lambda model: words)
     monkeypatch.setattr("psycopg.connect", lambda *a, **kw: pytest.fail("Unexpected DB connection"))
     monkeypatch.setattr("sys.argv", ["load_fixture.py", "--check-only"])
     load_fixture.main()
     output = capsys.readouterr().out
     assert "No database connection" in output
+    assert "Chunks: " in output
     assert f"Manifest SHA-256: {digest(folder / 'manifest.json')}" in output
 
 
@@ -220,3 +227,15 @@ def test_cli_selection_uses_environment_directory(source, monkeypatch, capsys):
     manifest = source / "fixtures/v0/manifest.json"
     assert manifest.is_file()
     assert f"Manifest SHA-256: {digest(manifest)}" in capsys.readouterr().out
+
+
+def test_chunks_are_copied_after_papers():
+    connection = MagicMock()
+    connection.execute.return_value.fetchone.side_effect = [(False,), (1, None)]
+    chunk = ("1-0", 1, "1 Intro", 0, "Body text.")
+    import_records(connection, [(1, "T", None, None)], [], chunks=[chunk])
+    cursor = connection.cursor.return_value.__enter__.return_value
+    statements = [call.args[0] for call in cursor.copy.call_args_list]
+    assert statements[0] == load_fixture.PAPER_COPY and statements[-1] == load_fixture.CHUNK_COPY
+    rows = cursor.copy.return_value.__enter__.return_value.write_row.call_args_list
+    assert rows[-1].args == (chunk,)

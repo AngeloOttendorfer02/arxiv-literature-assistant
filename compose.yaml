@@ -39,7 +39,7 @@ services:
       # Ollama runs on the host, outside compose.
       LLM_BASE_URL: http://host.docker.internal:11434/v1
       LLM_MODEL: ${LLM_MODEL:-}
-      EMBED_MODEL: ${EMBED_MODEL:-BAAI/bge-base-en-v1.5}
+      EMBED_MODEL: ${EMBED_MODEL:-ibm-granite/granite-embedding-english-r2}
       HF_TOKEN: ${HF_TOKEN:-}
       # Empty means the default from config.py.
       REQUEST_TIMEOUT_S: ${REQUEST_TIMEOUT_S:-}
