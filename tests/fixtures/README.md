@@ -3,11 +3,31 @@
 LitSearch records are not committed. Each teammate builds the same fixture from
 their own D-03 output. Requires D-01, D-03 and the D-04 to D-06 SQL setup.
 
-```sh
-uv run --locked --group data python scripts/select_fixture.py
-uv run --locked --group data python scripts/load_fixture.py --check-only
-uv run --locked --group data --group rag python scripts/load_fixture.py
-```
+Run in this order:
+
+1. In your own `.env`, set `EMBED_MODEL=ibm-granite/granite-embedding-english-r2`
+   (D044). Git does not update `.env`; chunks are counted with this tokenizer.
+2. Install the groups (the `data` group now includes `transformers` for the tokenizer):
+   ```sh
+   uv sync --locked --group data --group rag
+   ```
+3. Select the fixture (once; it is never overwritten):
+   ```sh
+   uv run --locked --group data python scripts/select_fixture.py
+   ```
+4. Validate without the database. The first run downloads the pinned tokenizer
+   (about 4 MB). Expect `Chunks: 6918 from 300 papers; 512 tokens with 10 % overlap`:
+   ```sh
+   uv run --locked --group data --group rag python scripts/load_fixture.py --check-only
+   ```
+5. If the database already holds data, reset it as administrator (command below).
+6. Load:
+   ```sh
+   uv run --locked --group data --group rag python scripts/load_fixture.py
+   ```
+
+`--chunk-tokens` (256, 384, 512) and `--overlap` (0, 10, 20 %) change the chunk
+window; the defaults stay until D-20 decides.
 
 **Selection** (defaults: 300 papers, seed 42): five queries from each of the four
 query sets, all their target papers, then cited neighbors, citing neighbors and
