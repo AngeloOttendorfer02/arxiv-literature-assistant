@@ -14,6 +14,15 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D048 D-12 full-text subset of 1,000 papers (implements D034)
+
+- Context: D034 gives 1,000 papers full-text chunks: query targets, demo papers and a random sample. All papers stay in `papers`, `authors`, `paper_authors` and `citations`; only chunks (D-13) are limited. S1 needs metrics from full texts of topic papers, S2 needs baseline passages in the full texts of papers that cite Paper X, S3 uses abstracts, citations and authors only.
+- Decision: scripts/select_fulltext.py selects from the D-03 data in priority order: all query targets; papers since 2022 whose title or abstract mentions retrieval-augmented generation or RAG (S1/S3 demo topic); the S2 demo paper Dense Passage Retrieval (corpus ID 215737187) and the papers citing it; a random sample with seed 42 up to 1,000. The ID list and the IDs added per group are written to DATA_DIR/fulltext/v1/selection.json, never overwritten and never committed.
+- Reason: DPR is cited by 14 of the RAG papers and by 219 papers in total, and is a common retrieval baseline; BERT (4,891 citing papers) would exceed the budget. The corpus has only 38 RAG papers since 2022, so all are taken. Retrieval evaluation stays on title and abstract of all papers (D034).
+- Statistics (for D-23): 1,000 papers: 574 query targets, 36 more RAG papers, DPR, 192 more papers citing DPR, 197 random.
+- Validation: The same seed gives the same selection. Synthetic tests cover group order, overlaps, the random fill, reproducibility and missing targets or demo papers.
+- Date: 2026-10-24
+
 ### D047 Component timings in the request log
 
 - Context: A-08 asks for dense, BM25 and SQL time and guardrail scores per request. The pipeline only sees whole stages; the search backend measures dense, BM25 and fusion time, and the input check returns scores that the status events do not carry.
