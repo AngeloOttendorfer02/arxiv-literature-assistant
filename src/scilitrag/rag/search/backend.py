@@ -40,7 +40,8 @@ DENSE_SQL = (
 
 BM25_SQL = (
     "SELECT " + PAPER_COLUMNS + ", pdb.score(p.corpus_id) AS score "
-    "FROM papers p WHERE p.abstract ||| %(topic)s AND "
+    "FROM papers p WHERE (p.title ||| %(topic)s::text::pdb.boost(0.5) "
+    "OR p.abstract ||| %(topic)s) AND "
     + PAPER_FILTERS
     + " ORDER BY pdb.score(p.corpus_id) DESC, p.corpus_id LIMIT %(limit)s"
 )
