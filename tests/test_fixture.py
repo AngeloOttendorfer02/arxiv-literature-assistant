@@ -187,9 +187,29 @@ def test_nonempty_database_is_refused_before_copy():
     connection.cursor.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "metadata",
+    [
+        (1, None, "old-fingerprint"),
+        (1, None, ""),
+        (1, "published-model", None),
+        (1, "pending:model", "fingerprint"),
+        (2, None, None),
+        None,
+    ],
+)
+def test_import_refuses_stale_or_invalid_metadata_before_copy(metadata):
+    connection = MagicMock()
+    connection.execute.return_value.fetchone.side_effect = [(False,), metadata]
+    with pytest.raises(ValueError, match="no embedding model or fingerprint"):
+        import_records(connection, [(1, "Title", "Abstract", 2023)], [])
+    assert "embed_fingerprint" in connection.execute.call_args.args[0]
+    connection.cursor.assert_not_called()
+
+
 def test_import_uses_copy_values_and_parameterized_metadata():
     connection = MagicMock()
-    connection.execute.return_value.fetchone.side_effect = [(False,), (1, None)]
+    connection.execute.return_value.fetchone.side_effect = [(False,), (1, None, None)]
     paper = (1, "'); DROP TABLE papers; --", None, None)
     import_records(connection, [paper], [(1, 1)])
     cursor = connection.cursor.return_value.__enter__.return_value
@@ -231,7 +251,7 @@ def test_cli_selection_uses_environment_directory(source, monkeypatch, capsys):
 
 def test_chunks_are_copied_after_papers():
     connection = MagicMock()
-    connection.execute.return_value.fetchone.side_effect = [(False,), (1, None)]
+    connection.execute.return_value.fetchone.side_effect = [(False,), (1, None, None)]
     chunk = ("1-0", 1, "1 Intro", 0, "Body text.")
     import_records(connection, [(1, "T", None, None)], [], chunks=[chunk])
     cursor = connection.cursor.return_value.__enter__.return_value
