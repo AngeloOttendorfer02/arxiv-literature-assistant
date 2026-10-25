@@ -14,6 +14,22 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D052 D-15 BM25 title weight (updates D051)
+
+- Context: The team reports about +7 percentage points Recall@20 from adding titles on LitSearch with the D-22 dev/test split, provided titles are downweighted; `0.5` performed best on dev. These measurements were supplied by the team and have not been reproduced here.
+- Decision: Use `p.title ||| %(topic)s::text::pdb.boost(0.5) OR p.abstract ||| %(topic)s` in the paper BM25 query. The explicit `::text` before the boost avoids psycopg's `invalid typemod` error. Retain the consistent `papers_title_abstract_bm25_idx` name in SQL, migration and readiness. Chunk BM25 is unchanged; no index rebuild is needed for query-time weighting.
+- Reason: Apply the team's dev-selected title weight while retaining full abstract scores and the existing filters.
+- Validation: A disposable-database regression compares weighted scores with an unweighted baseline: title-only scores halve, abstract-only scores stay unchanged, and matching paper IDs are preserved. Live SQL verification requires `RETRIEVAL_TEST_DATABASE_URL`.
+- Date: 2026-10-25
+
+### D051 D-15 BM25 on paper title and abstract
+
+- Context: D-15 asks for BM25 with pg_search on title and abstract and on chunk text. WP2 had created `papers_abstract_bm25_idx` (abstract only) and `chunks_text_bm25_idx` in docker/db/retrieval_indexes.sql; the paper BM25 query searched the abstract only, while the dense paper vector already covers title and abstract (D050).
+- Options: keep abstract-only BM25 (R-07 wording) or add the title.
+- Decision: One ParadeDB index `papers_title_abstract_bm25_idx` on `(corpus_id, title, abstract, year)`; the WP2 paper query matches `title ||| topic OR abstract ||| topic` and still returns one BM25 score per paper for RRF. Title and abstract stay separate columns; no title boost. The chunk index is unchanged. Readiness checks index table and columns, not only names. Existing databases replace the old index with docker/db/migrations/002_bm25_title_abstract.sql. Details in [D-15 BM25 indexes](d15_bm25_index.md).
+- Reason: Keeps keyword and dense paper search on the same text, so a method or dataset named only in the title is found by both. Agreed with WP2, whose query and readiness check changed.
+- Date: 2026-10-25
+
 ### D050 D-14 granite embeddings for papers and chunks
 
 - Context: D-14 fills `papers.embedding` and `chunks.embedding` (vector(768)) with the model chosen in D044 and adds vector indexes. WP2 search orders by cosine distance (`<=>`), embeds queries through `scilitrag.data.embedding` and requires `schema_metadata.embed_model` to equal `EMBED_MODEL`; WP3 topic gating uses the same component.

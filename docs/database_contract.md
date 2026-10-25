@@ -46,7 +46,15 @@ is a shared data-layer dependency. There is no automatic substitute for it.
 Unit tests inject small deterministic vectors; database fixtures use synthetic
 768-dimensional vectors under the separate `retrieval-test` model identity.
 
-Topic search uses `papers.abstract`; chunk search uses `chunks.text`. Indexed
+Topic BM25 search matches `papers.title` or `papers.abstract` in one
+`papers_title_abstract_bm25_idx`; chunk search uses `chunks.text` in
+`chunks_text_bm25_idx`. Fields remain separate; no paper text is overwritten.
+Both use the default Unicode tokenizer and BM25 scores, with deterministic ID
+ordering for ties. Paper title matches use `::text::pdb.boost(0.5)`; abstracts
+retain weight `1.0`. The explicit text cast supports psycopg-bound parameters.
+Year and linked-paper/author filters also apply to title hits.
+Readiness checks require valid, ready, nonpartial indexes on the correct tables
+with all required columns; a matching name alone is insufficient. Indexed
 passage availability is derived with `EXISTS` over nonblank chunk text. This says
 whether passages are indexed, not whether a source full-text document exists.
 Search index installation is explicit, like the existing schema/index scripts.
@@ -57,7 +65,11 @@ after data loading. BM25 requires a ParadeDB index on each searched relation.
 
 The database image is pinned in Compose. Enable `vector`, `pg_search` and
 `pg_trgm`, then explicitly apply `schema.sql`, `indexes.sql` and the retrieval
-index script `retrieval_indexes.sql` when it is available. Initialization currently enables extensions only.
+index script `retrieval_indexes.sql`. Initialization enables extensions only.
+Existing abstract-only indexes first require
+`docker/db/migrations/002_bm25_title_abstract.sql`, which atomically replaces the
+paper index without changing rows or the chunk index. Plan for searches to wait
+during the rebuild. See [D-15](d15_bm25_index.md) for deployment and verification.
 
 The explicit role setup is `docker/db/roles.sql`, applied by the schema owner
 after `schema.sql` and the existing relational indexes. It creates the configured

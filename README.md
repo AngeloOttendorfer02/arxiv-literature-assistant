@@ -74,7 +74,7 @@ Names: `check_input`, `mask_pii`, `embed`, `plan`, `retrieve`, `sql_facts`, `gen
 | Model access | Configured completions, cancellable streaming, bounded retries and strict JSON validation. |
 | Citations | Request-local evidence snapshots, label checks, deterministic rendering, source fingerprints and ledgers. |
 | Planning and entities | Scenario planning with S1 fallback, explicit year/result filters and reader-injected paper/author linking. |
-| Search and evidence | Filtered abstract search with pgvector/BM25, RRF k=60, scoped passages and explicit evidence coverage. |
+| Search and evidence | Filtered title/abstract search with pgvector/BM25, RRF k=60, scoped passages and explicit evidence coverage. |
 | Citation paths | Incoming citation traversal with target-specific experimental baseline candidates. |
 | Author rankings | SQL credits over the exact selected topic-paper set, with dataset revision, scope and examples. |
 | Evaluation | Validated frozen references, pipeline model runs and separate structural/reference/human support metrics. |
@@ -137,7 +137,7 @@ needed:
 ```sh
 docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/schema.sql
 docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/indexes.sql
-docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/retrieval_indexes.sql
+docker compose exec db psql -X -v ON_ERROR_STOP=1 -U postgres -d scilitrag -f /opt/scilitrag/db/retrieval_indexes.sql
 docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/roles.sql
 ```
 
@@ -175,6 +175,11 @@ After bulk imports, the administrator runs `ANALYZE papers, authors, paper_autho
 citations, chunks;`. Ingest has no MAINTAIN privilege.
 
 ### Retrieval readiness
+
+BM25 indexes cover paper titles and abstracts plus chunk text (D-15). For existing
+abstract-only indexes, first apply migration
+`docker/db/migrations/002_bm25_title_abstract.sql` as the database owner, using
+`psql -X -v ON_ERROR_STOP=1`. See [deployment and tests](docs/d15_bm25_index.md).
 
 Run schema-only preflight with the configured application login:
 
