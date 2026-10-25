@@ -23,7 +23,8 @@ and does not import retrieval implementation modules.
 ### S1: topic literature search
 
 The planner extracts the topic, explicit publication-year bounds and result limit.
-Dense pgvector search and BM25 search use the same bound filter parameters. Reciprocal
+BM25 matches the title or abstract; chunk BM25 matches passage text within selected
+papers. Dense pgvector search and BM25 search use the same bound filter parameters. Reciprocal
 rank fusion uses k=60. Passage retrieval is limited to selected paper IDs and prioritizes
 section coverage while suppressing near duplicates. Each result retains corpus, chunk,
 year and author identity. Results without retrieved passages are explicitly abstract-only;

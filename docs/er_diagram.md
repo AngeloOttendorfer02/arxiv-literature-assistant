@@ -16,7 +16,7 @@ erDiagram
 
     papers {
         bigint corpus_id PK
-        text title "nullable; dense input"
+        text title "nullable; dense and BM25 input"
         text abstract "nullable; dense and BM25 input"
         integer year "nullable; relational filter"
         vector(768) embedding "nullable; title plus abstract; cosine HNSW"
@@ -84,7 +84,7 @@ than asserting that these indexes have been installed in a particular database.
 
 | Data | Vector representation | Sparse or relational indexes |
 | --- | --- | --- |
-| Paper title and abstract | Joined with a line break into one `papers.embedding`, 768 dimensions; cosine HNSW | BM25 on abstract; title has B-tree expression indexes and a GIN trigram index |
+| Paper title and abstract | Joined with a line break into one `papers.embedding`, 768 dimensions; cosine HNSW | One BM25 index on title and abstract; title also has B-tree expression indexes and a GIN trigram index |
 | Chunk text | One `chunks.embedding` per chunk, 768 dimensions; cosine HNSW | BM25 on `chunks.text` |
 | Paper year | None | B-tree; also included in the paper BM25 index for filtering |
 | Authors and paper-author links | None | Primary keys, foreign keys, normalized-name lookup and reverse paper-author lookup |
