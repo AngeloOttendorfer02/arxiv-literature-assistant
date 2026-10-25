@@ -1,11 +1,9 @@
 """D-13 section-based chunks with a fixed token window and overlap (O5, compared in D-20)."""
 
+from scilitrag.data.embedding import MODEL_REVISIONS as TOKENIZER_REVISIONS
+
 SIZES = (256, 384, 512)
 OVERLAPS = (0, 10, 20)
-# Pinned so that the same chunk IDs always mean the same token boundaries.
-TOKENIZER_REVISIONS = {
-    "ibm-granite/granite-embedding-english-r2": "47ea694b257b703fee9253d75c2b1f2985180498",
-}
 
 
 def chunk_sections(corpus_id, sections, offsets, *, size=512, overlap=10):

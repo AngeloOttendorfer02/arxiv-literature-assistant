@@ -1,5 +1,7 @@
 # Dataset, dumps and model weights (LitSearch must not be redistributed)
 data/
+# The embed component is code, not data (D-14).
+!src/scilitrag/data/
 *.dump
 *.backup
 *.sql.gz

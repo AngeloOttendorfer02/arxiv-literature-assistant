@@ -13,12 +13,12 @@ WORKDIR /app
 RUN --mount=type=cache,target=/root/.cache/uv \
     --mount=type=bind,source=uv.lock,target=uv.lock \
     --mount=type=bind,source=pyproject.toml,target=pyproject.toml \
-    uv sync --locked --no-install-project --no-editable --group rag --group guardrails
+    uv sync --locked --no-install-project --no-editable --group rag --group guardrails --group embed
 
 COPY pyproject.toml uv.lock README.md ./
 COPY src ./src
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --no-editable --group rag --group guardrails
+    uv sync --locked --no-editable --group rag --group guardrails --group embed
 
 
 FROM python:3.13-slim-trixie
