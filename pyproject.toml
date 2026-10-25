@@ -32,6 +32,11 @@ ui = [
     "httpx2>=2.13",
     "streamlit>=1.66",
 ]
+# D-14 embeddings with granite (D044); torch is listed so the CPU source applies.
+embed = [
+    "sentence-transformers>=6.2.0",
+    "torch>=2.14.1",
+]
 bench = []
 
 # CPU-only torch on every platform (Prompt Guard and NLI run on CPU, small image).

@@ -20,10 +20,28 @@ Run in this order:
    ```sh
    uv run --locked --group data --group rag python scripts/load_fixture.py --check-only
    ```
-5. If the database already holds data, reset it as administrator (command below).
+5. Apply the additive embedding fingerprint migration as administrator (safe to
+   re-run; new schemas already include the column):
+   ```sh
+   docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/migrations/001_embedding_fingerprint.sql
+   ```
+   If the database already holds data, reset it as administrator (command below).
 6. Load:
    ```sh
    uv run --locked --group data --group rag python scripts/load_fixture.py
+   ```
+7. Embed papers (title + abstract) and chunks with the pinned granite model (D-14).
+   This needs the `embed` group (CPU torch) and takes several minutes on a CPU; an
+   interrupted run continues where it stopped:
+   ```sh
+   uv sync --locked --group data --group rag --group embed
+   uv run --locked --group data --group rag --group embed python scripts/embed_database.py
+   ```
+   A resumed or completed run must match its saved model revision and preprocessing
+   fingerprint. Old vectors without that fingerprint are refused and must be rebuilt.
+8. As administrator, add the HNSW indexes (safe to re-run) and update statistics:
+   ```sh
+   docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/indexes.sql
    ```
 
 `--chunk-tokens` (256, 384, 512) and `--overlap` (0, 10, 20 %) change the chunk
@@ -56,10 +74,11 @@ writing to the database. Author IDs are numbered from 1 in
 `normalized_name` order, so an existing database is first reset as administrator:
 
 ```sh
-docker compose exec db psql -X -U postgres -d scilitrag -c "TRUNCATE papers, authors, paper_authors, citations, chunks RESTART IDENTITY;"
+docker compose exec db psql -X -U postgres -d scilitrag -c "TRUNCATE papers, authors, paper_authors, citations, chunks RESTART IDENTITY; UPDATE schema_metadata SET embed_model = NULL, embed_fingerprint = NULL WHERE id = 1;"
 ```
 
-Embeddings follow in D-14. After loading, the administrator runs
-`ANALYZE papers, citations, authors, paper_authors, chunks;`.
+The reset clears both the published embedding model and its permanent fingerprint,
+because the loader rejects either field being set before it copies new data. Step 8 ends with
+`ANALYZE papers, authors, paper_authors, citations, chunks;`.
 
 Unit tests use synthetic records and need neither LitSearch nor a database.

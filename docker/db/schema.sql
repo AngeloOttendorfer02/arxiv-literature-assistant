@@ -50,7 +50,9 @@ CREATE TABLE schema_metadata (
     id smallint PRIMARY KEY DEFAULT 1 CHECK (id = 1),
     schema_version integer NOT NULL,
     dataset_revision text,
-    embed_model text
+    embed_model text,
+    -- Permanent ingestion provenance, retained after embed_model is published.
+    embed_fingerprint text
 );
 
 -- Dataset revision and embedding model are recorded when their data are built.

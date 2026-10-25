@@ -194,10 +194,14 @@ def import_records(connection, papers, citations, authors=(), links=(), chunks=(
     if occupied:
         raise ValueError("Database is not empty; no data will be replaced or appended.")
     metadata = connection.execute(
-        "SELECT schema_version, embed_model FROM public.schema_metadata WHERE id = 1 FOR UPDATE"
+        "SELECT schema_version, embed_model, embed_fingerprint "
+        "FROM public.schema_metadata WHERE id = 1 FOR UPDATE"
     ).fetchone()
-    if metadata != (1, None):
-        raise ValueError("Expected schema version 1 with no published embedding model.")
+    if metadata != (1, None, None):
+        raise ValueError(
+            "Expected schema version 1 with no embedding model or fingerprint; "
+            "clear both embedding metadata fields before importing."
+        )
     with connection.cursor() as cursor:
         for statement, records in ((PAPER_COPY, papers), (CITATION_COPY, citations)):
             with cursor.copy(statement) as copy:
