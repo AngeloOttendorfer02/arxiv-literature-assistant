@@ -26,8 +26,19 @@ between `EMBED_MODEL` and `schema_metadata.embed_model`. Metadata must describe
 vectors actually loaded, with the same preprocessing and normalization as queries.
 Matching a model name and dimension alone cannot prove preprocessing equivalence.
 
-The production embedding entry point is `scilitrag.data.embedding.embed(texts)`.
-It must return one finite, nonzero, 768-dimensional vector per input. That module
+Ingestion also stores `schema_metadata.embed_fingerprint`, containing the model
+revision and preprocessing settings. It remains set after publication, and the
+embedding script verifies it before reusing either partial or completed vectors.
+Existing databases add this column with
+`docker/db/migrations/001_embedding_fingerprint.sql`; the additive ingestion field
+does not change the version 1 retrieval interface above. Resetting embeddings also
+clears this fingerprint. Vectors without matching provenance must be rebuilt.
+The fixture loader also requires both `embed_model` and `embed_fingerprint` to be
+NULL before importing, and rejects stale metadata before any COPY operation.
+
+The production embedding component is created by
+`scilitrag.data.embedding.build_component(settings)` and called as `embed(texts)`.
+It returns one finite, nonzero, 768-dimensional vector per input. That module
 is a shared data-layer dependency. There is no automatic substitute for it.
 Unit tests inject small deterministic vectors; database fixtures use synthetic
 768-dimensional vectors under the separate `retrieval-test` model identity.

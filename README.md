@@ -206,11 +206,19 @@ The default is 300 papers around 20 queries. Files stay under
 `DATA_DIR/fixtures/v0`; no LitSearch records are committed. The import uses
 `INGEST_DATABASE_URL` and requires empty data tables with a fresh author ID
 sequence. It loads paper metadata, internal citations, authors and D-13 chunks;
-embeddings follow in D-14. To reload, reset the tables first as
-administrator; a failed or rolled-back import also needs this reset:
+`scripts/embed_database.py` (group `embed`) then adds the D-14 embeddings.
+Before embedding or resetting an existing database, apply the additive fingerprint
+migration as administrator (safe to re-run). New schemas already have the column:
 
 ```sh
-docker compose exec db psql -X -U postgres -d scilitrag -c "TRUNCATE papers, authors, paper_authors, citations, chunks RESTART IDENTITY;"
+docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/migrations/001_embedding_fingerprint.sql
+```
+
+To reload, reset the tables and embedding metadata as administrator; a failed or
+rolled-back import also needs this reset:
+
+```sh
+docker compose exec db psql -X -U postgres -d scilitrag -c "TRUNCATE papers, authors, paper_authors, citations, chunks RESTART IDENTITY; UPDATE schema_metadata SET embed_model = NULL, embed_fingerprint = NULL WHERE id = 1;"
 ```
 
 See [fixture selection and loading](tests/fixtures/README.md) for details.
