@@ -303,6 +303,9 @@ tests/          shared/API/UI/data tests and fixtures
 docs/           decisions and diagrams
 ```
 
+The [database ER diagram](docs/er_diagram.md) documents the current tables,
+relationships and search storage (D-24).
+
 The UI imports nothing from the package except `scilitrag.contracts`.
 
 ## Evaluate retrieval

@@ -5,6 +5,9 @@ relations and uses `schema_metadata` row `id=1`, schema version 1. Both embeddin
 columns are `vector(768)`; dimension is read from PostgreSQL's type catalog.
 The application does not require an `embed_dim` metadata column.
 
+The [ER diagram (D-24)](er_diagram.md) shows all tables, keys, relationship
+cardinalities and the vector, sparse and relational storage choices.
+
 | Relation | Retrieval fields |
 | --- | --- |
 | papers | corpus_id, title, abstract, year, embedding |
