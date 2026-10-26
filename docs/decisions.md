@@ -14,6 +14,21 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D054 D-16 full database, dump and restore
+
+- Context: D-16 builds the full database (D048: all D-03 papers, chunks only for the D-12 selection), shares it privately as a dump and needs a restore script, the "pre-seeded database scripts" of the report.
+- Decision: scripts/load_full.py loads all D-03 papers, citations and authors and the D-13 chunks of the 1,000 selected papers, with the checks and COPY import of load_fixture.py; it reads the 3.3 GB S2ORC file once. scripts/dump_database.py writes a custom-format dump of the six tables without owners, grants or indexes plus a `.sha256` file, and refuses unpublished embeddings. scripts/restore_database.py restores into a fresh database, then runs roles.sql, indexes.sql and retrieval_indexes.sql from the repository and ANALYZE. compose gives the database 2 GB of shared memory, and .env.example connects to 127.0.0.1 instead of localhost. The 5 protected query targets without title and abstract (D021) stay in the corpus and are embedded as empty text.
+- Reason: Roles and passwords stay local, and index changes such as D-15 need no new dump. Parallel HNSW builds failed with Docker's default 64 MB `/dev/shm` ("could not resize shared memory segment ... 1036095712 bytes"), because the image sets `maintenance_work_mem` to 991 MB. On Windows every connection to localhost waited 5 s for IPv6 before using 127.0.0.1 (24 ms), and DatabaseReader connects once per query.
+- Validation: 56,115 papers, 328,622 citations, 70,171 authors and 27,969 chunks imported in 157 s. Embedding the 84,084 vectors in fp32 on a Quadro T2000 took about 1 h 45 min with `--batch-size 1024` (17.8 papers/s, 8.4 chunks/s; the default 32 gave 8 papers/s). Resuming after a stop reused the 3,040 finished vectors. The dump has 330 MiB and took 70 s. A restore into a separate compose project took 76 s including all indexes; `check_database.py --require-search` passes there and on the build database. On the restored database, all 597 LitSearch queries as topic give Recall@20 0.690 dense, 0.607 BM25 and 0.704 hybrid.
+- Date: 2026-10-25
+
+### D053 fp32 for embeddings on GPU too (changes D050)
+
+- Context: D050 used fp16 on a GPU and fp32 on CPU. Queries are always embedded on CPU, and the D-16 build runs on a local GPU.
+- Decision: `load_model` uses fp32 on every device.
+- Reason: Measured on a Quadro T2000 (4 GB) with 3,000 LitSearch papers and 597 queries: fp16 took 473 s, fp32 164 s, CPU fp32 1,255 s. fp16 did not change quality (Recall@20 0.905 for both, 99.4 % identical top-20). GPU fp32 vectors match CPU fp32 (cosine 1.000000), so stored and query vectors now come from the same precision. Peak GPU memory 1.2 GB.
+- Date: 2026-10-25
+
 ### D052 D-15 BM25 title weight (updates D051)
 
 - Context: The team reports about +7 percentage points Recall@20 from adding titles on LitSearch with the D-22 dev/test split, provided titles are downweighted; `0.5` performed best on dev. These measurements were supplied by the team and have not been reproduced here.

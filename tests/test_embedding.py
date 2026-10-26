@@ -49,14 +49,15 @@ def test_unpinned_model_is_refused():
         embedding.load_model.__wrapped__("someone/unpinned-model")
 
 
-def test_whole_chunk_fits_after_special_tokens(monkeypatch):
+@pytest.mark.parametrize("cuda", [False, True])
+def test_whole_chunk_fits_after_special_tokens(monkeypatch, cuda):
     class FakeSentenceTransformer:
         def __init__(self, model, **kwargs):
             self.kwargs = kwargs
             self.tokenizer = SimpleNamespace(num_special_tokens_to_add=lambda: 2)
 
     torch = SimpleNamespace(
-        cuda=SimpleNamespace(is_available=lambda: False), float16="fp16", float32="fp32"
+        cuda=SimpleNamespace(is_available=lambda: cuda), float16="fp16", float32="fp32"
     )
     monkeypatch.setitem(sys.modules, "torch", torch)
     monkeypatch.setitem(
@@ -67,6 +68,7 @@ def test_whole_chunk_fits_after_special_tokens(monkeypatch):
     encoder = embedding.load_model.__wrapped__(GRANITE)
     assert encoder.max_seq_length == 512 + 2
     assert encoder.kwargs["revision"] == embedding.MODEL_REVISIONS[GRANITE]
+    assert encoder.kwargs["device"] == ("cuda" if cuda else "cpu")
     assert encoder.kwargs["model_kwargs"] == {"dtype": "fp32"}
 
 

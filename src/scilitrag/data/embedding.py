@@ -49,10 +49,12 @@ def load_model(model: str):
     from sentence_transformers import SentenceTransformer
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    # fp32 on CPU; granite would otherwise load in bf16, which is slow on most CPUs.
-    dtype = torch.float16 if device == "cuda" else torch.float32
+    # fp32 everywhere, so stored and query vectors match (D053).
     encoder = SentenceTransformer(
-        model, revision=MODEL_REVISIONS[model], device=device, model_kwargs={"dtype": dtype}
+        model,
+        revision=MODEL_REVISIONS[model],
+        device=device,
+        model_kwargs={"dtype": torch.float32},
     )
     encoder.max_seq_length = CONTENT_TOKENS + encoder.tokenizer.num_special_tokens_to_add()
     return encoder
