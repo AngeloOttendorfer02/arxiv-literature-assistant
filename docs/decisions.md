@@ -14,6 +14,13 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D055 D-17 database validation
+
+- Decision: scripts/validate_database.py checks read-only with the app login: at least 3 tables with 1,000 rows; the 5 validated single-column foreign keys with the expected parent column and schema and without orphans; no missing embeddings, blank chunk texts or author names (including tabs and newlines); nonempty published dataset/model/fingerprint metadata in row id=1 with schema_version=1; no e-mails (D-11 pattern) in stored text. Papers without title and abstract (D021) or year (D035) are INFO. A failed check gives exit code 1.
+- Reason: Own connection, because the 10 s DatabaseReader timeout is too short for full-table scans.
+- Validation: Restored D-16 database, 14 PASS and 2 INFO in 20.3 s: papers 56,115, authors 70,171, paper_authors 196,079, citations 328,622, chunks 27,969; 0 orphans, nulls and e-mails. INFO: 5 papers without title and abstract, 451 without year. The 37 D-17 tests include 25 real-SQL regressions in isolated schemas of a disposable database: NULL/empty/whitespace metadata, pending models, whitespace-only text and incorrect FK target columns, schemas, arity and validation state.
+- Date: 2026-10-26
+
 ### D054 D-16 full database, dump and restore
 
 - Context: D-16 builds the full database (D048: all D-03 papers, chunks only for the D-12 selection), shares it privately as a dump and needs a restore script, the "pre-seeded database scripts" of the report.
