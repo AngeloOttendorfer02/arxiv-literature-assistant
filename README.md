@@ -264,6 +264,20 @@ installs CPU torch, so a GPU run needs its own environment with a CUDA build of
 torch 2.14.1 and the locked versions of the other packages. Create the dump before
 running `indexes.sql`; the restore builds the indexes. Details in D054.
 
+### Validate the database (D-17)
+
+```sh
+uv run --locked --group data --group rag python scripts/validate_database.py
+```
+
+Read-only checks with the app login: rows per table (at least 1,000 in at least 3
+tables), validated single-column foreign keys with the expected target column
+and schema and no orphans, no missing embeddings or blank texts and names
+(including tabs and newlines), nonempty published metadata in the version 1
+singleton row, and no e-mail addresses in stored text.
+Papers without title and abstract or year are reported as INFO. `--json FILE`
+also writes the results; a failed check gives exit code 1. Details in D055.
+
 ## Run with Docker
 
 ```
