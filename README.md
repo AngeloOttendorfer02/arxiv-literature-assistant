@@ -10,7 +10,8 @@ Developed by Angelo Ottendorfer, Benjamin Storck, Kristof Zörenyi and Nuray Vis
 
 The project uses [LitSearch](https://huggingface.co/datasets/princeton-nlp/LitSearch) ([princeton-nlp/LitSearch](https://github.com/princeton-nlp/LitSearch)). The dataset is **not** part of this repository and must not be redistributed. Database dumps are shared privately within the team only.
 
-TODO: full-corpus loading and dump restore.
+The full database is shared as a dump; restoring or building it is described in
+[Full database and dump (D-16)](#full-database-and-dump-d-16).
 
 ## Setup
 
@@ -228,7 +229,40 @@ docker compose exec db psql -X -U postgres -d scilitrag -c "TRUNCATE papers, aut
 
 See [fixture selection and loading](tests/fixtures/README.md) for details.
 
-TODO: dump restore.
+### Full database and dump (D-16)
+
+Usually you only restore the shared dump. Add the role variables to `.env` (see
+above), start a fresh database volume and run:
+
+```sh
+docker compose up -d db
+uv run --locked --group data python scripts/restore_database.py path/to/scilitrag_v1.dump
+uv run --locked --group rag python scripts/check_database.py --require-search
+```
+
+The restore checks the `.sha256` file next to the dump, runs `pg_restore`, then
+`roles.sql`, `indexes.sql` and `retrieval_indexes.sql` from this repository and
+`ANALYZE` (about 80 s). It refuses a database that already has the project tables;
+`docker compose down -v` deletes existing data first. The dump `scilitrag_v1`
+(about 330 MiB) holds schema and data of the six tables only, without indexes,
+roles or grants, so index changes need no new dump.
+
+To build it yourself, run D-03 and D-12 first (`filter_data.py`, `select_fulltext.py`),
+apply `schema.sql` and `roles.sql` to an empty database, then:
+
+```sh
+uv run --locked --group data --group rag python scripts/load_full.py --check-only
+uv run --locked --group data --group rag python scripts/load_full.py
+uv run --locked --group data --group rag --group embed python scripts/embed_database.py --batch-size 1024
+uv run --locked --group data python scripts/dump_database.py
+```
+
+The import loads all 56,115 papers, 328,622 citations, 70,171 authors and 27,969
+chunks of the 1,000 full-text papers (about 2.5 min). Embedding the 84,084 vectors
+took about 1 h 45 min on a 4 GB Quadro T2000 and takes many hours on CPU. The lock
+installs CPU torch, so a GPU run needs its own environment with a CUDA build of
+torch 2.14.1 and the locked versions of the other packages. Create the dump before
+running `indexes.sql`; the restore builds the indexes. Details in D054.
 
 ## Run with Docker
 
