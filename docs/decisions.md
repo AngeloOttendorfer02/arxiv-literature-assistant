@@ -14,6 +14,16 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D033 S-09 NLI default changed to ModernCE-large-nli (replaces D029 default)
+
+- Context: D029 chose `dleemiller/EttinX-nli-s` from 7 hand-made pairs and named ModernCE-large-nli as the fallback. A larger test on 150 random abstracts from the D-03 corpus (1,034 sentence pairs in four variants: entail, negation, number, wrong_paper; premise short at about 210 tokens or long at about 600 tokens) showed EttinX rejecting correct sentences.
+- Options: keep EttinX-nli-s (about 40 / 370 ms per pair on CPU); ModernCE-base-nli (149M, about 210 / 850 ms); ModernCE-large-nli (395M, about 600 / 2,400 ms).
+- Decision: Default `dleemiller/ModernCE-large-nli`. `NLI_MODEL` stays configurable. Label order is unchanged ([contradiction, entailment, neutral], fixed in code); a check with two unambiguous sentences confirmed it for all three models.
+- Reason: Share of pairs with status ok at threshold 0.5. entail (must pass): EttinX 0.77 short and 0.13 long, ModernCE-base 0.87 and 0.53, ModernCE-large 1.00 and 0.99. negation, number and wrong_paper (must fail) stay at or below 0.14 for all models. EttinX drops verbatim sentences at 23% (200 tokens) and 87% (600 tokens), so it is not usable with chunks as premise. ModernCE-large is stable across premise length. Cost: about 6 times the CPU latency per sentence. The NLI thresholds stay at 0.5 for now; 0.8 also works on this test and is decided in S-13.
+- Date: 2026-10-23
+
+---
+
 ### D032 S-05 evidence guard against indirect injection (contracts 0.5)
 
 - Context: Retrieved chunks and abstracts go into the prompt and could carry instructions. The pipeline had no place to check them, and the contracts had no interface for it.

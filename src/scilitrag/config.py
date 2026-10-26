@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from dotenv import find_dotenv, load_dotenv
 
 DEFAULT_EMBED_MODEL = "BAAI/bge-base-en-v1.5"
-DEFAULT_NLI_MODEL = "dleemiller/EttinX-nli-s"
+DEFAULT_NLI_MODEL = "dleemiller/ModernCE-large-nli"
 DEFAULT_REQUEST_TIMEOUT_S = 120.0
 DEFAULT_LOG_DIR = "logs"
 REQUIRED_WITHOUT_MOCKS = ("DATABASE_URL", "LLM_BASE_URL", "LLM_MODEL")
