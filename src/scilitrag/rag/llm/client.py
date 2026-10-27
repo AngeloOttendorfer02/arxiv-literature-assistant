@@ -36,6 +36,10 @@ class ChatClient:
             raise LLMClientError("Configure LLM_BASE_URL.", kind="configuration")
         return f"{base}/chat/completions"
 
+    def _headers(self) -> dict[str, str]:
+        key = self.settings.llm_api_key
+        return {"Authorization": f"Bearer {key}"} if key else {}
+
     def _payload(
         self,
         messages: list[dict[str, str]],
@@ -74,7 +78,7 @@ class ChatClient:
         try:
             with (
                 httpx.Client(timeout=timeout, transport=self.transport) as client,
-                client.stream("POST", url, json=payload) as response,
+                client.stream("POST", url, json=payload, headers=self._headers()) as response,
             ):
                 response.raise_for_status()
                 for chunk in response.iter_bytes():
@@ -101,7 +105,7 @@ class ChatClient:
         payload = self._payload(messages, stream=True)
         async with (
             httpx.AsyncClient(timeout=timeout, transport=self.transport) as client,
-            client.stream("POST", url, json=payload) as response,
+            client.stream("POST", url, json=payload, headers=self._headers()) as response,
         ):
             response.raise_for_status()
             data: list[str] = []

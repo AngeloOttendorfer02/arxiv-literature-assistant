@@ -172,6 +172,17 @@ def test_health_reports_unhealthy_database(tmp_path, database_url, expected):
     assert body["checks"] == {"database": expected, "llm": "skipped"}
 
 
+def test_health_does_not_probe_a_token_protected_llm(tmp_path):
+    # The URL is unreachable, so a probe would report "unreachable".
+    url = f"http://127.0.0.1:{free_port()}/v1"
+    app, _ = make_app(tmp_path, REAL_COMPONENTS="generate", LLM_BASE_URL=url, LLM_API_KEY="t")
+    body = TestClient(app).get("/health").json()
+    assert body["checks"] == {"database": "skipped", "llm": "not probed"}
+    assert body["status"] == "ok"
+    app, _ = make_app(tmp_path, REAL_COMPONENTS="generate", LLM_BASE_URL=url)
+    assert TestClient(app).get("/health").json()["checks"]["llm"] == "unreachable"
+
+
 @pytest.mark.parametrize("value", ["nan", "inf", "0", "-1", "abc"])
 def test_request_timeout_must_be_positive_and_finite(value):
     with pytest.raises(ConfigError):
