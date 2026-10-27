@@ -30,16 +30,27 @@ PAPER_FILTERS = """
         AND af.author_id=%(author_id)s))
     AND (%(paper_id)s::bigint IS NULL OR p.corpus_id=%(paper_id)s)
 """
-DENSE_SQL = (
-    "SELECT " + PAPER_COLUMNS + ", 1-(p.embedding <=> %(vector)s::vector) AS score "
+
+
+def _top_first(ranked: str) -> str:
+    # Rank with the index first; PAPER_COLUMNS subqueries on the full corpus otherwise
+    # make PostgreSQL scan all chunks once per search.
+    return (
+        "SELECT " + PAPER_COLUMNS + ", top.score FROM (" + ranked + ") top "
+        "JOIN papers p USING (corpus_id) ORDER BY top.score DESC, p.corpus_id"
+    )
+
+
+DENSE_SQL = _top_first(
+    "SELECT p.corpus_id, 1-(p.embedding <=> %(vector)s::vector) AS score "
     "FROM papers p WHERE p.embedding IS NOT NULL AND "
     + PAPER_FILTERS
     + " ORDER BY p.embedding <=> %(vector)s::vector, p.corpus_id LIMIT %(limit)s"
 )
 
 
-BM25_SQL = (
-    "SELECT " + PAPER_COLUMNS + ", pdb.score(p.corpus_id) AS score "
+BM25_SQL = _top_first(
+    "SELECT p.corpus_id, pdb.score(p.corpus_id) AS score "
     "FROM papers p WHERE (p.title ||| %(topic)s::text::pdb.boost(0.5) "
     "OR p.abstract ||| %(topic)s) AND "
     + PAPER_FILTERS
@@ -187,9 +198,7 @@ def default_backend(settings=None) -> SearchBackend:
         from scilitrag.data import embedding
     except ImportError:
         raise RagUserError("The search embedding service is not available.") from None
-    factory = getattr(embedding, "build_component", None)
-    embed = factory(settings) if factory else embedding.embed
-    backend = SearchBackend(reader, embed, dimension=dimension)
+    backend = SearchBackend(reader, embedding.build_component(settings), dimension=dimension)
     backend.settings = settings
     backend.metadata = metadata
     return backend
