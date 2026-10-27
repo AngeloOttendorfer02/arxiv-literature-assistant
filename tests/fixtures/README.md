@@ -45,7 +45,7 @@ Run in this order:
    ```
 
 `--chunk-tokens` (256, 384, 512) and `--overlap` (0, 10, 20 %) change the chunk
-window; the default 256 tokens with 10 % overlap was chosen in D-20 (D059).
+window; the default 256 tokens with 10 % overlap was chosen in D-20 (D060).
 
 **Selection** (defaults: 300 papers, seed 42): five queries from each of the four
 query sets, all their target papers, then cited neighbors, citing neighbors and
