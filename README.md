@@ -236,16 +236,17 @@ above), start a fresh database volume and run:
 
 ```sh
 docker compose up -d db
-uv run --locked --group data python scripts/restore_database.py path/to/scilitrag_v1.dump
+uv run --locked --group data python scripts/restore_database.py path/to/scilitrag_v2.dump
 uv run --locked --group rag python scripts/check_database.py --require-search
 ```
 
 The restore checks the `.sha256` file next to the dump, runs `pg_restore`, then
 `roles.sql`, `indexes.sql` and `retrieval_indexes.sql` from this repository and
 `ANALYZE` (about 80 s). It refuses a database that already has the project tables;
-`docker compose down -v` deletes existing data first. The dump `scilitrag_v1`
-(about 330 MiB) holds schema and data of the six tables only, without indexes,
-roles or grants, so index changes need no new dump.
+`docker compose down -v` deletes existing data first. The dump `scilitrag_v2`
+(about 400 MiB, chunks of 256 tokens with 10 % overlap; D062) holds schema and data
+of the six tables only, without indexes, roles or grants, so index changes need no
+new dump. `scilitrag_v1` (512-token chunks) is superseded.
 
 To build it yourself, run D-03 and D-12 first (`filter_data.py`, `select_fulltext.py`),
 apply `schema.sql` and `roles.sql` to an empty database, then:
@@ -254,15 +255,21 @@ apply `schema.sql` and `roles.sql` to an empty database, then:
 uv run --locked --group data --group rag python scripts/load_full.py --check-only
 uv run --locked --group data --group rag python scripts/load_full.py
 uv run --locked --group data --group rag --group embed python scripts/embed_database.py --batch-size 1024
-uv run --locked --group data python scripts/dump_database.py
+uv run --locked --group data python scripts/dump_database.py --name scilitrag_v2
 ```
 
-The import loads all 56,115 papers, 328,622 citations, 70,171 authors and 27,969
-chunks of the 1,000 full-text papers (about 2.5 min). Embedding the 84,084 vectors
-took about 1 h 45 min on a 4 GB Quadro T2000 and takes many hours on CPU. The lock
-installs CPU torch, so a GPU run needs its own environment with a CUDA build of
-torch 2.14.1 and the locked versions of the other packages. Create the dump before
-running `indexes.sql`; the restore builds the indexes. Details in D054.
+The import loads all 56,115 papers, 328,622 citations, 70,171 authors and 48,860
+chunks of the 1,000 full-text papers (about 1 min). Embedding the 104,975 vectors
+took about 12 min on an RTX 4070 Ti SUPER and takes many hours on CPU. The lock
+installs CPU torch, so on a GPU run the embedding step in its own environment
+(PowerShell: `$env:PYTHONPATH = "src"` first):
+
+```sh
+uv run --no-project --python 3.13 --index https://download.pytorch.org/whl/cu130 --with "torch==2.14.1+cu130" --with sentence-transformers==6.2.0 --with transformers==5.20.2 --with numpy==2.4.6 --with pyarrow==26.0.0 --with python-dotenv==1.2.4 --with pydantic==2.14.1 --with "psycopg[binary]==3.3.6" python scripts/embed_database.py --batch-size 1024
+```
+
+Create the dump before running `indexes.sql`; the restore builds the indexes.
+Details in D054 and D062.
 
 ### Validate the database (D-17)
 
