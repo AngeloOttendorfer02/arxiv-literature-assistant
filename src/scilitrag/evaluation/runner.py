@@ -18,7 +18,7 @@ from scilitrag.rag.errors import RagUserError
 from scilitrag.rag.scenarios.authors import attach_sql_evidence
 
 CORE = {"plan", "retrieve", "sql_facts", "generate", "render_citations"}
-GUARDRAILS = {"check_input", "check_sentence", "mask_pii"}
+GUARDRAILS = {"check_input", "check_evidence", "check_sentence", "mask_pii"}
 
 
 def dataset_revision(settings):

@@ -6,6 +6,7 @@ pytest.importorskip("presidio_analyzer")
 
 from scilitrag.config import ConfigError, load_settings
 from scilitrag.guardrails import input as real_input
+from scilitrag.guardrails.prompt_guard import PromptGuard
 
 
 def settings(**env):
@@ -15,7 +16,7 @@ def settings(**env):
 @pytest.fixture
 def fake_guard(monkeypatch):
     scores = {}
-    monkeypatch.setattr(real_input.PromptGuard, "score", lambda self, text: scores[text])
+    monkeypatch.setattr(PromptGuard, "score", lambda self, text: scores[text])
     return scores
 
 

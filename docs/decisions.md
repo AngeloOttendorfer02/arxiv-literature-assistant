@@ -14,6 +14,27 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D057 S-09 NLI default set to ModernCE-large-nli in code (implements D036)
+
+- Context: D029 chose `dleemiller/EttinX-nli-s` from 7 hand-made pairs; D036 replaced it with ModernCE-large-nli as a team decision, but the default in the code was still EttinX. A larger test on 150 random abstracts from the D-03 corpus (1,034 sentence pairs in four variants: entail, negation, number, wrong_paper; premise short at about 210 tokens or long at about 600 tokens) showed EttinX rejecting correct sentences.
+- Options: keep EttinX-nli-s (about 40 / 370 ms per pair on CPU); ModernCE-base-nli (149M, about 210 / 850 ms); ModernCE-large-nli (395M, about 600 / 2,400 ms).
+- Decision: Default `dleemiller/ModernCE-large-nli`. `NLI_MODEL` stays configurable. Label order is unchanged ([contradiction, entailment, neutral], fixed in code); a check with two unambiguous sentences confirmed it for all three models.
+- Reason: Share of pairs with status ok at threshold 0.5. entail (must pass): EttinX 0.77 short and 0.13 long, ModernCE-base 0.87 and 0.53, ModernCE-large 1.00 and 0.99. negation, number and wrong_paper (must fail) stay at or below 0.14 for all models. EttinX drops verbatim sentences at 23% (200 tokens) and 87% (600 tokens), so it is not usable with chunks as premise. ModernCE-large is stable across premise length. Cost: about 6 times the CPU latency per sentence. The NLI thresholds stay at 0.5 for now; 0.8 also works on this test and is decided in S-13.
+- Date: 2026-10-23
+
+---
+
+---
+
+### D056 S-05 evidence guard against indirect injection (contracts 0.5)
+
+- Context: Retrieved chunks and abstracts go into the prompt and could carry instructions. The pipeline had no place to check them, and the contracts had no interface for it.
+- Options: new contract interface; direct call in the pipeline without a contract; filtering inside `retrieve` (WP2). Own threshold or the query threshold. Continue or abort when every source is removed.
+- Decision: Contracts 0.5 (additive): `CheckEvidence`, `EvidenceCheckResult` (kept evidence, removed labels, scores, latency) and stage `evidence_guard`; `Components.check_evidence`, a mock that drops sources matching the injection keywords, and a real module `guardrails/evidence.py`. The real check scores title and text of every chunk and paper source with the shared Prompt Guard instance (windows as in D028) and drops sources at or above `EVIDENCE_GUARD_THRESHOLD` (default 0.5, provisional, tuned in S-13). SQL evidence is built by our code and not scored. The pipeline runs the check between `retrieve` and `sql_facts`, so SQL facts only see the kept sources. It sends a `status` event (`ok` or `k of n removed`), the stage is in the request log as a guardrail event, and the UI shows it as "Source check". Labels are not renumbered. If all sources are removed the pipeline continues with empty evidence and `generate` answers with no evidence (R-12).
+- Reason: A checked interface keeps `USE_MOCKS=1` and the swap per component working. Removing sources before SQL facts keeps tables free of flagged papers. Measured on CPU with 17 sources of about 400 tokens: 4.3 s in total, about 250 ms per source, all of it before the first token.
+- Known limits: A paper abstract about prompt injection that quotes an attack sentence scored 0.98 and is removed, so such papers disappear from answers; no threshold helps, because the legitimate and the attack text score alike. Three poisoned test sources (instruction at the end of a chunk, role-play, plain override) scored 0.998 and above. Latency can be cut by scoring fewer sources or in parallel; not done here.
+
+---
 ### D055 D-17 database validation
 
 - Decision: scripts/validate_database.py checks read-only with the app login: at least 3 tables with 1,000 rows; the 5 validated single-column foreign keys with the expected parent column and schema and without orphans; no missing embeddings, blank chunk texts or author names (including tabs and newlines); nonempty published dataset/model/fingerprint metadata in row id=1 with schema_version=1; no e-mails (D-11 pattern) in stored text. Papers without title and abstract (D021) or year (D035) are INFO. A failed check gives exit code 1.

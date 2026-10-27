@@ -33,6 +33,7 @@ STAGE_LABELS = {
     "pii": "PII masking",
     "plan": "Query plan",
     "retrieve": "Retrieval",
+    "evidence_guard": "Source check",
     "sql": "SQL facts",
     "generate": "Answer check",
 }
@@ -93,6 +94,8 @@ def stage_badge(answer: Answer, stage: str) -> tuple[str, str]:
     text = f"{status.result} · {status.latency_ms:.0f} ms"
     if stage in GUARD_STAGES and status.result != "ok" and not status.result.startswith("masked"):
         return text, "red"
+    if stage == "evidence_guard" and status.result != "ok":
+        return text, "orange"
     if stage == "generate" and answer.removed:
         return text, "orange"
     return text, "green"

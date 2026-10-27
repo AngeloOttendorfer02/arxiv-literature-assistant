@@ -1,7 +1,14 @@
 import re
 import time
 
-from scilitrag.contracts import CheckInputResult, EvidenceMapping, SentenceCheck, StageResult
+from scilitrag.contracts import (
+    CheckInputResult,
+    Evidence,
+    EvidenceCheckResult,
+    EvidenceMapping,
+    SentenceCheck,
+    StageResult,
+)
 
 EMAIL = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
 LABEL = re.compile(r"\[(\d+)\]")
@@ -54,6 +61,16 @@ def check_input(query: str) -> CheckInputResult:
     masked = len(EMAIL.findall(query))
     stages.append(_stage("pii", f"masked {masked}" if masked else "ok", masked > 0))
     return finish("ok")
+
+
+def check_evidence(evidence: list[Evidence]) -> EvidenceCheckResult:
+    flagged = [e.label for e in evidence if e.type != "sql" and INJECTION.search(e.text)]
+    return EvidenceCheckResult(
+        evidence=[e for e in evidence if e.label not in flagged],
+        removed=flagged,
+        scores={label: 1.0 for label in flagged},
+        latency_ms=0.0,
+    )
 
 
 # Structure stage only (label present and known); no fact or NLI check.
