@@ -14,6 +14,12 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D064 D-16 dump v2 with 256-token chunks (implements D060)
+
+- Context: D060 changed the chunk defaults to 256 tokens with 10 % overlap; dump v1 (D054) holds 27,969 chunks of 512 tokens. `load_full.py` only imports into an empty database, and replacing chunks in place would leave published metadata next to chunks without vectors.
+- Decision: Full rebuild with the existing scripts into a fresh database, dump `scilitrag_v2`. v1 is superseded; the team restores v2. The chunk setting is recorded by the dump name and this entry, not in `schema_metadata` (schema unchanged). The benchmark (D058) runs on v2.
+- Validation: Build on an RTX 4070 Ti SUPER. `load_full.py`: 56,115 papers, 328,622 citations, 70,171 authors, 196,079 paper links and 48,860 chunks in 60 s, identical to D054 except the chunks and equal to the D-20 count. Embedding in a CUDA environment (torch 2.14.1+cu130, locked versions otherwise): papers 251 s, chunks 459 s, about 12 min in total against about 1 h 45 min on the T2000. Dump 401 MiB in 39 s (SHA-256 `017ff941...0a53`). Restore into a fresh volume in 40 s; `check_database.py --require-search` passes; `validate_database.py` 14 PASS, 2 INFO as in D055, chunks 48,860, no missing vectors. Recall@20 of the 597 LitSearch queries as topic: dense 0.694, BM25 0.607, hybrid 0.710 (v1: 0.690, 0.607, 0.704); paper search does not use chunks, the small dense difference comes from re-embedding on another GPU and a rebuilt HNSW index. S1 chunk search on 30 queries returned 2 passages per paper, longest 1,496 characters (limit 2,400).
+
 ### D063 S-12 guardrail test sets in the repository, first baseline on the tuning split
 
 - Context: S-12 asks for at least 100 attacks in five categories and harmless questions, split into tuning and test, with AI-written prompts reviewed by a person. LitSearch text may not be stored in the repository.
