@@ -8,7 +8,7 @@ Runs outside the project lock because the project pins CPU-only torch:
 
 Reads the D-03 output from DATA_DIR/filtered/d03 (--raw: the D-01 cache instead).
 Embeddings are cached under DATA_DIR/embeddings. Full results go to
-eval/private/embedding_comparison.json, the aggregate report to
+eval/results/d22_embedding_comparison.json (scores only, no dataset text), the report to
 docs/d22_embedding_comparison.md. No dataset text is written to the repository.
 """
 
@@ -368,9 +368,9 @@ def main():
             if g != "all"
         }
 
-    output = PROJECT_ROOT / "eval" / "private" / "embedding_comparison.json"
+    output = PROJECT_ROOT / "eval" / "results" / "d22_embedding_comparison.json"
     if args.limit_docs:
-        output = output.with_name(f"embedding_comparison_{corpus_name}.json")
+        output = PROJECT_ROOT / "eval" / "private" / f"embedding_comparison_{corpus_name}.json"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(result, indent=2), encoding="utf-8")
     print(f"Results: {output}")

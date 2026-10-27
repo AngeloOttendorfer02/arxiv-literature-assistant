@@ -94,7 +94,7 @@ def s2orc_pass(folder, ids, selected, offsets, size, overlap):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--check-only", action="store_true")
-    parser.add_argument("--chunk-tokens", type=int, default=512)
+    parser.add_argument("--chunk-tokens", type=int, default=256)
     parser.add_argument("--overlap", type=int, default=10, help="Chunk overlap in percent.")
     args = parser.parse_args()
     started = perf_counter()
