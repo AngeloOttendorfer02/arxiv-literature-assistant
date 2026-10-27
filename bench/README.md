@@ -32,4 +32,24 @@ Each request is appended to `--output` as one JSON line. A run that stops halfwa
 The input is JSON lines with `id` and `messages`, in the format the app sends to the LLM.
 
 - `prompts.example.jsonl` holds 30 synthetic questions with made-up evidence, built with the app's `build_context`. It is for trial runs only.
-- For the reported numbers, use prompts from real pipeline runs. They contain LitSearch text, so keep them and their outputs in `eval/private/`.
+- For the reported numbers, `export_prompts.py` builds one prompt per LitSearch query from the real retrieval on the configured database. Every query gets the fixed S1 plan of the planner fallback (k = 5), so all tags see the same prompts and the planner is not part of the comparison. It also writes a sample of 30 for the repeats (seed 1789) and a `.meta.json` with dataset revision, embedding model and skipped queries. The prompts contain LitSearch text, so keep them and all outputs in `eval/private/`.
+
+```
+uv run --locked --group data --group rag --group embed python bench/export_prompts.py
+uv run --group rag python bench/benchmark.py eval/private/bench/prompts.jsonl --models qwen3.8:27b-q4_K_M,qwen3.8:27b-q8_0,qwen3.8:27b-bf16 --repeats 1 --output eval/private/bench/engine.jsonl
+uv run --group rag python bench/benchmark.py eval/private/bench/prompts_30.jsonl --models qwen3.8:27b-q4_K_M,qwen3.8:27b-q8_0,qwen3.8:27b-bf16 --output eval/private/bench/engine_30.jsonl
+```
+
+## Quality
+
+`score_quality.py` scores the stored answers offline with the app's NLI model (D058):
+
+- citation recall and precision as in ALCE (Gao et al., EMNLP 2023): a sentence is supported when its cited evidence, joined, entails it at `NLI_ENTAILMENT_THRESHOLD`; a citation is precise when its sentence is supported and it is not redundant. Labels outside the evidence count as wrong.
+- "not found" rate: answers whose first sentence says the evidence holds nothing matching. NLI cannot entail such a statement, so these answers are left out of recall and precision. Check the pattern with `--review 20`, which prints first sentences of flagged and unflagged answers.
+- gold-paper citation: the answer cites a LitSearch target paper, counted only for queries whose evidence holds one, "not found" answers included.
+
+Repeats of a prompt are averaged first. Each tag is compared with `--baseline` by a paired bootstrap over queries (10,000 draws, seed 1789), per split (dev, test, all). The output has scores and labels, no dataset text. NLI runs on the CPU and caches repeated pairs.
+
+```
+uv run --locked --group data --group guardrails python bench/score_quality.py eval/private/bench/prompts.jsonl eval/private/bench/engine.jsonl --baseline qwen3.8:27b-bf16 --output eval/private/bench/quality.json
+```
