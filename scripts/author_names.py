@@ -1,9 +1,10 @@
 """D-08 authors from S2ORC name annotations, normalized as in WP2 entity linking (O2)."""
 
 import html
-import json
 import re
 from collections import Counter, defaultdict
+
+from s2orc_annotations import annotation_spans
 
 from scilitrag.rag.search.entities import normalize_name
 
@@ -28,26 +29,9 @@ EXCLUDED_SUBSTRINGS = (
 EDGE_NOISE = re.compile(r"^[\W_]+|[^\w.]+$")
 
 
-def annotation_spans(row, field):
-    payload = ((row.get("content") or {}).get("annotations") or {}).get(field)
-    entries = json.loads(payload) if isinstance(payload, str) else payload or []
-    text = row["content"].get("text") or ""
-    spans = []
-    for entry in entries:
-        start, end = (
-            int(value)
-            if isinstance(value, str) and value.isascii() and value.isdecimal()
-            else value
-            for value in (entry.get("start"), entry.get("end"))
-        )
-        if not (type(start) is int and type(end) is int and 0 <= start < end <= len(text)):
-            raise ValueError(f"Paper {row['corpusid']}: invalid {field} text span.")
-        spans.append((start, end))
-    return sorted(spans)
-
-
 def join_spans(text, spans, start, end):
-    value = " ".join(text[s:e] for s, e in spans if start <= s and e <= end)
+    # S2ORC repeats identical spans, which would turn "Han Shi" into "Han Han Shi Shi".
+    value = " ".join(text[s:e] for s, e in dict.fromkeys(spans) if start <= s and e <= end)
     # The source keeps HTML entities such as &apos;; leading and trailing marks are parser noise.
     value = EDGE_NOISE.sub("", html.unescape(value))
     return " ".join(value.split())

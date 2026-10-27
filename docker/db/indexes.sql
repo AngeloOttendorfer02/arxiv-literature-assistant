@@ -36,6 +36,23 @@ CREATE INDEX IF NOT EXISTS papers_title_trgm_idx
 CREATE INDEX IF NOT EXISTS authors_normalized_name_idx
     ON authors (normalized_name, author_id);
 
+-- D-14 dense search: retrieval orders by cosine distance (<=>); pgvector defaults
+-- m = 16 and ef_construction = 64. Rows without a vector are not indexed.
+CREATE INDEX IF NOT EXISTS papers_embedding_hnsw_idx
+    ON papers USING hnsw (embedding vector_cosine_ops);
+CREATE INDEX IF NOT EXISTS chunks_embedding_hnsw_idx
+    ON chunks USING hnsw (embedding vector_cosine_ops);
+
+-- Search defaults for new sessions (pgvector >= 0.8): retrieval asks for up to 100
+-- dense candidates, more than the default candidate list of 40, and year or paper
+-- filters drop index hits; strict_order keeps scanning without changing the order.
+DO $$
+BEGIN
+    EXECUTE format('ALTER DATABASE %I SET hnsw.ef_search = 100', current_database());
+    EXECUTE format('ALTER DATABASE %I SET hnsw.iterative_scan = strict_order', current_database());
+END
+$$;
+
 COMMIT;
 
 -- Repeat after bulk imports; empty tables do not produce new statistics.

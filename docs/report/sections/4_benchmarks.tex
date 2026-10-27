@@ -1,0 +1,26 @@
+% Owner: WP4 (Ben), quality with WP3. Tasks: A-12, S-16.
+% Required: FP16 vs. INT8 vs. INT4 with VRAM, TTFT, tokens/s and generation quality;
+% latency vs. quality trade-off. Report engine and end-to-end time separately.
+\section{Empirical Results and Performance Benchmarking}
+\label{sec:benchmarks}
+
+\paragraph{Setup.}
+\todo{GPU (D038), Ollama version, question set size, warm-up, repetitions (A-10).}
+
+\begin{table}[ht]
+\centering
+\caption{Precision vs. memory, speed and quality. \todo{model tag, n questions, repetitions}}
+\label{tab:precision}
+\begin{tabular}{lrrrrr}
+\toprule
+Precision & VRAM (GB) & TTFT engine (ms) & TTFT end-to-end (ms) & Tokens/s & Quality \\
+\midrule
+bf16 & \todo{} & \todo{} & \todo{} & \todo{} & \todo{} \\
+q8\_0 & \todo{} & \todo{} & \todo{} & \todo{} & \todo{} \\
+q4\_K\_M & \todo{} & \todo{} & \todo{} & \todo{} & \todo{} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Trade-offs.}
+\todo{Quantization loss vs. throughput gain; guardrail overhead vs. safety (with Section~\ref{sec:guardrails}).}

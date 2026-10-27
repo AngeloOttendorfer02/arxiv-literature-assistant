@@ -74,7 +74,7 @@ Names: `check_input`, `mask_pii`, `check_evidence`, `embed`, `plan`, `retrieve`,
 | Model access | Configured completions, cancellable streaming, bounded retries and strict JSON validation. |
 | Citations | Request-local evidence snapshots, label checks, deterministic rendering, source fingerprints and ledgers. |
 | Planning and entities | Scenario planning with S1 fallback, explicit year/result filters and reader-injected paper/author linking. |
-| Search and evidence | Filtered abstract search with pgvector/BM25, RRF k=60, scoped passages and explicit evidence coverage. |
+| Search and evidence | Filtered title/abstract search with pgvector/BM25, RRF k=60, scoped passages and explicit evidence coverage. |
 | Citation paths | Incoming citation traversal with target-specific experimental baseline candidates. |
 | Author rankings | SQL credits over the exact selected topic-paper set, with dataset revision, scope and examples. |
 | Evaluation | Validated frozen references, pipeline model runs and separate structural/reference/human support metrics. |
@@ -137,7 +137,7 @@ needed:
 ```sh
 docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/schema.sql
 docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/indexes.sql
-docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/retrieval_indexes.sql
+docker compose exec db psql -X -v ON_ERROR_STOP=1 -U postgres -d scilitrag -f /opt/scilitrag/db/retrieval_indexes.sql
 docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/roles.sql
 ```
 
@@ -176,6 +176,11 @@ citations, chunks;`. Ingest has no MAINTAIN privilege.
 
 ### Retrieval readiness
 
+BM25 indexes cover paper titles and abstracts plus chunk text (D-15). For existing
+abstract-only indexes, first apply migration
+`docker/db/migrations/002_bm25_title_abstract.sql` as the database owner, using
+`psql -X -v ON_ERROR_STOP=1`. See [deployment and tests](docs/d15_bm25_index.md).
+
 Run schema-only preflight with the configured application login:
 
 ```sh
@@ -205,12 +210,20 @@ uv run --locked --group data --group rag python scripts/load_fixture.py
 The default is 300 papers around 20 queries. Files stay under
 `DATA_DIR/fixtures/v0`; no LitSearch records are committed. The import uses
 `INGEST_DATABASE_URL` and requires empty data tables with a fresh author ID
-sequence. It loads paper metadata, internal citations and authors; chunks and
-embeddings follow in later tasks. To reload, reset the tables first as
-administrator; a failed or rolled-back import also needs this reset:
+sequence. It loads paper metadata, internal citations, authors and D-13 chunks;
+`scripts/embed_database.py` (group `embed`) then adds the D-14 embeddings.
+Before embedding or resetting an existing database, apply the additive fingerprint
+migration as administrator (safe to re-run). New schemas already have the column:
 
 ```sh
-docker compose exec db psql -X -U postgres -d scilitrag -c "TRUNCATE papers, authors, paper_authors, citations, chunks RESTART IDENTITY;"
+docker compose exec db psql -X -U postgres -d scilitrag -f /opt/scilitrag/db/migrations/001_embedding_fingerprint.sql
+```
+
+To reload, reset the tables and embedding metadata as administrator; a failed or
+rolled-back import also needs this reset:
+
+```sh
+docker compose exec db psql -X -U postgres -d scilitrag -c "TRUNCATE papers, authors, paper_authors, citations, chunks RESTART IDENTITY; UPDATE schema_metadata SET embed_model = NULL, embed_fingerprint = NULL WHERE id = 1;"
 ```
 
 See [fixture selection and loading](tests/fixtures/README.md) for details.
@@ -227,7 +240,7 @@ Starts `db`, `api` (http://127.0.0.1:8000/health) and `ui` (chat at http://127.0
 
 ## Request log
 
-The API writes one JSON line per query to stdout and to `logs/requests.jsonl` (folder set by `LOG_DIR`): request id, status (`ok`, `refused`, `error`, `timeout`, `cancelled`), latencies per stage, TTFT, tokens per second, guardrail events. The query text is never logged, only its length. The id is also sent as `X-Request-ID` and shown under each answer in the UI.
+The API writes one JSON line per query to stdout and to `logs/requests.jsonl` (folder set by `LOG_DIR`): request id, status (`ok`, `refused`, `error`, `timeout`, `cancelled`), latencies per stage, TTFT, tokens per second, guardrail events with score. `component_ms` holds steps inside a stage that components report with `scilitrag.timings.record_timing` (dense, BM25 and fusion time of the paper and chunk search). The query text is never logged, only its length. The id is also sent as `X-Request-ID` and shown under each answer in the UI.
 
 ```
 docker compose logs -f api
@@ -294,6 +307,9 @@ tests/evaluation/ reference validation, runner and metric tests
 tests/          shared/API/UI/data tests and fixtures
 docs/           decisions and diagrams
 ```
+
+The [database ER diagram](docs/er_diagram.md) documents the current tables,
+relationships and search storage (D-24).
 
 The UI imports nothing from the package except `scilitrag.contracts`.
 

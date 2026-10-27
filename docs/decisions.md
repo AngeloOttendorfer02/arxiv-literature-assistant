@@ -14,9 +14,9 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
-### D033 S-09 NLI default changed to ModernCE-large-nli (replaces D029 default)
+### D054 S-09 NLI default set to ModernCE-large-nli in code (implements D036)
 
-- Context: D029 chose `dleemiller/EttinX-nli-s` from 7 hand-made pairs and named ModernCE-large-nli as the fallback. A larger test on 150 random abstracts from the D-03 corpus (1,034 sentence pairs in four variants: entail, negation, number, wrong_paper; premise short at about 210 tokens or long at about 600 tokens) showed EttinX rejecting correct sentences.
+- Context: D029 chose `dleemiller/EttinX-nli-s` from 7 hand-made pairs; D036 replaced it with ModernCE-large-nli as a team decision, but the default in the code was still EttinX. A larger test on 150 random abstracts from the D-03 corpus (1,034 sentence pairs in four variants: entail, negation, number, wrong_paper; premise short at about 210 tokens or long at about 600 tokens) showed EttinX rejecting correct sentences.
 - Options: keep EttinX-nli-s (about 40 / 370 ms per pair on CPU); ModernCE-base-nli (149M, about 210 / 850 ms); ModernCE-large-nli (395M, about 600 / 2,400 ms).
 - Decision: Default `dleemiller/ModernCE-large-nli`. `NLI_MODEL` stays configurable. Label order is unchanged ([contradiction, entailment, neutral], fixed in code); a check with two unambiguous sentences confirmed it for all three models.
 - Reason: Share of pairs with status ok at threshold 0.5. entail (must pass): EttinX 0.77 short and 0.13 long, ModernCE-base 0.87 and 0.53, ModernCE-large 1.00 and 0.99. negation, number and wrong_paper (must fail) stay at or below 0.14 for all models. EttinX drops verbatim sentences at 23% (200 tokens) and 87% (600 tokens), so it is not usable with chunks as premise. ModernCE-large is stable across premise length. Cost: about 6 times the CPU latency per sentence. The NLI thresholds stay at 0.5 for now; 0.8 also works on this test and is decided in S-13.
@@ -24,18 +24,189 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
-### D032 S-05 evidence guard against indirect injection (contracts 0.5)
+---
+
+### D053 S-05 evidence guard against indirect injection (contracts 0.5)
 
 - Context: Retrieved chunks and abstracts go into the prompt and could carry instructions. The pipeline had no place to check them, and the contracts had no interface for it.
 - Options: new contract interface; direct call in the pipeline without a contract; filtering inside `retrieve` (WP2). Own threshold or the query threshold. Continue or abort when every source is removed.
 - Decision: Contracts 0.5 (additive): `CheckEvidence`, `EvidenceCheckResult` (kept evidence, removed labels, scores, latency) and stage `evidence_guard`; `Components.check_evidence`, a mock that drops sources matching the injection keywords, and a real module `guardrails/evidence.py`. The real check scores title and text of every chunk and paper source with the shared Prompt Guard instance (windows as in D028) and drops sources at or above `EVIDENCE_GUARD_THRESHOLD` (default 0.5, provisional, tuned in S-13). SQL evidence is built by our code and not scored. The pipeline runs the check between `retrieve` and `sql_facts`, so SQL facts only see the kept sources. It sends a `status` event (`ok` or `k of n removed`), the stage is in the request log as a guardrail event, and the UI shows it as "Source check". Labels are not renumbered. If all sources are removed the pipeline continues with empty evidence and `generate` answers with no evidence (R-12).
 - Reason: A checked interface keeps `USE_MOCKS=1` and the swap per component working. Removing sources before SQL facts keeps tables free of flagged papers. Measured on CPU with 17 sources of about 400 tokens: 4.3 s in total, about 250 ms per source, all of it before the first token.
 - Known limits: A paper abstract about prompt injection that quotes an attack sentence scored 0.98 and is removed, so such papers disappear from answers; no threshold helps, because the legitimate and the attack text score alike. Three poisoned test sources (instruction at the end of a chunk, role-play, plain override) scored 0.998 and above. Latency can be cut by scoring fewer sources or in parallel; not done here.
-- Date: 2026-10-23
 
 ---
 
-## D030 S-10 check_sentence: number check and NLI
+### D052 D-15 BM25 title weight (updates D051)
+
+- Context: The team reports about +7 percentage points Recall@20 from adding titles on LitSearch with the D-22 dev/test split, provided titles are downweighted; `0.5` performed best on dev. These measurements were supplied by the team and have not been reproduced here.
+- Decision: Use `p.title ||| %(topic)s::text::pdb.boost(0.5) OR p.abstract ||| %(topic)s` in the paper BM25 query. The explicit `::text` before the boost avoids psycopg's `invalid typemod` error. Retain the consistent `papers_title_abstract_bm25_idx` name in SQL, migration and readiness. Chunk BM25 is unchanged; no index rebuild is needed for query-time weighting.
+- Reason: Apply the team's dev-selected title weight while retaining full abstract scores and the existing filters.
+- Validation: A disposable-database regression compares weighted scores with an unweighted baseline: title-only scores halve, abstract-only scores stay unchanged, and matching paper IDs are preserved. Live SQL verification requires `RETRIEVAL_TEST_DATABASE_URL`.
+- Date: 2026-10-25
+
+### D051 D-15 BM25 on paper title and abstract
+
+- Context: D-15 asks for BM25 with pg_search on title and abstract and on chunk text. WP2 had created `papers_abstract_bm25_idx` (abstract only) and `chunks_text_bm25_idx` in docker/db/retrieval_indexes.sql; the paper BM25 query searched the abstract only, while the dense paper vector already covers title and abstract (D050).
+- Options: keep abstract-only BM25 (R-07 wording) or add the title.
+- Decision: One ParadeDB index `papers_title_abstract_bm25_idx` on `(corpus_id, title, abstract, year)`; the WP2 paper query matches `title ||| topic OR abstract ||| topic` and still returns one BM25 score per paper for RRF. Title and abstract stay separate columns; no title boost. The chunk index is unchanged. Readiness checks index table and columns, not only names. Existing databases replace the old index with docker/db/migrations/002_bm25_title_abstract.sql. Details in [D-15 BM25 indexes](d15_bm25_index.md).
+- Reason: Keeps keyword and dense paper search on the same text, so a method or dataset named only in the title is found by both. Agreed with WP2, whose query and readiness check changed.
+- Date: 2026-10-25
+
+### D050 D-14 granite embeddings for papers and chunks
+
+- Context: D-14 fills `papers.embedding` and `chunks.embedding` (vector(768)) with the model chosen in D044 and adds vector indexes. WP2 search orders by cosine distance (`<=>`), embeds queries through `scilitrag.data.embedding` and requires `schema_metadata.embed_model` to equal `EMBED_MODEL`; WP3 topic gating uses the same component.
+- Decision: `scilitrag.data.embedding` is the real `embed` component: `ibm-granite/granite-embedding-english-r2` via sentence-transformers at revision `47ea694b257b703fee9253d75c2b1f2985180498` (as in D-22 and the D-13 tokenizer), no prefixes, normalized vectors, fp32 on CPU and fp16 on a GPU. The input limit is 512 content tokens plus the model's special tokens, so a full 512-token chunk (D-13) is embedded completely; D-22 used 512 including special tokens. Vectors must be finite, 768-dimensional and normalized; zero vectors are refused, since the cosine index skips them. Papers embed `title` and `abstract` joined by a line break, the D-22 format; chunks embed their stored text only. scripts/embed_database.py embeds rows without a vector in batches and commits each batch. Before the first batch it stores the fingerprint of model, revision, input limit and input texts in `schema_metadata.embed_fingerprint`, alongside a pending marker in `embed_model`. Publication retains the fingerprint, and both resumed and completed runs must match it before reusing vectors; legacy vectors without a fingerprint are refused. Existing databases add the column with `docker/db/migrations/001_embedding_fingerprint.sql`; resets clear both fields. `embed_model` is published only when no paper or chunk is left without a vector, so WP2 search stays unavailable during a run. docker/db/indexes.sql adds HNSW indexes with `vector_cosine_ops` and the pgvector build defaults, and sets database defaults `hnsw.ef_search = 100` (retrieval asks for up to 100 dense candidates) and `hnsw.iterative_scan = strict_order` (pgvector 0.8.6 in the image), so filtered searches keep scanning without changing the order. The new `embed` group holds sentence-transformers 6.2.0 and the CPU torch from the lock; the API image installs it for query embedding.
+- Reason: Same library, revision and text format as D-22, so its measured quality applies. Embedding runs as a separate step because it takes minutes on a CPU and the fixture load must stay under 60 s (D-07); the same script serves the full build, where a GPU is used (D-16). Title before chunk text was not chosen, so D-20 measures the stored chunk text.
+- Validation: Tests with a fake encoder cover the paper text, the input limit with special tokens, vector checks (zero, non-finite, unnormalized, wrong size), batching and commits, the permanent fingerprint on start, resume and completed runs, rejection after model revision or token-limit changes, refusal of unknown vectors and unpinned models, and publishing only after a complete run with matching provenance. A filtered HNSW search (100 requested, filter matching only far vectors) returned 0 rows with the defaults and 100 with the new settings in a rolled-back transaction on pgvector 0.8.6; tests/test_hnsw_search.py repeats this on a disposable database. The fixture run is pending.
+- Date: 2026-10-25
+
+### D049 D-13 section-based chunker with granite tokens (O5)
+
+- Context: D-13 needs section-based chunks with a fixed window and overlap. O5 leaves size (256, 384, 512 tokens) and overlap (0, 10, 20 %) to the D-20 experiment; chunk plus sentence must fit the NLI context, 8,192 tokens for ModernCE-large-nli (D036) and granite-embedding-english-r2 (D044).
+- Decision: scripts/chunker.py splits each D-10/D-11 section into windows of `size` tokens; consecutive windows share `overlap` % of them, and the last window may be shorter. Chunks never cross a section boundary. `chunk_id` is `"{corpus_id}-{seq_no}"`, with `seq_no` running across the paper. Tokens come from the `EMBED_MODEL` tokenizer via `transformers` (now also in the `data` group), pinned to revision `47ea694b257b703fee9253d75c2b1f2985180498` of granite-embedding-english-r2 so that chunk IDs keep their boundaries; unpinned models are refused. Each chunk is re-encoded and its window shortened until it fits, because a character can map to several tokens; `.env.example`, compose.yaml and config.py default to granite (D044). Only the O5 values are accepted; the default is 512 tokens with 10 % overlap until D-20 decides. `load_fixture.py` loads chunks for all 300 fixture papers (`--chunk-tokens`, `--overlap`); the full build uses the D-12 selection. Embeddings follow in D-14.
+- Reason: Counting with the embedder's own tokenizer makes the O5 sizes exact. The largest chunk leaves ample room in the NLI context, but the combined chunk, generated sentence and special tokens must still fit within 8,192 tokens when counted with the NLI tokenizer. Smaller chunks make each NLI check faster (about 1,700 ms per pair for ModernCE in D029), so D-20 should report latency next to Hit@k.
+- Validation: Synthetic tests with a whitespace tokenizer cover window positions, all nine O5 combinations, section boundaries, IDs, full text coverage, multi-token characters and the COPY into `chunks`; a Unicode test with the cached granite tokenizer runs when it is available. Fixture with the granite tokenizer: 6,918 chunks from 300 papers at 512 tokens with 10 % overlap, none above 512 tokens after re-encoding (17 were before the fix); validation takes about 22 s, mostly tokenization. The DB import is pending.
+- Date: 2026-10-24
+
+### D048 D-12 full-text subset of 1,000 papers (implements D034)
+
+- Context: D034 gives 1,000 papers full-text chunks: query targets, demo papers and a random sample. All papers stay in `papers`, `authors`, `paper_authors` and `citations`; only chunks (D-13) are limited. S1 needs metrics from full texts of topic papers, S2 needs baseline passages in the full texts of papers that cite Paper X, S3 uses abstracts, citations and authors only.
+- Decision: scripts/select_fulltext.py selects from the D-03 data in priority order: all query targets; papers since 2022 whose title or abstract mentions retrieval-augmented generation or RAG (S1/S3 demo topic); the S2 demo paper Dense Passage Retrieval (corpus ID 215737187) and the papers citing it; a random sample with seed 42 up to 1,000. The ID list and the IDs added per group are written to DATA_DIR/fulltext/v1/selection.json, never overwritten and never committed.
+- Reason: DPR is cited by 14 of the RAG papers and by 219 papers in total, and is a common retrieval baseline; BERT (4,891 citing papers) would exceed the budget. The corpus has only 38 RAG papers since 2022, so all are taken. Retrieval evaluation stays on title and abstract of all papers (D034).
+- Statistics (for D-23): 1,000 papers: 574 query targets, 36 more RAG papers, DPR, 192 more papers citing DPR, 197 random.
+- Validation: The same seed gives the same selection. Synthetic tests cover group order, overlaps, the random fill, reproducibility and missing targets or demo papers.
+- Date: 2026-10-24
+
+### D047 Component timings in the request log
+
+- Context: A-08 asks for dense, BM25 and SQL time and guardrail scores per request. The pipeline only sees whole stages; the search backend measures dense, BM25 and fusion time, and the input check returns scores that the status events do not carry.
+- Options: a per-request context that components write to; new contract fields for timings (e.g. `Retrieve` returning a result with `timings_ms` instead of `list[Evidence]`); keep the separate log line of the search backend and join by request id.
+- Decision: `scilitrag.timings` holds a per-request `RequestMetrics` in a context variable. The API passes it to the pipeline task; components call `record_timing(name, ms)` (summed per request). The input check scores are already in the contract (`CheckInputResult.stages[].score`), so the pipeline writes them into the same object explicitly. The request log adds `component_ms` and a score per guardrail event. Outside a request `record_timing` does nothing. Scores stay out of `StatusEvent`, since a client could tune a jailbreak against the Prompt Guard threshold.
+- Reason: Timings are telemetry, not domain data; in the contract every caller, mock and scenario would carry them, and nested calls (hybrid and chunk search inside retrieve) would pass them up by hand. A context per request is the usual pattern for this (OpenTelemetry spans work the same way). Limit: timings from threads a component starts itself are lost, since only `run_in_threadpool` copies the context. SQL time is already the `sql` stage.
+- Date: 2026-10-23
+
+### D046 D-11 e-mail masking in full texts (extends D025, D040)
+
+- Context: D-10 leaves contact e-mails in retained sections; D025 already masks titles and abstracts.
+- Decision: `scripts/email_masking.py` supplies the shared import regex to `load_fixture.py` and `fulltext.py`. Each expression becomes one `<EMAIL>` and counts once; author names outside it are preserved. The WP3 mock shares the placeholder but keeps its simpler pattern. `--check-only` fails on remaining recognized expressions; DB validation follows in D-17.
+- Matched: Ordinary addresses and groups in matching `{}` or `()` with one or more names separated by commas or `|`, e.g. `{alice|bob}@uni.edu`, `(alice | bob)@uni.edu` and `{alice}@uni.edu`. Whitespace and line breaks around names/separators and before `@` are allowed.
+- Limitations: Dotless domains (`user@localhost`) are not matched. Slash forms are only partially masked (`alice/bob@uni.edu` becomes `alice/<EMAIL>`); broader matching could consume URL/path text. Zero recognized matches does not establish that all contact formats are absent.
+- Statistics (D-23): Current pattern, all 56,115 D-03 papers: 1,694 expressions masked in sections of 948 papers; 177 in titles/abstracts of 141 papers; 1,871 total. Zero recognized expressions remain. Independent audit: zero remaining checked brace/parenthesis/pipe groups; all four previously missed groups are now masked. Ten slash-form candidates remain partially masked (nine in sections, one in titles/abstracts); not all are confirmed contact shorthand.
+- Fixture: 300 papers; 12 expressions masked in sections of seven papers and one in titles/abstracts of one paper. Zero recognized expressions or independently detected groups remain; no slash candidates.
+- Validation: Regression tests cover comma/pipe groups, single addresses, whitespace, repeated masking, preserved names, mismatched delimiters and section boundaries. The corpus audit found no pipe-separated groups, so the recorded masking totals are unchanged. Full pytest: 345 passed, 28 skipped, one xfailed; Ruff lint and formatting pass.
+- Date: 2026-10-23
+
+### D045 D-10 clean full texts from S2ORC annotations
+
+- Context: corpus_s2orc texts start with title, author block (names, e-mails, affiliations) and abstract and end with the bibliography. D-10 removes the author block and bibliography and keeps section boundaries for the D-13 chunker. Title and abstract are already in `papers` and embedded there (D-14).
+- Decision: scripts/fulltext.py returns (section, text) pairs per paper. The body starts at the first `paragraph` or numbered `sectionheader` and ends before the first `bibentry`; title, author block and abstract before it are removed. Only headings with a section number (`n`) start a section, named "n heading"; table and figure captions and unnumbered headings stay as text in the current section. Papers without numbered headings get one section with no name. Bibliography spans past the end of a truncated text are clipped.
+- Reason: In the fixture, all 2,139 captions tagged as headings lack `n`, while 4,160 real headings have one; unnumbered headings mix real ones (Limitations, Ethics Statement) with parser noise ("as shown in", "-4-"). The bibliography is always at the end: no paragraph, heading, table or caption follows its first entry, and its region is fully covered by `bibentry` spans. In 278 of 300 papers the first numbered heading precedes the first paragraph, so the body starts at whichever comes first.
+- Statistics (for D-23): All 56,115 D-03 papers: 70.5 % of characters kept, 4.0 % front matter and 24.7 % bibliography removed; 623,896 sections (11.1 per paper); 1,745 papers without numbered headings, 1,409 without bibliography. 5 papers have bibliography spans past the text end (253 spans); 4 of them have shifted annotations, so a few reference lines stay or a few body lines are cut. Up to 168 papers (0.3 %) have unannotated reference lines before the first `bibentry`; they stay in the last section, since removing them would need pattern guessing.
+- Validation: Fixture: 3,855 sections, 67.1 % kept, 3.7 % front matter and 28.4 % bibliography removed, 8 papers without numbered headings; printed by `load_fixture.py --check-only`. Synthetic tests cover front matter, bibliography, captions, unnumbered headings, empty parent sections and truncated texts. Nothing is written to the DB yet; chunks follow in D-13.
+- Date: 2026-10-23
+
+### D044 O19 embedding model: granite-embedding-english-r2 (confirms D033)
+
+- Context: D033 proposed granite-embedding-english-r2 based on D-22, to be confirmed by the team.
+- Decision: `ibm-granite/granite-embedding-english-r2` replaces bge-base-en-v1.5 (D011, E8) as the embedding model for papers, chunks, queries and topic gating.
+- Reason: Team decision on the D-22 results in D033. 768 dimensions, schema unchanged.
+- Date: 2026-10-23
+
+### D043 O18 load test with one Ollama instance and parallel slots
+
+- Context: O18 proposed 1 / 2 / 4 / 8 parallel requests on Modal. With the default `OLLAMA_NUM_PARALLEL=1` Ollama processes one request per model at a time and queues the rest (docs.ollama.com/faq, read 2026-10-23); the same model cannot be loaded twice in one server.
+- Options: one instance with `OLLAMA_NUM_PARALLEL` above 1; several Ollama processes on separate ports with a load balancer.
+- Decision: One Ollama instance with `qwen3.8:27b-q4_K_M` (D037) on the A100 80 GB (D038), `OLLAMA_NUM_PARALLEL=8`, levels 1 / 2 / 4 / 8 concurrent requests. Measured metrics (throughput, latency, TTFT under concurrency) follow the technical report requirements.
+- Reason: The weights are held only once and no load balancer is needed; parallel slots only cost KV cache per slot.
+- Date: 2026-10-23
+
+### D042 O17 LitSearch license unclear
+
+- Context: The mail to the LitSearch authors about the dataset license got no reply.
+- Decision: The license is treated as unclear and stated as a limitation in the report. The dataset was used for this project and is not redistributed; dumps are shared privately.
+- Reason: Team decision.
+- Date: 2026-10-23
+
+### D041 O15 S3 counting rule
+
+- Decision: The O15 proposal is accepted: per (citing paper, cited paper) pair every author of the cited paper gets +1; ties are ordered alphabetically; the rule is shown in the UI.
+- Reason: Team decision.
+- Date: 2026-10-23
+
+### D040 O13 PII masking at import and on input
+
+- Context: O13 proposed regex masking at import and Presidio for query, answer and logs.
+- Decision: Current state: e-mail addresses are masked by regex at import (D025, D-11); Presidio (D027) masks the query input. Author names are never masked.
+- Reason: Presidio is too slow for the full texts; the regex covers the PII that occurs in papers.
+- Date: 2026-10-23
+
+### D039 O8 Llama Guard dropped
+
+- Context: O8 left open whether Llama Guard runs on input, output or not at all (COULD, S-17).
+- Decision: Llama Guard is not used. Injection and jailbreak detection rely on Prompt Guard 2 (D028, E12); S-17 is dropped.
+- Reason: Team decision.
+- Date: 2026-10-23
+
+### D038 O7 benchmark platform: Modal with A100 80 GB
+
+- Context: E11 runs the benchmark on Colab or Modal; O7 requires one fixed GPU type for all three precisions.
+- Decision: Modal with an NVIDIA A100 80 GB for all precisions (D037) and the load test (D043).
+- Reason: Team decision. 80 GB holds the bf16 variant (56 GB) with room for KV cache.
+- Date: 2026-10-23
+
+### D037 O6 LLM: qwen3.8:27b in bf16, q8_0 and q4_K_M
+
+- Context: O6 requires an Ollama model with fp16, q8_0 and q4_K_M tags. E10 compares ready-made GGUF variants of one model.
+- Decision: `qwen3.8:27b` via Ollama for demo and benchmark, variants `qwen3.8:27b-bf16` (56 GB), `qwen3.8:27b-q8_0` (30 GB) and `qwen3.8:27b-q4_K_M` (18 GB). The CPU development model stays D012.
+- Reason: Team decision. The model has no fp16 tag (ollama.com/library/qwen3.8/tags, read 2026-10-23), so bf16 is the 16-bit variant; the comparison stays 16 bit vs. 8 bit vs. 4 bit. The comparison uses one engine with GGUF F16 / Q8_0 / Q4_K_M rather than AWQ/GPTQ on vLLM (E10).
+- Date: 2026-10-23
+
+### D036 O5 NLI model: ModernCE-large-nli (replaces D029)
+
+- Context: O5 requires that chunk plus sentence fit into the context window of the NLI model. D029 chose EttinX-nli-s with ModernCE-large-nli as fallback.
+- Decision: `dleemiller/ModernCE-large-nli` (395M) is the NLI model for `check_sentence`. Chunk plus sentence must fit into 8192 tokens, the context of both ModernCE and granite-embedding-english-r2 (D044). Chunk size and overlap are still chosen by experiment (D-20).
+- Reason: Team decision; ModernCE scores higher on the card (MNLI mismatched 92.0 vs 88.0). It needed about 1700 ms per pair on CPU in D029 (EttinX about 250 ms), so the latency per sentence is measured in S-13/S-15.
+- Date: 2026-10-23
+
+### D035 O4 outliers and gaps (confirms D021)
+
+- Decision: Blank titles and titles over 500 characters are excluded, missing years become NULL, all counts are documented. Query targets stay as in D021.
+- Reason: Team decision; already implemented in D-03.
+- Date: 2026-10-23
+
+### D034 O3 full-text chunks for 1,000 papers
+
+- Context: O3 proposed full-text chunks for the targets of the 597 queries, the demo papers and a random sample, sized by compute cost.
+- Decision: 1,000 papers get full-text chunks: the query targets, the demo papers and a random sample that fills up to 1,000. The ID list is saved in D-12. Retrieval evaluation uses title and abstract only.
+- Reason: Team decision. Evaluating on full texts would favour the selected papers.
+- Date: 2026-10-23
+
+### D033 D-22 embedding comparison: granite-embedding-english-r2 (proposal for O19)
+
+- Context: D011/E8 keep bge-base-en-v1.5 unless D-22 shows a clearly better candidate before D-14. Compared on paper level (title + abstract), the unit D-14 embeds for papers; chunk-level behavior (D-19/D-20) is not covered.
+- Options: bge-base-en-v1.5 (with and without query instruction), ibm-granite/granite-embedding-english-r2, manveertamber/cadet-embed-base-v1, each at a pinned HF revision with the prefixes from its model card.
+- Decision: Proposal, to be confirmed by WP1: switch the default to granite-embedding-english-r2 (no query or passage prefix). Results in [D-22 embedding comparison](d22_embedding_comparison.md). Confirmed by D044.
+- Reason: On the D-03 corpus (56,115 papers, 597 queries, exact search) granite has the best NDCG@10 on dev and test (all: 0.510 vs 0.453 for bge, +0.057). The paired bootstrap interval for NDCG@10 is above 0 on both splits (dev +0.076 [+0.041, +0.112], test +0.037 [+0.004, +0.070]); Recall@20 gains are smaller and not significant. cadet is second (0.483) with no significant gain on either split. The bge query instruction helps (test -0.032 without it), so bge without instruction is not an option. All have 768 dimensions; the schema stays unchanged. Truncation at 512 tokens affects about 2% of documents for every model. Costs: GPU encoding at about 420 docs/s vs 970 for bge (one-off at build time), CPU query latency 25 ms vs 19 ms. cadet's NDCG@10 (0.483) is close to its MTEB LitSearchRetrieval score (47.9), which supports the setup.
+- Open: S-06 topic gating uses the same embedding; chunk sizes (O5) must be measured with granite's tokenizer. granite supports up to 8192 tokens, but the comparison used 512 for every model.
+- Date: 2026-10-23
+
+### D031 S-11 rule-based sentence splitter
+
+- Context: The regex splitter in `api/pipeline.py` cut after every `.`, `!` or `?` followed by a space, so "et al.", "e.g." and numbered lists produced fragments that failed the citation check.
+- Options: own rule-based splitter; a library such as pysbd.
+- Decision: `guardrails/sentences.py`, no new dependency. A boundary is only reported once the next character is known and it is a capital letter, digit, quote, bracket or list marker. No boundary after listed abbreviations (e.g., i.e., vs., Fig., Eq., Dr., ...), single initials and a lone list number; after "et al." and "etc." only when a capital letter follows. Citation labels directly after the punctuation belong to the sentence (`claim. [1]`). A newline before `-`, `*` or a numbered marker also ends a sentence. `api/pipeline.py` imports the function, the `SentenceBuffer` interface is unchanged.
+- Reason: When unsure the splitter does not split. A merged sentence is still checked as a whole, a fragment would lose its label and be removed. A library would not know the label placement and the streaming rule, so both would still be our code.
+- Known gap: `SentenceBuffer.finish()` rejects a last bullet without final punctuation as incomplete; this is not changed here.
+### D032 D-09 citation pairs from corpus_clean.citations
+
+- Context: corpus_clean.citations lists corpus IDs per paper. D-09 requires deduplicated pairs and a direction check. The schema needs both papers in `papers` (foreign keys).
+- Decision: scripts/citations.py builds (citing_id, cited_id) pairs, where the list owner is the citing paper, and checks the direction against the citing paper's S2ORC bibliography and the publication years. Self-citations, pairs with either paper outside the loaded corpus and duplicate pairs are dropped and counted; papers are never dropped. Pairs where the citing paper is older, and mutual citations, are kept. load_fixture.py uses the same function; the fixture manifest still counts source pairs, so its hash is unchanged.
+- Reason: Direction checked on all 56,115 D-03 papers: every kept pair is in the citing paper's own S2ORC bibliography (`bibentry` with `matched_paper_id`, 328,622 of 328,622). Years agree: citing paper newer in 305,854 pairs, same year in 14,692, older in 288 (likely preprints), year missing in 7,788. Self-citations are parser errors and would inflate citation counts (S3). Targets outside the corpus all point to papers removed by D-03, mostly for empty titles; incoming counts of retained papers are unaffected.
+- Statistics (for D-23): 340,484 list entries give 328,622 pairs; dropped 11,767 outside the corpus (2,727 papers removed by D-03), 95 self-citations, 0 duplicates. 964 mutual pairs. 10,037 papers cite no corpus paper, 23,117 are not cited, 6,233 have no link in either direction.
+- Validation: Fixture: 2,971 list entries give 447 pairs (manifest 448 before dropping 1 self-citation); dropped 2,523 outside the fixture. `load_fixture.py --check-only` prints the direction check: 447 of 447 pairs in the citing paper's bibliography; citing paper newer in 435, same year in 11, year missing in 1. Synthetic tests cover direction, dropped cases, bibliography and year comparison. 
+- Date: 2026-10-23
+
+### D030 S-10 check_sentence: number check and NLI
 
 - Context: The pipeline already checks label syntax and placement (`citation_status`). `check_sentence` adds the semantic checks before release.
 - Options: all cited sources must support the sentence, or one is enough; numbers only, or also author names against the tables; provisional thresholds of 0.5 or stricter ones (0.8).
@@ -50,7 +221,7 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Context: `check_sentence` needs an NLI cross-encoder (chunk as premise, sentence as hypothesis, E15) that runs on CPU per released sentence.
 - Options: `dleemiller/EttinX-nli-s` (68M); `dleemiller/ModernCE-large-nli` (395M); both configurable with the small one as default.
 - Decision: `dleemiller/EttinX-nli-s`, model ID in the configuration so it can be swapped. Both cards list MIT licence, no gating and a context of 8192 tokens. The label order is [contradiction, entailment, neutral] (index 0, 1, 2), fixed in code and covered by a test. The `config.json` of ModernCE lists entailment, neutral, contradiction, which disagrees with its card and with its outputs; EttinX has only LABEL_0 to LABEL_2.
-- Reason: On 7 hand-made pairs (changed number, wrong hardware, negation, neutral) both models were right. On 4 CPU threads with a 466-token premise EttinX needs about 250 ms per pair, ModernCE about 1700 ms. Seven pairs say nothing about accuracy; precision and recall come from S-15. If they are too low, ModernCE (MNLI mismatched 92.0 vs 88.0 on the cards) is the fallback.
+- Reason: On 7 hand-made pairs (changed number, wrong hardware, negation, neutral) both models were right. On 4 CPU threads with a 466-token premise EttinX needs about 250 ms per pair, ModernCE about 1700 ms. Seven pairs say nothing about accuracy; precision and recall come from S-15. If they are too low, ModernCE (MNLI mismatched 92.0 vs 88.0 on the cards) is the fallback. Replaced by D036.
 - Date: 2026-10-23
 
 ---

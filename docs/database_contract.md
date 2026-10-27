@@ -5,6 +5,9 @@ relations and uses `schema_metadata` row `id=1`, schema version 1. Both embeddin
 columns are `vector(768)`; dimension is read from PostgreSQL's type catalog.
 The application does not require an `embed_dim` metadata column.
 
+The [ER diagram (D-24)](er_diagram.md) shows all tables, keys, relationship
+cardinalities and the vector, sparse and relational storage choices.
+
 | Relation | Retrieval fields |
 | --- | --- |
 | papers | corpus_id, title, abstract, year, embedding |
@@ -26,13 +29,32 @@ between `EMBED_MODEL` and `schema_metadata.embed_model`. Metadata must describe
 vectors actually loaded, with the same preprocessing and normalization as queries.
 Matching a model name and dimension alone cannot prove preprocessing equivalence.
 
-The production embedding entry point is `scilitrag.data.embedding.embed(texts)`.
-It must return one finite, nonzero, 768-dimensional vector per input. That module
+Ingestion also stores `schema_metadata.embed_fingerprint`, containing the model
+revision and preprocessing settings. It remains set after publication, and the
+embedding script verifies it before reusing either partial or completed vectors.
+Existing databases add this column with
+`docker/db/migrations/001_embedding_fingerprint.sql`; the additive ingestion field
+does not change the version 1 retrieval interface above. Resetting embeddings also
+clears this fingerprint. Vectors without matching provenance must be rebuilt.
+The fixture loader also requires both `embed_model` and `embed_fingerprint` to be
+NULL before importing, and rejects stale metadata before any COPY operation.
+
+The production embedding component is created by
+`scilitrag.data.embedding.build_component(settings)` and called as `embed(texts)`.
+It returns one finite, nonzero, 768-dimensional vector per input. That module
 is a shared data-layer dependency. There is no automatic substitute for it.
 Unit tests inject small deterministic vectors; database fixtures use synthetic
 768-dimensional vectors under the separate `retrieval-test` model identity.
 
-Topic search uses `papers.abstract`; chunk search uses `chunks.text`. Indexed
+Topic BM25 search matches `papers.title` or `papers.abstract` in one
+`papers_title_abstract_bm25_idx`; chunk search uses `chunks.text` in
+`chunks_text_bm25_idx`. Fields remain separate; no paper text is overwritten.
+Both use the default Unicode tokenizer and BM25 scores, with deterministic ID
+ordering for ties. Paper title matches use `::text::pdb.boost(0.5)`; abstracts
+retain weight `1.0`. The explicit text cast supports psycopg-bound parameters.
+Year and linked-paper/author filters also apply to title hits.
+Readiness checks require valid, ready, nonpartial indexes on the correct tables
+with all required columns; a matching name alone is insufficient. Indexed
 passage availability is derived with `EXISTS` over nonblank chunk text. This says
 whether passages are indexed, not whether a source full-text document exists.
 Search index installation is explicit, like the existing schema/index scripts.
@@ -43,7 +65,11 @@ after data loading. BM25 requires a ParadeDB index on each searched relation.
 
 The database image is pinned in Compose. Enable `vector`, `pg_search` and
 `pg_trgm`, then explicitly apply `schema.sql`, `indexes.sql` and the retrieval
-index script `retrieval_indexes.sql` when it is available. Initialization currently enables extensions only.
+index script `retrieval_indexes.sql`. Initialization enables extensions only.
+Existing abstract-only indexes first require
+`docker/db/migrations/002_bm25_title_abstract.sql`, which atomically replaces the
+paper index without changing rows or the chunk index. Plan for searches to wait
+during the rebuild. See [D-15](d15_bm25_index.md) for deployment and verification.
 
 The explicit role setup is `docker/db/roles.sql`, applied by the schema owner
 after `schema.sql` and the existing relational indexes. It creates the configured

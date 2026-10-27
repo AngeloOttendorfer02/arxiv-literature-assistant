@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from scilitrag.contracts import SENTENCE_REMOVED, DoneEvent, ErrorEvent, Model, StatusEvent
+from scilitrag.timings import RequestMetrics
 
 GUARD_STAGES = ("prompt_guard", "topic_gate", "pii", "evidence_guard")
 APP_LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s [%(request_id)s] %(message)s"
@@ -72,6 +73,7 @@ class RequestLog:
     error_code: str | None = None
     guardrail_events: list[dict] = field(default_factory=list)
     done: DoneEvent | None = None
+    metrics: RequestMetrics = field(default_factory=RequestMetrics)
 
     def observe(self, event: Model) -> None:
         match event:
@@ -90,6 +92,10 @@ class RequestLog:
 
     def record(self) -> dict:
         done = self.done
+        guardrail_events = [
+            {**e, "score": self.metrics.scores.get(e["stage"])} if e["stage"] in GUARD_STAGES else e
+            for e in self.guardrail_events
+        ]
         return {
             "ts": datetime.now(UTC).isoformat(timespec="milliseconds"),
             "request_id": self.request_id,
@@ -105,7 +111,9 @@ class RequestLog:
             "tokens_per_s": done.tokens_per_s if done else None,
             "sentences_checked": done.sentences_checked if done else None,
             "sentences_removed": done.sentences_removed if done else None,
-            "guardrail_events": self.guardrail_events,
+            # Steps inside a stage reported by components, e.g. dense and BM25 search.
+            "component_ms": {k: round(v, 3) for k, v in self.metrics.timings_ms.items()},
+            "guardrail_events": guardrail_events,
         }
 
     def write(self) -> None:

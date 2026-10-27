@@ -15,6 +15,7 @@ from scilitrag.components import mock_components
 from scilitrag.config import ConfigError, load_settings
 from scilitrag.contracts import QueryRequest
 from scilitrag.mocks.rag import Generate
+from scilitrag.timings import record_timing
 from scilitrag.ui.sse import iter_events
 
 QUERY = "dense retrieval papers by alice@example.org"
@@ -90,6 +91,34 @@ def test_component_logs_carry_the_request_id(tmp_path):
         logger.removeHandler(handler)
     request_id = response.headers["x-request-id"]
     assert seen == [("check_input", request_id), ("generate", request_id)]
+
+
+def test_log_has_component_timings_and_guardrail_scores(tmp_path):
+    mocks = mock_components(0)
+
+    def retrieve(plan):  # runs in a worker thread
+        record_timing("paper_dense_ms", 2.0)
+        record_timing("paper_dense_ms", 3.0)
+        return mocks.retrieve(plan)
+
+    settings = load_settings({"USE_MOCKS": "1", "LOG_DIR": str(tmp_path)})
+    client = TestClient(create_app(replace(mocks, retrieve=retrieve), settings))
+    for _ in range(2):
+        client.post("/query", json={"query": QUERY})
+    for record in log_records(tmp_path):
+        assert record["component_ms"] == {"paper_dense_ms": 5.0}
+        scores = {e["stage"]: e.get("score") for e in record["guardrail_events"]}
+        assert scores == {
+            "prompt_guard": 0.0,
+            "topic_gate": 0.0,
+            "pii": 1.0,
+            "evidence_guard": None,
+            "generate": None,
+        }
+
+
+def test_record_timing_outside_a_request_is_ignored():
+    record_timing("paper_dense_ms", 1.0)
 
 
 def test_timeout_sends_timeout_event_and_logs_it(tmp_path):

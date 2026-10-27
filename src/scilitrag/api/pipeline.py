@@ -1,6 +1,6 @@
 import asyncio
+import contextvars
 import logging
-import re
 import time
 from collections.abc import AsyncIterator
 from contextlib import aclosing
@@ -18,24 +18,17 @@ from scilitrag.contracts import (
     StatusEvent,
     TableEvent,
 )
+from scilitrag.guardrails.sentences import split_sentences
 from scilitrag.rag.errors import LLMClientError, RagUserError
 from scilitrag.rag.evidence.index import EvidenceIndex
 from scilitrag.rag.evidence.labels import citation_status
 from scilitrag.rag.scenarios.authors import attach_sql_evidence
 from scilitrag.rag.sentence_stream import SentenceBuffer
+from scilitrag.timings import RequestMetrics, current_metrics
 
 logger = logging.getLogger(__name__)
 
-# Fallback splitter; semantic sentence boundaries are supplied by the validation layer.
-SENTENCE_END = re.compile(r"(?<=[.!?])\s+")
-
 _END = object()
-
-
-def split_sentences(buffer: str) -> tuple[list[str], str]:
-    """Return the complete sentences in buffer and the incomplete rest."""
-    parts = SENTENCE_END.split(buffer)
-    return [p.strip() for p in parts[:-1] if p.strip()], parts[-1]
 
 
 def _ms(start: float) -> float:
@@ -43,13 +36,19 @@ def _ms(start: float) -> float:
 
 
 async def run_query(
-    query: str, c: Components, timeout_s: float | None = None, *, max_buffer_chars: int = 32768
+    query: str,
+    c: Components,
+    timeout_s: float | None = None,
+    *,
+    max_buffer_chars: int = 32768,
+    metrics: RequestMetrics | None = None,
 ) -> AsyncIterator[tuple[str, Model]]:
     """Events of one query, ending with done or error.
 
     The pipeline runs as its own task and the caller reads events from a queue with a
     deadline. The time limit therefore never spans a yield, and closing this generator
-    (client disconnect) cancels the task, which also closes the LLM stream.
+    (client disconnect) cancels the task, which also closes the LLM stream. metrics gets
+    the input check scores and the timings components report (see scilitrag.timings).
     """
     loop = asyncio.get_running_loop()
     deadline = None if timeout_s is None else loop.time() + timeout_s
@@ -57,7 +56,8 @@ async def run_query(
 
     async def produce() -> None:
         try:
-            async with aclosing(_run(query, c, max_buffer_chars=max_buffer_chars)) as events:
+            run = _run(query, c, max_buffer_chars=max_buffer_chars, metrics=metrics)
+            async with aclosing(run) as events:
                 async for event in events:
                     await queue.put(event)
         except asyncio.CancelledError:
@@ -69,7 +69,9 @@ async def run_query(
             )
         await queue.put(_END)
 
-    task = asyncio.create_task(produce())
+    context = contextvars.copy_context()
+    context.run(current_metrics.set, metrics)
+    task = asyncio.create_task(produce(), context=context)
     try:
         while True:
             remaining = None if deadline is None else max(deadline - loop.time(), 0)
@@ -93,7 +95,11 @@ async def run_query(
 
 
 async def _run(
-    query: str, c: Components, *, max_buffer_chars: int = 32768
+    query: str,
+    c: Components,
+    *,
+    max_buffer_chars: int = 32768,
+    metrics: RequestMetrics | None = None,
 ) -> AsyncIterator[tuple[str, Model]]:
     start = time.perf_counter()
     latency: dict[str, float] = {}
@@ -101,6 +107,9 @@ async def _run(
         checked = await run_in_threadpool(c.check_input, query)
         for stage in checked.stages:
             latency[stage.stage] = stage.latency_ms
+            if metrics is not None and stage.score is not None:
+                metrics.scores[stage.stage] = stage.score
+            # Scores go to the log only; clients could tune attacks against the threshold.
             yield "status", StatusEvent(**stage.model_dump(exclude={"score"}))
         if not checked.allowed:
             yield "done", DoneEvent(stage_latency_ms=latency, total_ms=_ms(start), refused=True)
