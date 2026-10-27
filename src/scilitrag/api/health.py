@@ -35,9 +35,13 @@ def check_database(url: str | None) -> str:
         return "unreachable"
 
 
-def check_llm(base_url: str | None) -> str:
+def check_llm(base_url: str | None, api_key: str | None = None) -> str:
     if not base_url:
         return "not configured"
+    if api_key:
+        # A token means a paid remote endpoint (Modal): probing it every compose healthcheck
+        # would keep the GPU container from scaling down.
+        return "not probed"
     try:
         with urllib.request.urlopen(f"{base_url.rstrip('/')}/models", timeout=TIMEOUT_S):
             return "ok"
@@ -56,7 +60,7 @@ def dependency_checks(settings: Settings) -> dict[str, str]:
         if _needed(settings, DB_COMPONENTS):
             checks["database"] = pool.submit(check_database, settings.database_url)
         if _needed(settings, LLM_COMPONENTS):
-            checks["llm"] = pool.submit(check_llm, settings.llm_base_url)
+            checks["llm"] = pool.submit(check_llm, settings.llm_base_url, settings.llm_api_key)
     return {
         "database": checks["database"].result() if "database" in checks else "skipped",
         "llm": checks["llm"].result() if "llm" in checks else "skipped",
