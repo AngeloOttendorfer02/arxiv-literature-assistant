@@ -173,7 +173,8 @@ def main() -> None:
     parser.add_argument("--output", type=Path, required=True, help="JSON lines, appended")
     parser.add_argument("--repeats", type=int, default=3)
     parser.add_argument("--warmup", type=int, default=2, help="prompts sent before measuring")
-    parser.add_argument("--max-tokens", type=int, default=512)
+    # Same as the app's LLM_MAX_OUTPUT_TOKENS, so quality is scored on untruncated answers.
+    parser.add_argument("--max-tokens", type=int, default=1024)
     parser.add_argument("--num-ctx", type=int, default=8192, help="same context for every tag")
     parser.add_argument("--summary-only", action="store_true", help="summarize --output only")
     args = parser.parse_args()
