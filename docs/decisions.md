@@ -14,6 +14,15 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D056 A-12 benchmark scope, size and quality metrics
+
+- Context: The technical report compares FP16, INT8 and INT4 on VRAM, TTFT, tokens/s and generation quality (e.g. answer relevance or exact match). D037 fixes the three qwen3.8:27b tags, D038 the A100 80 GB. Only S1 lets the LLM decide both answer and cited sources and has ground truth: LitSearch gives the target papers of all 597 queries. S3 counts are rendered by code (E29), S2 has no baseline labels.
+- Options: S1 only or all scenarios; 30 or all 597 queries; quality by exact match, NLI-based citation support, gold-paper citation, agreement with bf16, an LLM judge or human labels.
+- Decision: Benchmark S1 only. All 597 queries once per tag (temperature 0, seed 0) for quality and latency, plus 30 of them with 3 repeats to check that timings and answers are stable. Prompts come from the real pipeline (retrieval on the D-16 database, `build_context`). Quality metrics: (A) citation recall and precision of each sentence against its cited evidence with the NLI model (D036), as in ALCE (Gao et al., EMNLP 2023); (B) gold-paper citation: the answer cites a LitSearch target paper that was among its evidence. Paired comparison with bootstrap confidence intervals as in D-22. The Modal endpoint runs with `OLLAMA_NUM_PARALLEL=1` for the benchmark and 8 only for the load test, which uses qwen3.8:27b-q4_K_M alone (D043).
+- Reason: 30 queries give about +/-18 percentage points for a rate near 50 %, all 597 about +/-4, and differences between quantizations are expected to be small. One slot keeps the VRAM figure to the model plus one 8k context. A and B need no extra model and are computed offline from the stored answers.
+- Validation: Trial run on the A100 with the 30 example prompts: no CPU offload; VRAM 17.1 / 28.5 / 52.5 GB, decode 45.1 / 39.5 / 27.3 tokens/s for q4_K_M / q8_0 / bf16. Prefill was about twice as fast in bf16 from 1,000 to 5,650 prompt tokens (2,484 vs. 1,245 tokens/s at 985 tokens), so bf16 had the lowest TTFT. The full run is pending.
+- Date: 2026-10-27
+
 ### D055 D-17 database validation
 
 - Decision: scripts/validate_database.py checks read-only with the app login: at least 3 tables with 1,000 rows; the 5 validated single-column foreign keys with the expected parent column and schema and without orphans; no missing embeddings, blank chunk texts or author names (including tabs and newlines); nonempty published dataset/model/fingerprint metadata in row id=1 with schema_version=1; no e-mails (D-11 pattern) in stored text. Papers without title and abstract (D021) or year (D035) are INFO. A failed check gives exit code 1.
