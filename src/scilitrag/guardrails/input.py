@@ -1,14 +1,21 @@
 import time
 
 from scilitrag.config import Settings
-from scilitrag.contracts import CheckInput, CheckInputResult, StageResult
+from scilitrag.contracts import CheckInput, CheckInputResult, Embed, StageResult
 from scilitrag.guardrails.pii import mask_pii
 from scilitrag.guardrails.prompt_guard import shared_guard
+from scilitrag.guardrails.prototypes import load_prototypes
+from scilitrag.guardrails.topic import TopicGate, decide
 
 
-# Topic gate and write-intent refusal (S-06, S-07) are not part of this stage list yet.
-def build_component(settings: Settings) -> CheckInput:
+def build_component(settings: Settings, embed: Embed | None = None) -> CheckInput:
     guard = shared_guard()
+    if embed is None:
+        # Mock vectors are hashes, so similarities would be meaningless: the gate always embeds for real.
+        from scilitrag.data.embedding import build_component as build_embed
+
+        embed = build_embed(settings)
+    gate = TopicGate(embed, load_prototypes(settings.data_dir))
 
     def check_input(query: str) -> CheckInputResult:
         start = time.perf_counter()
@@ -40,6 +47,19 @@ def build_component(settings: Settings) -> CheckInput:
         )
         if flagged:
             return finish("injection")
+
+        gate_start = time.perf_counter()
+        category, gap = decide(gate.scores(masked), settings.topic_gate_margin)
+        stages.append(
+            StageResult(
+                stage="topic_gate",
+                result=category,
+                score=gap,
+                latency_ms=(time.perf_counter() - gate_start) * 1000,
+            )
+        )
+        if category != "ok":
+            return finish(category)
 
         changed = masked != query
         stages.append(
