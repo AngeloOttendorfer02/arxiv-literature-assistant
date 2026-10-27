@@ -1,0 +1,265 @@
+{
+ "seed": 42,
+ "papers": 150,
+ "pairs": 1034,
+ "device": "GPU in fp16, batches of 32",
+ "gpu": "NVIDIA GeForce RTX 4070 Ti SUPER",
+ "cpu": "Intel64 Family 6 Model 183 Stepping 1, GenuineIntel",
+ "versions": {
+  "torch": "2.14.1+cu130"
+ },
+ "models": {
+  "EttinX-nli-s": {
+   "revision": "db0dfbf65c68dcd4747f384257a44f18776be709",
+   "pass_rate": {
+    "short@0.5": {
+     "entail": 0.7666666666666667,
+     "negation": 0.04964539007092199,
+     "number": 0.05128205128205128,
+     "wrong_paper": 0.06756756756756757
+    },
+    "short@0.6": {
+     "entail": 0.7266666666666667,
+     "negation": 0.03546099290780142,
+     "number": 0.038461538461538464,
+     "wrong_paper": 0.0472972972972973
+    },
+    "short@0.7": {
+     "entail": 0.66,
+     "negation": 0.03546099290780142,
+     "number": 0.02564102564102564,
+     "wrong_paper": 0.033783783783783786
+    },
+    "short@0.8": {
+     "entail": 0.58,
+     "negation": 0.03546099290780142,
+     "number": 0.02564102564102564,
+     "wrong_paper": 0.013513513513513514
+    },
+    "short@0.9": {
+     "entail": 0.4,
+     "negation": 0.028368794326241134,
+     "number": 0.01282051282051282,
+     "wrong_paper": 0.013513513513513514
+    },
+    "long@0.5": {
+     "entail": 0.13333333333333333,
+     "negation": 0.04964539007092199,
+     "number": 0.02564102564102564,
+     "wrong_paper": 0.02702702702702703
+    },
+    "long@0.6": {
+     "entail": 0.08666666666666667,
+     "negation": 0.02127659574468085,
+     "number": 0.01282051282051282,
+     "wrong_paper": 0.02702702702702703
+    },
+    "long@0.7": {
+     "entail": 0.04666666666666667,
+     "negation": 0.0070921985815602835,
+     "number": 0.01282051282051282,
+     "wrong_paper": 0.013513513513513514
+    },
+    "long@0.8": {
+     "entail": 0.02,
+     "negation": 0.0070921985815602835,
+     "number": 0.01282051282051282,
+     "wrong_paper": 0.006756756756756757
+    },
+    "long@0.9": {
+     "entail": 0.013333333333333334,
+     "negation": 0.0070921985815602835,
+     "number": 0.0,
+     "wrong_paper": 0.0
+    }
+   },
+   "counts": {
+    "entail": 150,
+    "negation": 141,
+    "number": 78,
+    "wrong_paper": 148
+   },
+   "cpu_ms": {
+    "short": 36.43760015256703,
+    "long": 155.03309993073344
+   },
+   "median_tokens": {
+    "short": 211.0,
+    "long": 598.0
+   },
+   "entail_index": 1,
+   "sanity_argmax": [
+    1,
+    0
+   ]
+  },
+  "ModernCE-base-nli": {
+   "revision": "c7bdbbe134ed451db33a946bab9221712e589c35",
+   "pass_rate": {
+    "short@0.5": {
+     "entail": 0.8666666666666667,
+     "negation": 0.04964539007092199,
+     "number": 0.0,
+     "wrong_paper": 0.10810810810810811
+    },
+    "short@0.6": {
+     "entail": 0.84,
+     "negation": 0.04964539007092199,
+     "number": 0.0,
+     "wrong_paper": 0.10135135135135136
+    },
+    "short@0.7": {
+     "entail": 0.8133333333333334,
+     "negation": 0.0425531914893617,
+     "number": 0.0,
+     "wrong_paper": 0.08108108108108109
+    },
+    "short@0.8": {
+     "entail": 0.74,
+     "negation": 0.0425531914893617,
+     "number": 0.0,
+     "wrong_paper": 0.07432432432432433
+    },
+    "short@0.9": {
+     "entail": 0.6333333333333333,
+     "negation": 0.03546099290780142,
+     "number": 0.0,
+     "wrong_paper": 0.04054054054054054
+    },
+    "long@0.5": {
+     "entail": 0.5333333333333333,
+     "negation": 0.05673758865248227,
+     "number": 0.01282051282051282,
+     "wrong_paper": 0.12162162162162163
+    },
+    "long@0.6": {
+     "entail": 0.47333333333333333,
+     "negation": 0.04964539007092199,
+     "number": 0.01282051282051282,
+     "wrong_paper": 0.11486486486486487
+    },
+    "long@0.7": {
+     "entail": 0.43333333333333335,
+     "negation": 0.0425531914893617,
+     "number": 0.01282051282051282,
+     "wrong_paper": 0.10810810810810811
+    },
+    "long@0.8": {
+     "entail": 0.36,
+     "negation": 0.0425531914893617,
+     "number": 0.0,
+     "wrong_paper": 0.08783783783783784
+    },
+    "long@0.9": {
+     "entail": 0.26,
+     "negation": 0.03546099290780142,
+     "number": 0.0,
+     "wrong_paper": 0.07432432432432433
+    }
+   },
+   "counts": {
+    "entail": 150,
+    "negation": 141,
+    "number": 78,
+    "wrong_paper": 148
+   },
+   "cpu_ms": {
+    "short": 81.91090007312596,
+    "long": 311.16980011574924
+   },
+   "median_tokens": {
+    "short": 211.0,
+    "long": 598.0
+   },
+   "entail_index": 1,
+   "sanity_argmax": [
+    1,
+    0
+   ]
+  },
+  "ModernCE-large-nli": {
+   "revision": "0c0575b16b1e4614c4fa8fbf5dbc1a98476f2aaf",
+   "pass_rate": {
+    "short@0.5": {
+     "entail": 1.0,
+     "negation": 0.04964539007092199,
+     "number": 0.0,
+     "wrong_paper": 0.13513513513513514
+    },
+    "short@0.6": {
+     "entail": 1.0,
+     "negation": 0.0425531914893617,
+     "number": 0.0,
+     "wrong_paper": 0.12162162162162163
+    },
+    "short@0.7": {
+     "entail": 1.0,
+     "negation": 0.0425531914893617,
+     "number": 0.0,
+     "wrong_paper": 0.0945945945945946
+    },
+    "short@0.8": {
+     "entail": 1.0,
+     "negation": 0.0425531914893617,
+     "number": 0.0,
+     "wrong_paper": 0.06756756756756757
+    },
+    "short@0.9": {
+     "entail": 1.0,
+     "negation": 0.02127659574468085,
+     "number": 0.0,
+     "wrong_paper": 0.0472972972972973
+    },
+    "long@0.5": {
+     "entail": 0.9933333333333333,
+     "negation": 0.0425531914893617,
+     "number": 0.01282051282051282,
+     "wrong_paper": 0.13513513513513514
+    },
+    "long@0.6": {
+     "entail": 0.9933333333333333,
+     "negation": 0.0425531914893617,
+     "number": 0.0,
+     "wrong_paper": 0.12162162162162163
+    },
+    "long@0.7": {
+     "entail": 0.9933333333333333,
+     "negation": 0.0425531914893617,
+     "number": 0.0,
+     "wrong_paper": 0.10810810810810811
+    },
+    "long@0.8": {
+     "entail": 0.98,
+     "negation": 0.03546099290780142,
+     "number": 0.0,
+     "wrong_paper": 0.07432432432432433
+    },
+    "long@0.9": {
+     "entail": 0.92,
+     "negation": 0.02127659574468085,
+     "number": 0.0,
+     "wrong_paper": 0.05405405405405406
+    }
+   },
+   "counts": {
+    "entail": 150,
+    "negation": 141,
+    "number": 78,
+    "wrong_paper": 148
+   },
+   "cpu_ms": {
+    "short": 225.91719985939562,
+    "long": 866.5307001210749
+   },
+   "median_tokens": {
+    "short": 211.0,
+    "long": 598.0
+   },
+   "entail_index": 1,
+   "sanity_argmax": [
+    1,
+    0
+   ]
+  }
+ }
+}

@@ -1,7 +1,7 @@
 import math
 import os
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from dotenv import find_dotenv, load_dotenv
 
@@ -41,6 +41,8 @@ class Settings:
     nli_model: str = DEFAULT_NLI_MODEL
     nli_entailment_threshold: float = 0.5
     nli_contradiction_threshold: float = 0.5
+    # Bearer token for a protected endpoint such as the Modal proxy; kept out of repr and logs.
+    llm_api_key: str | None = field(default=None, repr=False)
 
 
 def _parse_float(name: str, value: str) -> float:
@@ -107,6 +109,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         database_url=env.get("DATABASE_URL") or None,
         llm_base_url=env.get("LLM_BASE_URL") or None,
         llm_model=env.get("LLM_MODEL") or None,
+        llm_api_key=env.get("LLM_API_KEY") or None,
         embed_model=env.get("EMBED_MODEL") or DEFAULT_EMBED_MODEL,
         use_mocks=use_mocks,
         real_components=frozenset(name.strip() for name in real.split(",") if name.strip()),

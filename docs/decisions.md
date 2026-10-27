@@ -14,7 +14,7 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
-### D059 S-12 guardrail test sets in the repository, first baseline on the tuning split
+### D063 S-12 guardrail test sets in the repository, first baseline on the tuning split
 
 - Context: S-12 asks for at least 100 attacks in five categories and harmless questions, split into tuning and test, with AI-written prompts reviewed by a person. LitSearch text may not be stored in the repository.
 - Options: JSONL files in the repository with our own prompts; everything private under `eval/private/`.
@@ -24,9 +24,7 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Open: A pattern or output check for system prompt extraction (Benjamin's request) and a better indirect injection check are not built; both change behaviour and need a decision. Numbers for the report come from S-13 on the test split after a person has reviewed the cases.
 - Date: 2026-10-27
 
----
-
-### D058 S-06 topic gate with prototype similarity (O9)
+### D062 S-06 topic gate with prototype similarity (O9)
 
 - Context: `check_input` needs a topic gate (E13) that refuses off-topic and write requests before any DB or LLM call. LitSearch has no licence, so its queries cannot be stored in the repository; `DATA_DIR` is not present in Docker or CI.
 - Options: dev queries from `DATA_DIR` only; own sentences in the repository only; own sentences plus dev queries when `DATA_DIR` has them.
@@ -35,7 +33,42 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Known limits: Write requests that read like a question about the database ("Delete everything you know about BERT") are close to allow. German is weaker because granite is English only. The prototypes are embedded on the first request, which takes seconds on CPU.
 - Date: 2026-10-27
 
----
+### D061 S-09 NLI check reproducible in the repository (evidence for D057)
+
+- Context: D057 reported pass rates and latencies from a local run whose script was not in the repository, so the numbers could not be traced.
+- Decision: scripts/nli_check.py rebuilds the 1,034 pairs of D057 (seed 42, kept so that the published pairs are drawn again) and scores EttinX-nli-s, ModernCE-base-nli and ModernCE-large-nli at pinned revisions. Results with per-threshold pass rates in eval/results/s09_nli_check.json, report in [S-09 NLI check](s09_nli_check.md).
+- Validation: All pass rates of D057 are reproduced exactly for all three models. CPU latencies (fp32, 4 threads, median of 15 pairs) were lower than in D057, for ModernCE-large 226 ms with a 211-token premise and 867 ms with a 598-token premise instead of about 600 and 2,400 ms; latency depends on machine load, the comparison between models is unchanged.
+- Date: 2026-10-27
+
+### D060 D-20 chunk size 256 tokens with 10 % overlap (O5, changes D049)
+
+- Context: D049 left size (256, 384, 512 tokens) and overlap (0, 10, 20 %) to D-20, with 512/10 as default; the D-16 database was built with it. S1 picks 2 passages per top paper, `EVIDENCE_ITEM_CHAR_LIMIT` cuts each source at 2,400 characters, and every released sentence is checked against its cited chunks by NLI (D057).
+- Options: the 9 O5 settings, compared by scripts/chunk_experiment.py on the 1,000 D-12 papers, chunked like the build (512/10 gives exactly the 27,969 chunks of D054), granite dense plus BM25 with RRF k = 60. Benchmark A: the 597 LitSearch queries at paper level through chunks (dev/test split, seed 1789). Benchmark B: the 86 reviewed D-19 questions, a hit is a chunk holding at least half of the source span; S1 Hit@2 picks passages exactly like `SearchBackend.chunks`.
+- Rule, fixed before the run: settings whose paired bootstrap interval against the best includes 0 on LitSearch dev NDCG@10 and on S1 Hit@2 are equivalent; among them fewer chunks above the character limit wins, then the smaller size.
+- Decision: 256 tokens with 10 % overlap. Defaults in `chunker.py`, `load_fixture.py` and `load_full.py` changed. Full results in [D-20 chunking experiment](d20_chunking_experiment.md) and eval/results/d20_chunk_experiment.json.
+- Reason: Equivalent settings were 256/10, 512/0, 512/10 and 512/20. Quality differs little: S1 Hit@2 0.76 for 256/10 and 0.70 for 512/10 (+0.058 [-0.023, +0.151]); LitSearch dev NDCG@10 0.784 and 0.797 (-0.013 [-0.030, +0.005]). Costs differ clearly: 10 % of 512-token chunks exceed 2,400 characters and are cut in the prompt, none at 256; NLI takes 292 instead of 555 ms per full chunk (ModernCE-large, CPU). At an equal budget of about 1,024 tokens, 256/10 holds the source span in 0.84 of the questions against 0.62 for 512/10 (+0.221 [+0.128, +0.314]). 10 % overlap is at least as good as 0 % and 20 % at every size.
+- Known limits: 256/10 is inside the equivalence set by a margin of 0.002 (upper interval bound on NDCG@10), 384/0 and 384/10 are outside by 0.001 and 0.002, so 256 against 384 is decided by noise; 384 does not cut chunks either. BM25 in the experiment is a Python implementation, not pg_search. The D-19 questions come from one model and match the passage wording more closely than real questions.
+- Follow-up: rebuild the chunks of the full database with 256/10 (48,860 chunks instead of 27,969) and their embeddings, then dump v2 (D-16 steps); agree with WP1 first.
+- Date: 2026-10-27
+
+### D059 D-19 chunk evaluation set (O16)
+
+- Context: LitSearch only labels papers, so it cannot show whether a chunk holds the passage that answers a question. O16 asks for about 100 synthetic questions with a source span; a hit is a top-k chunk that contains the span. D-20 needs the set to compare chunk sizes.
+- Options: questions from the local LLM via `LLM_BASE_URL`; questions written by hand; questions from the LLM used in the app (qwen3.8:27b, only on Modal).
+- Decision: scripts/build_chunk_eval_set.py samples one passage per paper (1 to 2 consecutive sentences, 15 to 60 words, S-11 sentence splitter) from the 1,000 D-12 papers, cleaned exactly like the database build (D-10, D-11) and independent of any chunk boundary. The span is stored as section index and character offsets. Captions, e-mail placeholders, sentences under 8 words or under 70 % letters and acknowledgement or funding sections are skipped. `gpt-oss:20b` on local Ollama (temperature 0, seed 1789, JSON schema) writes one search question per passage: name the method or dataset, do not state the answer, no run of more than 4 copied words, no "this paper". Questions are dropped when the model flags the passage as unusable, when they copy more than 5 consecutive words or share more than half their words with the passage, or when they refer to "this paper". Generation stops at 100 kept questions. Output in eval/private/chunk_eval_set.json (not committed, contains dataset text) with model, prompt hash and seed.
+- Reason: Local, reproducible and free; the app model is reserved for Modal credits. Sampling spans independent of chunk boundaries keeps the set neutral between chunk sizes. The copy filters reduce the bias of synthetic questions towards exact keyword matches, which would favor BM25 and small chunks.
+- Validation: 130 passages, 100 questions kept in 1,228 s on an RTX 4070 Ti SUPER (16 copied, 8 unusable, 6 self-references dropped). First manual pass over all 100: 8 rejected (bibliography entry, garbled formula or script, caption noise, passages that only announce or point to content, one only answerable through the title). A second team member checked a random sample of 25 (seed 1789) and rejected 6, the 3 of the first pass plus 3 more (agreement 22 of 25); the new reasons were questions that claim more than the passage says and passages whose subject lies outside the span. A second pass over all questions with these two criteria rejected 3 more. D-20 uses the remaining 86.
+- Known limits: Questions are written from the passage, so they match its wording more closely than real user questions, even after filtering. Generated by a single model.
+- Date: 2026-10-27
+
+### D058 A-12 benchmark scope, size and quality metrics
+
+- Context: The technical report compares FP16, INT8 and INT4 on VRAM, TTFT, tokens/s and generation quality (e.g. answer relevance or exact match). D037 fixes the three qwen3.8:27b tags, D038 the A100 80 GB. Only S1 lets the LLM decide both answer and cited sources and has ground truth: LitSearch gives the target papers of all 597 queries. S3 counts are rendered by code (E29), S2 has no baseline labels.
+- Options: S1 only or all scenarios; 30 or all 597 queries; quality by exact match, NLI-based citation support, gold-paper citation, agreement with bf16, an LLM judge or human labels.
+- Decision: Benchmark S1 only. All 597 queries once per tag (temperature 0, seed 0) for quality and latency, plus 30 of them with 3 repeats to check that timings and answers are stable. Prompts come from the real pipeline (retrieval on the D-16 database, `build_context`). Quality metrics: (A) citation recall and precision of each sentence against its cited evidence with the NLI model (D036), as in ALCE (Gao et al., EMNLP 2023); (B) gold-paper citation: the answer cites a LitSearch target paper that was among its evidence. Paired comparison with bootstrap confidence intervals as in D-22. The Modal endpoint runs with `OLLAMA_NUM_PARALLEL=1` for the benchmark and 8 only for the load test, which uses qwen3.8:27b-q4_K_M alone (D043).
+- Reason: 30 queries give about +/-18 percentage points for a rate near 50 %, all 597 about +/-4, and differences between quantizations are expected to be small. One slot keeps the VRAM figure to the model plus one 8k context. A and B need no extra model and are computed offline from the stored answers.
+- Validation: Trial run on the A100 with the 30 example prompts: no CPU offload; VRAM 17.1 / 28.5 / 52.5 GB, decode 45.1 / 39.5 / 27.3 tokens/s for q4_K_M / q8_0 / bf16. Prefill was about twice as fast in bf16 from 1,000 to 5,650 prompt tokens (2,484 vs. 1,245 tokens/s at 985 tokens), so bf16 had the lowest TTFT. The full run is pending.
+- Date: 2026-10-27
 
 ### D057 S-09 NLI default set to ModernCE-large-nli in code (implements D036)
 
@@ -45,10 +78,6 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Reason: Share of pairs with status ok at threshold 0.5. entail (must pass): EttinX 0.77 short and 0.13 long, ModernCE-base 0.87 and 0.53, ModernCE-large 1.00 and 0.99. negation, number and wrong_paper (must fail) stay at or below 0.14 for all models. EttinX drops verbatim sentences at 23% (200 tokens) and 87% (600 tokens), so it is not usable with chunks as premise. ModernCE-large is stable across premise length. Cost: about 6 times the CPU latency per sentence. The NLI thresholds stay at 0.5 for now; 0.8 also works on this test and is decided in S-13.
 - Date: 2026-10-23
 
----
-
----
-
 ### D056 S-05 evidence guard against indirect injection (contracts 0.5)
 
 - Context: Retrieved chunks and abstracts go into the prompt and could carry instructions. The pipeline had no place to check them, and the contracts had no interface for it.
@@ -57,7 +86,6 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Reason: A checked interface keeps `USE_MOCKS=1` and the swap per component working. Removing sources before SQL facts keeps tables free of flagged papers. Measured on CPU with 17 sources of about 400 tokens: 4.3 s in total, about 250 ms per source, all of it before the first token.
 - Known limits: A paper abstract about prompt injection that quotes an attack sentence scored 0.98 and is removed, so such papers disappear from answers; no threshold helps, because the legitimate and the attack text score alike. Three poisoned test sources (instruction at the end of a chunk, role-play, plain override) scored 0.998 and above. Latency can be cut by scoring fewer sources or in parallel; not done here.
 
----
 ### D055 D-17 database validation
 
 - Decision: scripts/validate_database.py checks read-only with the app login: at least 3 tables with 1,000 rows; the 5 validated single-column foreign keys with the expected parent column and schema and without orphans; no missing embeddings, blank chunk texts or author names (including tabs and newlines); nonempty published dataset/model/fingerprint metadata in row id=1 with schema_version=1; no e-mails (D-11 pattern) in stored text. Papers without title and abstract (D021) or year (D035) are INFO. A failed check gives exit code 1.

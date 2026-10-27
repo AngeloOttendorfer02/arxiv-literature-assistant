@@ -58,7 +58,7 @@ def create_app(components: Components | None = None, settings: Settings | None =
     @app.get("/health")
     def health() -> dict:
         checks = dependency_checks(settings)
-        unhealthy = any(value not in ("ok", "skipped") for value in checks.values())
+        unhealthy = any(value not in ("ok", "skipped", "not probed") for value in checks.values())
         return {
             "status": "degraded" if unhealthy else "ok",
             "checks": checks,

@@ -16,7 +16,7 @@ Run in this order:
    uv run --locked --group data python scripts/select_fixture.py
    ```
 4. Validate without the database. The first run downloads the pinned tokenizer
-   (about 4 MB). Expect `Chunks: 6918 from 300 papers; 512 tokens with 10 % overlap`:
+   (about 4 MB). Expect `Chunks: 11762 from 300 papers; 256 tokens with 10 % overlap`:
    ```sh
    uv run --locked --group data --group rag python scripts/load_fixture.py --check-only
    ```
@@ -45,7 +45,7 @@ Run in this order:
    ```
 
 `--chunk-tokens` (256, 384, 512) and `--overlap` (0, 10, 20 %) change the chunk
-window; the defaults stay until D-20 decides.
+window; the default 256 tokens with 10 % overlap was chosen in D-20 (D060).
 
 **Selection** (defaults: 300 papers, seed 42): five queries from each of the four
 query sets, all their target papers, then cited neighbors, citing neighbors and

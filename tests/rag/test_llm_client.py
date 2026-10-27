@@ -10,7 +10,8 @@ from scilitrag.components import mock_components
 from scilitrag.config import load_settings
 from scilitrag.rag.llm.client import ChatClient, LLMClientError
 
-SETTINGS = load_settings({"USE_MOCKS": "1", "LLM_BASE_URL": "http://model/v1", "LLM_MODEL": "test"})
+ENV = {"USE_MOCKS": "1", "LLM_BASE_URL": "http://model/v1", "LLM_MODEL": "test"}
+SETTINGS = load_settings(ENV)
 
 
 def test_completion_uses_config_and_schema():
@@ -23,6 +24,31 @@ def test_completion_uses_config_and_schema():
 
     client = ChatClient(SETTINGS, transport=httpx.MockTransport(handler))
     assert client.complete([], schema={"type": "object"}) == "{}"
+
+
+def test_api_key_is_sent_as_bearer_token_only_when_set():
+    seen = []
+
+    def handler(request):
+        seen.append(request.headers.get("authorization"))
+        if "stream" in json.loads(request.content) and json.loads(request.content)["stream"]:
+            return httpx.Response(
+                200, text='data: {"choices":[{"delta":{"content":"x"}}]}\n\ndata: [DONE]\n\n'
+            )
+        return httpx.Response(200, json={"choices": [{"message": {"content": "ok"}}]})
+
+    keyed = load_settings({**ENV, "LLM_API_KEY": "token-123"})
+    ChatClient(keyed, transport=httpx.MockTransport(handler)).complete([])
+    ChatClient(SETTINGS, transport=httpx.MockTransport(handler)).complete([])
+
+    async def collect():
+        return [
+            t async for t in ChatClient(keyed, transport=httpx.MockTransport(handler)).stream([])
+        ]
+
+    assert asyncio.run(collect()) == ["x"]
+    assert seen == ["Bearer token-123", None, "Bearer token-123"]
+    assert "token-123" not in repr(keyed)
 
 
 @pytest.mark.parametrize("status", [401, 429, 500])

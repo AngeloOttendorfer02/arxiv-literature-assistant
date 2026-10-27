@@ -7,6 +7,7 @@ Evaluation inputs are organized by capability. Executable implementations live i
 | --- | --- |
 | `retrieval/` | Synthetic public cases and retrieval-evaluation usage |
 | `guardrails/` | Attack and harmless test sets for the guardrails, split into tuning and test |
+| `results/` | Recorded comparison runs with per-query scores, no dataset text; the matching reports are in `docs/` |
 | `private/` | Ignored real references, source passages, annotations and recorded runs |
 
 See [retrieval evaluation](../docs/evaluation.md) for reference export, explicit model
