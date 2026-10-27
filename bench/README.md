@@ -14,7 +14,7 @@ Benchmark of the inference engine across precisions (fp16, q8_0, q4_K_M) and the
 - the answer text, for quality scoring later
 
 Settings that are the same for every tag:
-- temperature 0, seed 0, `num_ctx` 8192, at most 512 output tokens, thinking off
+- temperature 0, seed 0, `num_ctx` 8192, at most 1024 output tokens (the app's `LLM_MAX_OUTPUT_TOKENS`), thinking off
 - each request gets a unique prefix, so Ollama's prompt cache cannot shorten TTFT
 - warm-up prompts (2 by default) load the model and are not counted
 
