@@ -14,6 +14,34 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D061 S-09 NLI check reproducible in the repository (evidence for D057)
+
+- Context: D057 reported pass rates and latencies from a local run whose script was not in the repository, so the numbers could not be traced.
+- Decision: scripts/nli_check.py rebuilds the 1,034 pairs of D057 (seed 42, kept so that the published pairs are drawn again) and scores EttinX-nli-s, ModernCE-base-nli and ModernCE-large-nli at pinned revisions. Results with per-threshold pass rates in eval/results/s09_nli_check.json, report in [S-09 NLI check](s09_nli_check.md).
+- Validation: All pass rates of D057 are reproduced exactly for all three models. CPU latencies (fp32, 4 threads, median of 15 pairs) were lower than in D057, for ModernCE-large 226 ms with a 211-token premise and 867 ms with a 598-token premise instead of about 600 and 2,400 ms; latency depends on machine load, the comparison between models is unchanged.
+- Date: 2026-10-27
+
+### D060 D-20 chunk size 256 tokens with 10 % overlap (O5, changes D049)
+
+- Context: D049 left size (256, 384, 512 tokens) and overlap (0, 10, 20 %) to D-20, with 512/10 as default; the D-16 database was built with it. S1 picks 2 passages per top paper, `EVIDENCE_ITEM_CHAR_LIMIT` cuts each source at 2,400 characters, and every released sentence is checked against its cited chunks by NLI (D057).
+- Options: the 9 O5 settings, compared by scripts/chunk_experiment.py on the 1,000 D-12 papers, chunked like the build (512/10 gives exactly the 27,969 chunks of D054), granite dense plus BM25 with RRF k = 60. Benchmark A: the 597 LitSearch queries at paper level through chunks (dev/test split, seed 1789). Benchmark B: the 86 reviewed D-19 questions, a hit is a chunk holding at least half of the source span; S1 Hit@2 picks passages exactly like `SearchBackend.chunks`.
+- Rule, fixed before the run: settings whose paired bootstrap interval against the best includes 0 on LitSearch dev NDCG@10 and on S1 Hit@2 are equivalent; among them fewer chunks above the character limit wins, then the smaller size.
+- Decision: 256 tokens with 10 % overlap. Defaults in `chunker.py`, `load_fixture.py` and `load_full.py` changed. Full results in [D-20 chunking experiment](d20_chunking_experiment.md) and eval/results/d20_chunk_experiment.json.
+- Reason: Equivalent settings were 256/10, 512/0, 512/10 and 512/20. Quality differs little: S1 Hit@2 0.76 for 256/10 and 0.70 for 512/10 (+0.058 [-0.023, +0.151]); LitSearch dev NDCG@10 0.784 and 0.797 (-0.013 [-0.030, +0.005]). Costs differ clearly: 10 % of 512-token chunks exceed 2,400 characters and are cut in the prompt, none at 256; NLI takes 292 instead of 555 ms per full chunk (ModernCE-large, CPU). At an equal budget of about 1,024 tokens, 256/10 holds the source span in 0.84 of the questions against 0.62 for 512/10 (+0.221 [+0.128, +0.314]). 10 % overlap is at least as good as 0 % and 20 % at every size.
+- Known limits: 256/10 is inside the equivalence set by a margin of 0.002 (upper interval bound on NDCG@10), 384/0 and 384/10 are outside by 0.001 and 0.002, so 256 against 384 is decided by noise; 384 does not cut chunks either. BM25 in the experiment is a Python implementation, not pg_search. The D-19 questions come from one model and match the passage wording more closely than real questions.
+- Follow-up: rebuild the chunks of the full database with 256/10 (48,860 chunks instead of 27,969) and their embeddings, then dump v2 (D-16 steps); agree with WP1 first.
+- Date: 2026-10-27
+
+### D059 D-19 chunk evaluation set (O16)
+
+- Context: LitSearch only labels papers, so it cannot show whether a chunk holds the passage that answers a question. O16 asks for about 100 synthetic questions with a source span; a hit is a top-k chunk that contains the span. D-20 needs the set to compare chunk sizes.
+- Options: questions from the local LLM via `LLM_BASE_URL`; questions written by hand; questions from the LLM used in the app (qwen3.8:27b, only on Modal).
+- Decision: scripts/build_chunk_eval_set.py samples one passage per paper (1 to 2 consecutive sentences, 15 to 60 words, S-11 sentence splitter) from the 1,000 D-12 papers, cleaned exactly like the database build (D-10, D-11) and independent of any chunk boundary. The span is stored as section index and character offsets. Captions, e-mail placeholders, sentences under 8 words or under 70 % letters and acknowledgement or funding sections are skipped. `gpt-oss:20b` on local Ollama (temperature 0, seed 1789, JSON schema) writes one search question per passage: name the method or dataset, do not state the answer, no run of more than 4 copied words, no "this paper". Questions are dropped when the model flags the passage as unusable, when they copy more than 5 consecutive words or share more than half their words with the passage, or when they refer to "this paper". Generation stops at 100 kept questions. Output in eval/private/chunk_eval_set.json (not committed, contains dataset text) with model, prompt hash and seed.
+- Reason: Local, reproducible and free; the app model is reserved for Modal credits. Sampling spans independent of chunk boundaries keeps the set neutral between chunk sizes. The copy filters reduce the bias of synthetic questions towards exact keyword matches, which would favor BM25 and small chunks.
+- Validation: 130 passages, 100 questions kept in 1,228 s on an RTX 4070 Ti SUPER (16 copied, 8 unusable, 6 self-references dropped). First manual pass over all 100: 8 rejected (bibliography entry, garbled formula or script, caption noise, passages that only announce or point to content, one only answerable through the title). A second team member checked a random sample of 25 (seed 1789) and rejected 6, the 3 of the first pass plus 3 more (agreement 22 of 25); the new reasons were questions that claim more than the passage says and passages whose subject lies outside the span. A second pass over all questions with these two criteria rejected 3 more. D-20 uses the remaining 86.
+- Known limits: Questions are written from the passage, so they match its wording more closely than real user questions, even after filtering. Generated by a single model.
+- Date: 2026-10-27
+
 ### D058 A-12 benchmark scope, size and quality metrics
 
 - Context: The technical report compares FP16, INT8 and INT4 on VRAM, TTFT, tokens/s and generation quality (e.g. answer relevance or exact match). D037 fixes the three qwen3.8:27b tags, D038 the A100 80 GB. Only S1 lets the LLM decide both answer and cited sources and has ground truth: LitSearch gives the target papers of all 597 queries. S3 counts are rendered by code (E29), S2 has no baseline labels.

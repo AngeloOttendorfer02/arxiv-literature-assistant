@@ -1,1 +1,3 @@
 * text=auto eol=lf
+# Recorded comparison runs: collapsed in GitHub diffs
+eval/results/*.json linguist-generated=true

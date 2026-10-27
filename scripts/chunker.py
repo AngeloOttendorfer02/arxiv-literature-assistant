@@ -1,4 +1,4 @@
-"""D-13 section-based chunks with a fixed token window and overlap (O5, compared in D-20)."""
+"""D-13 section-based chunks with a fixed token window and overlap (O5; 256/10 chosen in D-20)."""
 
 from scilitrag.data.embedding import MODEL_REVISIONS as TOKENIZER_REVISIONS
 
@@ -6,7 +6,7 @@ SIZES = (256, 384, 512)
 OVERLAPS = (0, 10, 20)
 
 
-def chunk_sections(corpus_id, sections, offsets, *, size=512, overlap=10):
+def chunk_sections(corpus_id, sections, offsets, *, size=256, overlap=10):
     """Split (section, text) pairs into (chunk_id, corpus_id, section, seq_no, text) rows.
 
     offsets(text) returns the character span of every token. Chunks never cross a section
