@@ -108,7 +108,13 @@ def test_log_has_component_timings_and_guardrail_scores(tmp_path):
     for record in log_records(tmp_path):
         assert record["component_ms"] == {"paper_dense_ms": 5.0}
         scores = {e["stage"]: e.get("score") for e in record["guardrail_events"]}
-        assert scores == {"prompt_guard": 0.0, "topic_gate": 0.0, "pii": 1.0, "generate": None}
+        assert scores == {
+            "prompt_guard": 0.0,
+            "topic_gate": 0.0,
+            "pii": 1.0,
+            "evidence_guard": None,
+            "generate": None,
+        }
 
 
 def test_record_timing_outside_a_request_is_ignored():

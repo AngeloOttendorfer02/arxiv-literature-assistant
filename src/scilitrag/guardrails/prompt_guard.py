@@ -1,4 +1,5 @@
 import threading
+from functools import lru_cache
 
 import torch
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
@@ -54,3 +55,9 @@ class PromptGuard:
                     self._model_id
                 ).eval()
         return self._tokenizer, self._model
+
+
+@lru_cache(maxsize=1)
+def shared_guard() -> PromptGuard:
+    """One model instance for the query check and the evidence check."""
+    return PromptGuard()

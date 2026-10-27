@@ -10,7 +10,7 @@ from pathlib import Path
 from scilitrag.contracts import SENTENCE_REMOVED, DoneEvent, ErrorEvent, Model, StatusEvent
 from scilitrag.timings import RequestMetrics
 
-GUARD_STAGES = ("prompt_guard", "topic_gate", "pii")
+GUARD_STAGES = ("prompt_guard", "topic_gate", "pii", "evidence_guard")
 APP_LOG_FORMAT = "%(asctime)s %(levelname)s %(name)s [%(request_id)s] %(message)s"
 
 request_logger = logging.getLogger("scilitrag.requests")

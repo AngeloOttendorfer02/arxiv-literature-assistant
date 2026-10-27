@@ -3,12 +3,12 @@ import time
 from scilitrag.config import Settings
 from scilitrag.contracts import CheckInput, CheckInputResult, StageResult
 from scilitrag.guardrails.pii import mask_pii
-from scilitrag.guardrails.prompt_guard import PromptGuard
+from scilitrag.guardrails.prompt_guard import shared_guard
 
 
 # Topic gate and write-intent refusal (S-06, S-07) are not part of this stage list yet.
 def build_component(settings: Settings) -> CheckInput:
-    guard = PromptGuard()
+    guard = shared_guard()
 
     def check_input(query: str) -> CheckInputResult:
         start = time.perf_counter()
