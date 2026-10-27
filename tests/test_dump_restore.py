@@ -44,10 +44,10 @@ def run(module, monkeypatch, *argv):
 def test_dump_writes_file_and_checksum_without_roles_or_grants(tmp_path, fake, monkeypatch):
     compose = fake("ibm-granite/granite-embedding-english-r2")
     run(dump_database, monkeypatch)
-    dump = tmp_path / "dumps/scilitrag_v1.dump"
+    dump = tmp_path / "dumps/scilitrag_v2.dump"
     assert dump.read_bytes() == b"PGDMP fake dump"
-    assert (tmp_path / "dumps/scilitrag_v1.dump.sha256").read_text() == (
-        f"{digest(dump)}  scilitrag_v1.dump\n"
+    assert (tmp_path / "dumps/scilitrag_v2.dump.sha256").read_text() == (
+        f"{digest(dump)}  scilitrag_v2.dump\n"
     )
     pg_dump = compose.calls[-1]
     assert pg_dump[0] == "pg_dump" and "--no-owner" in pg_dump and "--no-acl" in pg_dump
@@ -66,11 +66,11 @@ def test_dump_refuses_unpublished_embeddings(fake, monkeypatch, model):
 
 def test_dump_never_overwrites(tmp_path, fake, monkeypatch):
     (tmp_path / "dumps").mkdir()
-    (tmp_path / "dumps/scilitrag_v1.dump").write_bytes(b"old")
+    (tmp_path / "dumps/scilitrag_v2.dump").write_bytes(b"old")
     compose = fake()
     with pytest.raises(SystemExit):
         run(dump_database, monkeypatch)
-    assert compose.calls == [] and (tmp_path / "dumps/scilitrag_v1.dump").read_bytes() == b"old"
+    assert compose.calls == [] and (tmp_path / "dumps/scilitrag_v2.dump").read_bytes() == b"old"
 
 
 def write_dump(tmp_path, checksum=None):

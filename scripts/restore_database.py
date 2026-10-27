@@ -1,6 +1,6 @@
 """Restore a D-16 dump into a fresh database, then create roles and build the indexes.
 
-Usage: uv run --locked --group data python scripts/restore_database.py data/dumps/scilitrag_v1.dump
+Usage: uv run --locked --group data python scripts/restore_database.py data/dumps/scilitrag_v2.dump
 Needs a fresh db volume (docker compose up -d db) and the role variables in .env.
 Steps: pg_restore (schema and data), roles.sql, indexes.sql, retrieval_indexes.sql, ANALYZE.
 The SQL files come from this repository, so indexes always match the current code.
@@ -67,7 +67,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("dump", type=Path, nargs="?")
     args = parser.parse_args()
-    path = args.dump or data_directory() / "dumps" / "scilitrag_v1.dump"
+    path = args.dump or data_directory() / "dumps" / "scilitrag_v2.dump"
     if not path.is_file():
         parser.exit(1, f"{path} not found.\n")
     try:

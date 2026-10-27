@@ -255,7 +255,7 @@ apply `schema.sql` and `roles.sql` to an empty database, then:
 uv run --locked --group data --group rag python scripts/load_full.py --check-only
 uv run --locked --group data --group rag python scripts/load_full.py
 uv run --locked --group data --group rag --group embed python scripts/embed_database.py --batch-size 1024
-uv run --locked --group data python scripts/dump_database.py --name scilitrag_v2
+uv run --locked --group data python scripts/dump_database.py
 ```
 
 The import loads all 56,115 papers, 328,622 citations, 70,171 authors and 48,860
@@ -347,7 +347,7 @@ src/scilitrag/
   rag/          planner, retrieval, SQL facts, generation; llm/, evidence/, search/, scenarios/
   evaluation/   reference datasets, pipeline runner and quality metrics
   guardrails/   input checks, PII masking, sentence validation
-  data/         shared embedding adapter (pending data-pipeline integration)
+  data/         embed component: granite embeddings for papers, chunks and queries (D050)
   contracts/    shared data types and interfaces
   mocks/        mock implementation of every interface
   config.py     environment configuration
