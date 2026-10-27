@@ -7,15 +7,18 @@ from scilitrag.rag.errors import RagUserError
 from scilitrag.rag.evidence.index import allocate_evidence
 from scilitrag.rag.search.backend import PAPER_COLUMNS
 
+# Select the citing IDs first; PAPER_COLUMNS over thousands of citing papers (e.g. BERT)
+# otherwise makes PostgreSQL scan all chunks.
 CITING_SQL = (
-    "SELECT " + PAPER_COLUMNS + " FROM papers p "
+    "SELECT " + PAPER_COLUMNS + " FROM (SELECT p.corpus_id FROM papers p "
     "WHERE EXISTS (SELECT 1 FROM citations edge WHERE edge.citing_id=p.corpus_id "
     "AND edge.cited_id=%(target_id)s) "
     "AND (%(low)s::integer IS NULL OR p.year >= %(low)s) "
     "AND (%(high)s::integer IS NULL OR p.year <= %(high)s) "
     "AND (%(author_id)s::bigint IS NULL OR EXISTS (SELECT 1 FROM paper_authors pa "
     "WHERE pa.corpus_id=p.corpus_id AND pa.author_id=%(author_id)s)) "
-    "ORDER BY p.year DESC NULLS LAST,p.corpus_id LIMIT %(limit)s"
+    "ORDER BY p.year DESC NULLS LAST,p.corpus_id LIMIT %(limit)s) top "
+    "JOIN papers p USING (corpus_id) ORDER BY p.year DESC NULLS LAST,p.corpus_id"
 )
 
 
