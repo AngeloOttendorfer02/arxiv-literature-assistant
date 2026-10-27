@@ -1,6 +1,6 @@
 """Write the D-16 dump: schema and data of the six project tables (pg_dump custom format).
 
-Usage: uv run --locked --group data python scripts/dump_database.py [--name scilitrag_v1]
+Usage: uv run --locked --group data python scripts/dump_database.py [--name scilitrag_v2]
 Run after scripts/embed_database.py has published embed_model and before building indexes,
 so every restore builds the indexes of the current repository. Roles and grants are not in
 the dump; each restore creates its own roles from .env. LitSearch data: share privately only.
@@ -60,7 +60,7 @@ def write_dump(target):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--name", default="scilitrag_v1")
+    parser.add_argument("--name", default="scilitrag_v2")
     args = parser.parse_args()
     target = data_directory() / "dumps" / f"{args.name}.dump"
     if target.exists():
