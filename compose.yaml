@@ -12,6 +12,8 @@ services:
       APP_DB_PASSWORD: ${APP_DB_PASSWORD:?set APP_DB_PASSWORD in .env}
       INGEST_DB_USER: ${INGEST_DB_USER:?set INGEST_DB_USER in .env}
       INGEST_DB_PASSWORD: ${INGEST_DB_PASSWORD:?set INGEST_DB_PASSWORD in .env}
+    # Parallel HNSW builds on the full corpus need about 1 GB; Docker's default is 64 MB.
+    shm_size: 2gb
     ports:
       - "127.0.0.1:${DB_PORT:-5432}:5432"
     volumes:
