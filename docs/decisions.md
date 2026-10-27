@@ -14,6 +14,17 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D058 S-06 topic gate with prototype similarity (O9)
+
+- Context: `check_input` needs a topic gate (E13) that refuses off-topic and write requests before any DB or LLM call. LitSearch has no licence, so its queries cannot be stored in the repository; `DATA_DIR` is not present in Docker or CI.
+- Options: dev queries from `DATA_DIR` only; own sentences in the repository only; own sentences plus dev queries when `DATA_DIR` has them.
+- Decision: Own sentences in `guardrails/prototypes.py` (allow, off_topic, write_intent; English with a few German), plus the LitSearch dev split (same 50/50 split by `query_set`, seed 42 as D-22) added to allow when `DATA_DIR/filtered/d03/query.arrow` exists. Score per class is the highest cosine similarity to its prototypes, using the real `embed` (granite, D044). A query is refused when the best of off_topic and write_intent beats allow by more than `TOPIC_GATE_MARGIN` (default 0.0). The stage runs after Prompt Guard and before PII on the masked query; its score is the gap. Result texts are the category (`off_topic`, `write_intent`), which the UI maps to the refusal message. Smalltalk and other subjects both give `off_topic` (O9: fixed answer for smalltalk would need a contract change).
+- Reason: Works without data and stays licence-clean; with data it follows the real query distribution. The test queries stay unseen for S-13. Measured with granite on 45 own queries not in the prototypes (18 allow, 15 off-topic, 12 write): at margin 0.0 two allowed queries were refused ("Find papers on text-to-SQL", a German author question), one write request was allowed ("Delete everything you know about BERT"), one off-topic query got the write_intent label but was refused. Margin 0.02 trades two false refusals for two missed off-topic queries; 0.05 and above refuse too little. Similarities are compressed (0.7 to 0.9 for everything), so the margin is small. 45 queries by one author say little; S-12 and S-13 choose the value on the tuning set. The query embedding costs about 35 ms on CPU; the first request embeds the prototypes once.
+- Known limits: Write requests that read like a question about the database ("Delete everything you know about BERT") are close to allow. German is weaker because granite is English only. The prototypes are embedded on the first request, which takes seconds on CPU.
+- Date: 2026-10-27
+
+---
+
 ### D057 S-09 NLI default set to ModernCE-large-nli in code (implements D036)
 
 - Context: D029 chose `dleemiller/EttinX-nli-s` from 7 hand-made pairs; D036 replaced it with ModernCE-large-nli as a team decision, but the default in the code was still EttinX. A larger test on 150 random abstracts from the D-03 corpus (1,034 sentence pairs in four variants: entail, negation, number, wrong_paper; premise short at about 210 tokens or long at about 600 tokens) showed EttinX rejecting correct sentences.
