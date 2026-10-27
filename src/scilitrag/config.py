@@ -35,6 +35,8 @@ class Settings:
     evidence_item_char_limit: int = 2400
     max_sentence_buffer_chars: int = 32768
     prompt_guard_threshold: float = 0.5
+    topic_gate_margin: float = 0.0
+    data_dir: str | None = None
     evidence_guard_threshold: float = 0.5
     nli_model: str = DEFAULT_NLI_MODEL
     nli_entailment_threshold: float = 0.5
@@ -57,6 +59,16 @@ def _parse_unit_float(name: str, value: str) -> float:
     number = _parse_float(name, value)
     if number > 1:
         raise ConfigError(f"{name} must be in (0, 1], got {value!r}")
+    return number
+
+
+def _parse_margin(name: str, value: str) -> float:
+    try:
+        number = float(value)
+    except ValueError:
+        raise ConfigError(f"{name} must be a number, got {value!r}") from None
+    if not -1 <= number <= 1:
+        raise ConfigError(f"{name} must be in [-1, 1], got {value!r}")
     return number
 
 
@@ -118,6 +130,8 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         prompt_guard_threshold=_parse_unit_float(
             "PROMPT_GUARD_THRESHOLD", env.get("PROMPT_GUARD_THRESHOLD", "0.5")
         ),
+        topic_gate_margin=_parse_margin("TOPIC_GATE_MARGIN", env.get("TOPIC_GATE_MARGIN", "0.0")),
+        data_dir=env.get("DATA_DIR") or None,
         evidence_guard_threshold=_parse_unit_float(
             "EVIDENCE_GUARD_THRESHOLD", env.get("EVIDENCE_GUARD_THRESHOLD", "0.5")
         ),
