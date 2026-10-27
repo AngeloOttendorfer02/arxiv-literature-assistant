@@ -348,6 +348,7 @@ src/scilitrag/
 eval/retrieval/ synthetic public evaluation examples
 eval/private/   ignored references, source passages, annotations and results
 bench/          quantization benchmark
+deploy/modal/   Ollama endpoint on Modal for benchmark and load test (A-09)
 docker/         container configuration
 scripts/        helper scripts (data download, smoke test)
 tests/rag/      retrieval, generation and citation tests

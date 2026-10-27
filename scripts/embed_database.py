@@ -100,7 +100,9 @@ def publish_model(connection, model):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--batch-size", type=int, default=32)
+    # Rows per encode call; sentence-transformers only sorts by length within one call,
+    # so 32 gave 8 papers/s and 1024 about 18 on a 4 GB GPU (D054).
+    parser.add_argument("--batch-size", type=int, default=1024)
     args = parser.parse_args()
     started = perf_counter()
     data_directory()  # loads .env like the other WP1 scripts

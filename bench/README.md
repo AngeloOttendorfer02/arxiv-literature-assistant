@@ -18,7 +18,7 @@ Settings that are the same for every tag:
 - each request gets a unique prefix, so Ollama's prompt cache cannot shorten TTFT
 - warm-up prompts (2 by default) load the model and are not counted
 
-Set `LLM_BASE_URL` (with or without `/v1`) and, for the Modal endpoint, `LLM_API_KEY` in `.env`. Then run:
+Set `LLM_BASE_URL` (with or without `/v1`) and, for the Modal endpoint, `LLM_API_KEY` in `.env`. The endpoint and its deployment are described in [deploy/modal](../deploy/modal/README.md). Then run:
 
 ```
 uv run --group rag python bench/benchmark.py bench/prompts.example.jsonl --models qwen3.8:27b-q4_K_M,qwen3.8:27b-q8_0,qwen3.8:27b-bf16 --output eval/private/bench/engine.jsonl
