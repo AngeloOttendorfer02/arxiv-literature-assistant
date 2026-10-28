@@ -60,7 +60,7 @@ uv run --locked --group data --group guardrails python bench/score_quality.py ev
 
 - 24 requests per level by default, always N open at once. Every request gets a different question (seed 1789), so Ollama's prompt cache cannot shorten TTFT; 2 warm-up requests come first.
 - Per request it records status (ok, refused, timeout, error), client latency, time to the first sentence and the `done` fields: TTFT, tokens, tokens/s and the latency per stage. `check_ms` is the time spent in `check_sentence`, which runs inside the `generate` stage. The `request_id` links each record to `logs/requests.jsonl`. No answer text is stored.
-- The summary per level has p50 and p95 latency and TTFT, requests per minute, the summed tokens/s and the median per stage. Timeouts after `REQUEST_TIMEOUT_S` count as results.
+- The summary per level has p50 and p95 latency and TTFT, completed requests per minute (timeouts and errors not counted), the summed tokens/s and the median per stage. Timeouts after `REQUEST_TIMEOUT_S` count as results.
 
 The API runs locally with all real components (`USE_MOCKS=0`) on the full database, the LLM is `qwen3.8:27b-q4_K_M` on Modal with 8 slots ([deploy/modal](../deploy/modal/README.md)):
 

@@ -84,6 +84,70 @@ def test_one_supporting_source_is_enough(probs):
     assert check("Claim [1][2].", chunk(1, "bad"), chunk(2, "bad")).status == "unsupported"
 
 
+def test_scoring_stops_at_the_first_supporting_source(probs):
+    probs["values"] = lambda premise: (
+        {"contradiction": 0.0, "entailment": 0.9, "neutral": 0.1}
+        if premise == "good"
+        else {"contradiction": 0.0, "entailment": 0.0, "neutral": 1.0}
+    )
+    assert check("Claim [1][2].", chunk(1, "good"), chunk(2, "bad")).status == "ok"
+    assert [premise for premise, _ in probs["calls"]] == ["good"]
+
+
+def fake_nli_server(seen, model="dleemiller/ModernCE-large-nli", drop_first=False):
+    httpx = pytest.importorskip("httpx")
+
+    def handler(request):
+        if drop_first and not seen:
+            seen.append(None)
+            raise httpx.ConnectError("dropped")
+        body = json.loads(request.content)
+        seen.append((request.headers.get("authorization"), body))
+        probs = [
+            [0.0, 0.9, 0.1] if premise == "good" else [0.1, 0.1, 0.8]
+            for premise, _ in body["pairs"]
+        ]
+        return httpx.Response(200, json={"model": model, "probabilities": probs})
+
+    return httpx.MockTransport(handler)
+
+
+REMOTE_NLI = validation.RemoteNli
+
+
+def remote_check(monkeypatch, transport, sentence, *evidence):
+    monkeypatch.setattr(validation, "RemoteNli", lambda *args: REMOTE_NLI(*args, transport))
+    component = validation.build_component(settings(NLI_URL="http://gpu/nli", LLM_API_KEY="t"))
+    return component(sentence, {item.label: item for item in evidence})
+
+
+def test_remote_nli_sends_all_sources_of_a_sentence_in_one_request(monkeypatch):
+    seen = []
+    result = remote_check(
+        monkeypatch, fake_nli_server(seen), "Claim [1][2].", chunk(1, "bad"), chunk(2, "good")
+    )
+    assert result.status == "ok" and result.nli_scores["entailment"] == 0.9
+    ((auth, body),) = seen
+    assert auth == "Bearer t"
+    assert body["model"] == "dleemiller/ModernCE-large-nli"
+    assert [premise for premise, _ in body["pairs"]] == ["bad", "good"]
+    bad = remote_check(monkeypatch, fake_nli_server([]), "Claim [1].", chunk(1, "bad"))
+    assert bad.status == "unsupported"
+
+
+def test_remote_nli_retries_a_dropped_connection_once(monkeypatch):
+    seen = []
+    transport = fake_nli_server(seen, drop_first=True)
+    assert remote_check(monkeypatch, transport, "Claim [1].", chunk(1, "good")).status == "ok"
+    assert len(seen) == 2
+
+
+def test_remote_nli_rejects_another_model(monkeypatch):
+    transport = fake_nli_server([], model="dleemiller/EttinX-nli-s")
+    with pytest.raises(RuntimeError, match="EttinX"):
+        remote_check(monkeypatch, transport, "Claim [1].", chunk(1, "good"))
+
+
 def test_sql_evidence_uses_only_the_number_check(probs):
     assert check("Hinton has 42 cited papers [2].", sql()).status == "ok"
     assert check("Hinton has 43 cited papers [2].", sql()).status == "fact_mismatch"

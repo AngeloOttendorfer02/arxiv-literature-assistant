@@ -135,7 +135,7 @@ def test_levels_keep_concurrency_and_use_each_question_once():
     assert [row["level"] for row in rows] == [1, 2, 4]
     row = rows[0]
     assert row["requests"] == row["ok"] == 4 and row["errors"] == 0
-    assert row["total_p50_ms"] > 0 and row["requests_per_min"] > 0
+    assert row["total_p50_ms"] > 0 and row["ok_per_min"] > 0
     assert row["ttft_user_p50_ms"] == 400.0 and row["check_p50_ms"] == 130.0
     assert row["retrieve_p50_ms"] == 30.0 and row["generate_p50_ms"] == 900.0
 
@@ -154,8 +154,8 @@ def test_summary_counts_failures_and_skips_unfinished_levels():
     ]
     one, two = summarize(records)
     assert (one["ok"], one["timeouts"], one["refused"], one["errors"]) == (1, 1, 1, 0)
-    assert one["requests_per_min"] == 6.0 and one["tokens_per_s_sum"] == 2.0
-    assert two["requests_per_min"] is None and two["total_p50_ms"] == 1000.0
+    assert one["ok_per_min"] == 2.0 and one["tokens_per_s_sum"] == 2.0
+    assert two["ok_per_min"] is None and two["total_p50_ms"] == 1000.0
     assert list(one) == list(two)
 
 

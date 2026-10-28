@@ -157,7 +157,7 @@ def summarize(records: list[dict]) -> list[dict]:
             "ttft_user_p50_ms": _p(ok, "ttft_user_ms", 50),
             "ttft_user_p95_ms": _p(ok, "ttft_user_ms", 95),
             "ttft_engine_p50_ms": _p(ok, "ttft_engine_ms", 50),
-            "requests_per_min": len(done) / wall * 60 if wall else None,
+            "ok_per_min": sum(r["status"] == "ok" for r in done) / wall * 60 if wall else None,
             "tokens_per_s_sum": sum(r.get("tokens") or 0 for r in done) / wall if wall else None,
             "tokens_per_s_p50": _p(ok, "tokens_per_s", 50),
             "check_p50_ms": _p(ok, "check_ms", 50),
