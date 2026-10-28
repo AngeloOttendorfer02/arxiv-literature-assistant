@@ -2,6 +2,7 @@ import time
 
 from scilitrag.config import Settings
 from scilitrag.contracts import CheckInput, CheckInputResult, Embed, StageResult
+from scilitrag.guardrails.extraction import asks_for_instructions
 from scilitrag.guardrails.pii import mask_pii
 from scilitrag.guardrails.prompt_guard import shared_guard
 from scilitrag.guardrails.prototypes import load_prototypes
@@ -36,7 +37,8 @@ def build_component(settings: Settings, embed: Embed | None = None) -> CheckInpu
 
         guard_start = time.perf_counter()
         score = guard.score(query)
-        flagged = score >= settings.prompt_guard_threshold
+        # Prompt Guard misses requests for the system prompt, so a pattern covers them (D066).
+        flagged = score >= settings.prompt_guard_threshold or asks_for_instructions(query)
         stages.append(
             StageResult(
                 stage="prompt_guard",
