@@ -100,7 +100,7 @@ class ReferenceSet(BaseModel):
 
 def load_reference_set(path: Path) -> dict:
     """Validate input before contacting a model or database; preserve absent expectations."""
-    value = ReferenceSet.model_validate(json.loads(path.read_text(encoding="utf-8")))
+    value = ReferenceSet.model_validate(json.loads(path.read_text(encoding="utf-8-sig")))
     return value.model_dump(exclude_unset=True)
 
 

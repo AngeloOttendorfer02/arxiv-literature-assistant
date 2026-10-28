@@ -226,7 +226,7 @@ def main(argv=None):
     try:
         source_run = None
         if args.from_run:
-            report = json.loads(args.from_run.read_text(encoding="utf-8"))
+            report = json.loads(args.from_run.read_text(encoding="utf-8-sig"))
             runs = [
                 r
                 for r in report["runs"]

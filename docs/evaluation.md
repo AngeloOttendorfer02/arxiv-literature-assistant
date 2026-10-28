@@ -10,6 +10,7 @@
 | `src/scilitrag/evaluation/reference.py` | Private reference export and independent citation-credit calculation |
 | `src/scilitrag/evaluation/runner.py` | Pipeline runs, provenance capture and offline re-scoring |
 | `src/scilitrag/evaluation/metrics.py` | Structural, reference and human-reviewed quality metrics |
+| `src/scilitrag/evaluation/review.py` | Source-bound CSV export/import for human judgments |
 | `scripts/build_reference_set.py` | Reference-export command |
 | `scripts/evaluate_retrieval.py` | Run and re-score command |
 
@@ -34,8 +35,11 @@ planning, SQL, generation and citation components to be selected as real. Guardr
 remain mocked are explicitly recorded and keep the report development-only.
 
 A successful execution requires a non-refused done event and at least one emitted sentence
-or nonempty table. Empty answers, refusals, errors and timeouts do not count as completed
-evaluations. A nonzero exit can still leave a saved report containing useful failure events.
+or nonempty table, plus correct scenario routing. Empty answers, refusals, errors and timeouts
+do not count as completed evaluations. `--fail-fast` saves a partial diagnostic report after
+the first failure or routing mismatch, recording unrun cases for every requested candidate.
+Omit it for final comparisons. A nonzero exit can still leave a useful failure report.
+Exit zero establishes execution and routing, not a reviewed quality threshold.
 
 ## Export frozen references
 
@@ -88,15 +92,24 @@ After the [real retrieval prerequisites](retrieval.md#configuration-and-integrat
 satisfied, use explicitly selected installed model names:
 
 ```powershell
-$env:USE_MOCKS = "1"
-$env:REAL_COMPONENTS = "plan,retrieve,sql_facts,generate,render_citations"
-uv run --locked --group rag python scripts/evaluate_retrieval.py eval/private/reference-set.json --models YOUR_FIRST_MODEL YOUR_SECOND_MODEL --output eval/private/model-runs.json
+$env:USE_MOCKS = "0"
+$env:REAL_COMPONENTS = ""
+uv run --locked --all-groups python scripts/check_database.py --require-search
+uv run --locked --all-groups python scripts/evaluate_retrieval.py eval/private/reference-set.json --models YOUR_FIRST_MODEL YOUR_SECOND_MODEL --output eval/private/model-runs.json
 ```
 
 Every model receives the same case queries and configured pipeline parameters; its planner
 is part of the evaluated pipeline. Reports retain the actual plan, evidence, tables,
 sentence events, errors, model identifier, selected settings and dataset revision. Secrets
 and connection URLs are excluded from the settings snapshot.
+
+The current main contains the real embedding adapter, input gate, evidence guard, PII
+masking and sentence validator. Full runs need their dependencies/model weights, access
+to the gated Prompt Guard checkpoint, and the ready frozen database. For diagnostics,
+select only available components with `USE_MOCKS=1`; mocked checks stay explicitly marked
+and those runs remain development-only. Do not present them as full guardrail acceptance.
+Start with `cases.live.example.json` and `--fail-fast`, then freeze a corpus-specific case
+set spanning S1, S2 (including reviewed baseline use) and S3 for the final comparison.
 
 The runner checks the database revision before and after the batch. A supplied reference
 revision must match before real inference begins. A changed revision invalidates reference
@@ -109,6 +122,21 @@ the benchmark owner. Application timing events and text-delta throughput do not 
 engine-reported token counts, VRAM or the quantization benchmark. This code supplies no
 measured model recommendation until the real runs and reviews are complete.
 
+`summary` groups each candidate by expected scenario, including failed and missing cases.
+Elapsed-time distributions include failed runs; missing legacy timing stays null. P95 is
+the nearest-rank percentile. Quality averages use the number of reviewed citations or
+sentences as weights; their denominators are included. `component_ms` captures search
+timings even when a later stage fails. Saved evidence reflects the evidence guard's output.
+The legacy API `ttft_engine_ms` starts at pipeline entry and can include code-generated
+framing; summaries call it `pipeline_first_delta_ms`. It is not engine-only model TTFT.
+
+R-13's final decision remains a joint review with WP4: compare at least two real candidates
+on the same frozen cases, corpus, thresholds and request settings. Record model digests,
+the run/review file identities, scenario coverage, reviewed Citation Precision, year/count
+Exact Match, failures, engine measurements from `bench/`, and the reason for the chosen
+model in `docs/decisions.md`. The engine benchmark already controls prompt-only comparisons;
+this runner evaluates the planner and full application pipeline. It does not choose a winner.
+
 ## Human review and offline scoring
 
 Fill `baseline_annotations[].baseline_use` with true/false after reviewing the target and
@@ -116,6 +144,25 @@ passage. Leave uncertain entries null and add reviewer notes. For each saved run
 `sentence_supported` array in emitted-sentence order with true/false/null. A sentence is
 supported only if its cited sources support the complete claim; valid label syntax alone
 is insufficient. Keep exactly one label per emitted sentence when supplying reviews.
+
+For a worksheet instead of editing the report, export and later import CSV offline:
+
+```powershell
+uv run --locked --all-groups python scripts/evaluate_retrieval.py eval/private/reference-set.json --score-only eval/private/model-runs.json --output eval/private/rescored-runs.json --export-review eval/private/model-review.csv
+# Fill the CSV, then use a new report filename:
+uv run --locked --all-groups python scripts/evaluate_retrieval.py eval/private/reference-set.json --score-only eval/private/model-runs.json --import-review eval/private/model-review.csv --output eval/private/reviewed-runs.json
+```
+
+Each `sentence` row reviews the whole claim against all supplied citations. Each `citation`
+row reviews that individual reference's support for the claim it is attached to. Edit only
+`supported`, sentence-row `year_exact`/`count_exact`, and `note`; use true, false or blank.
+Mark year/count exact only after comparing **every** applicable value in that sentence with
+the identified paper year or independently checked SQL count; one wrong value makes the
+sentence false. Leave non-applicable and uncertain fields blank. These are explicit human
+Exact Match judgments, separate from automatic source-metadata and SQL-table comparisons.
+Keep the static text, identities, hashes, columns and full row set; sorting rows is allowed.
+Stale, changed, duplicate or missing rows are rejected. All blank reviews remain unknown.
+This Citation Precision measures support, not the ALCE redundancy score in `bench/`.
 
 ```powershell
 uv run --locked --group rag python scripts/evaluate_retrieval.py eval/private/reference-set.json --score-only eval/private/model-runs.json --output eval/private/reviewed-runs.json
@@ -134,17 +181,20 @@ unset when their dataset revision is missing or mismatched.
 | structural_citation_validity | Emitted sentences with valid request-local trailing labels |
 | semantic_citation_precision | Fully supported reviewed cited sentences divided by reviewed sentences |
 | semantic_review_coverage | Reviewed emitted sentences divided by all emitted sentences |
+| citation_precision / citation_review_coverage | Supported individual references / reviewed references, plus review coverage |
+| answer_year_exact / answer_count_exact | Human exact-value judgments on applicable sentences; reviewed denominators are reported |
 | citing_precision / citing_recall | Returned citing-paper IDs versus the supplied bounded S2 reference |
-| source_year_exact | Agreement of available source metadata years; missing years are not correct predictions |
+| source_year_exact | Agreement for reference papers with known years; missing returned papers/years count as wrong |
 | author_scope_exact | Retrieved S3 seed IDs match the reference IDs |
 | author_count_exact | Count agreement only with matching seed scope and compatible dataset revision |
 | dataset_revision_exact | Known actual revision agrees with the supplied reference revision |
 | baseline_filter_metrics | Precision, recall and confusion counts on reviewed baseline passages |
 
-Semantic citation precision here is a sentence-level support measure, not per-reference
-precision. Year checks concern source metadata, not numbers generated in prose. Review
-textual numerical claims separately with the sentence validator. Unreviewed quality,
-undefined ratios and incompatible dataset-reference comparisons remain null.
+`semantic_citation_precision` is a sentence-level support measure; `citation_precision` is
+per reference. `source_year_exact` checks metadata, while `answer_year_exact` and
+`answer_count_exact` explicitly review rendered numerical claims. The output validator's
+number/NLI checks remain active and independent. Unreviewed quality, undefined ratios and
+incompatible dataset-reference comparisons remain null. Existing outputs are never overwritten.
 
 ## Renamed interfaces
 
