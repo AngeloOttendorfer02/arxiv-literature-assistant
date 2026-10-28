@@ -53,3 +53,22 @@ Repeats of a prompt are averaged first. Each tag is compared with `--baseline` b
 ```
 uv run --locked --group data --group guardrails python bench/score_quality.py eval/private/bench/prompts.jsonl eval/private/bench/engine.jsonl --baseline qwen3.8:27b-bf16 --output eval/private/bench/quality.json
 ```
+
+## Load test
+
+`load_test.py` sends LitSearch questions to `POST /query` of the running API at 1, 2, 4 and 8 concurrent requests (D043). Unlike the engine benchmark it goes through the whole pipeline, so a limit in the database, the NLI check on the CPU or the GPU shows up in the stage times.
+
+- 24 requests per level by default, always N open at once. Every request gets a different question (seed 1789), so Ollama's prompt cache cannot shorten TTFT; 2 warm-up requests come first.
+- Per request it records status (ok, refused, timeout, error), client latency, time to the first sentence and the `done` fields: TTFT, tokens, tokens/s and the latency per stage. `check_ms` is the time spent in `check_sentence`, which runs inside the `generate` stage. The `request_id` links each record to `logs/requests.jsonl`. No answer text is stored.
+- The summary per level has p50 and p95 latency and TTFT, completed requests per minute (timeouts and errors not counted), the summed tokens/s and the median per stage. Timeouts after `REQUEST_TIMEOUT_S` count as results.
+
+The API runs locally with all real components (`USE_MOCKS=0`) on the full database, the LLM is `qwen3.8:27b-q4_K_M` on Modal with 8 slots ([deploy/modal](../deploy/modal/README.md)):
+
+```
+OLLAMA_NUM_PARALLEL=8 uvx modal@1.6.2 deploy deploy/modal/ollama_server.py
+USE_MOCKS=0 uv run --group rag --group guardrails --group embed uvicorn scilitrag.api.app:create_app --factory
+uv run --group rag python bench/load_test.py eval/private/bench/prompts.jsonl --output eval/private/bench/load.jsonl
+uvx modal@1.6.2 app stop scilitrag-ollama --yes
+```
+
+Afterwards deploy again without `OLLAMA_NUM_PARALLEL` for the engine benchmark, which needs one slot. `--summary-only` prints the table from `--output` at any time.

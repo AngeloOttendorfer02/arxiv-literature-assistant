@@ -41,6 +41,8 @@ services:
       # Ollama on the host by default; set API_LLM_BASE_URL and API_LLM_API_KEY for Modal.
       LLM_BASE_URL: ${API_LLM_BASE_URL:-http://host.docker.internal:11434/v1}
       LLM_API_KEY: ${API_LLM_API_KEY:-}
+      # NLI on Modal next to Ollama, authorized with the same token; empty runs NLI on the CPU.
+      NLI_URL: ${API_NLI_URL:-}
       LLM_MODEL: ${LLM_MODEL:-}
       EMBED_MODEL: ${EMBED_MODEL:-ibm-granite/granite-embedding-english-r2}
       HF_TOKEN: ${HF_TOKEN:-}
