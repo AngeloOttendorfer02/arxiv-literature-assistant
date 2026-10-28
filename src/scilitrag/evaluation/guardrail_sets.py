@@ -55,3 +55,45 @@ def load_input_cases(directory: Path = DEFAULT_DIR) -> list[InputCase]:
 
 def load_evidence_cases(directory: Path = DEFAULT_DIR) -> list[EvidenceCase]:
     return _read(directory / "evidence_cases.jsonl", EvidenceCase)
+
+
+class ValidatorPassage(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    label: int
+    type: Literal["chunk", "paper"]
+    title: str
+    text: str = Field(min_length=1)
+
+
+class ValidatorCase(BaseModel):
+    """One answer sentence with its cited passages and whether check_sentence should keep it."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    id: str = Field(min_length=1)
+    manipulation: Literal[
+        "faithful_verbatim",
+        "faithful_paraphrase",
+        "faithful_two_sources",
+        "number",
+        "year",
+        "negation",
+        "addition",
+        "wrong_paper",
+        "number_swap",
+        "comparison",
+        "quantifier",
+        "faithful_combined",
+    ]
+    expected: Literal["ok", "removed"]
+    split: Split
+    sentence: str = Field(min_length=1)
+    passages: list[ValidatorPassage] = Field(min_length=1)
+    language: Literal["en", "de"]
+    source: Literal["hand", "ai"]
+    reviewed: bool
+
+
+def load_validator_cases(directory: Path = DEFAULT_DIR) -> list[ValidatorCase]:
+    return _read(directory / "validator_cases.jsonl", ValidatorCase)
