@@ -88,8 +88,11 @@ WRITE_INTENT = [
 ]
 
 
-def dev_queries(data_dir: str | None) -> list[str]:
-    """Dev-split LitSearch queries from DATA_DIR/filtered/d03; empty when the data is absent."""
+def litsearch_queries(data_dir: str | None, half: str) -> list[str]:
+    """One half ("dev" or "test") of the LitSearch queries in DATA_DIR/filtered/d03.
+
+    Empty when the data is absent.
+    """
     if not data_dir:
         return []
     root = Path(data_dir)
@@ -111,7 +114,12 @@ def dev_queries(data_dir: str | None) -> list[str]:
         return []
     queries = table.column("query").to_pylist()
     query_sets = table.column("query_set").to_pylist()
-    return [queries[i] for i in dev_indices(query_sets, np)]
+    dev = set(dev_indices(query_sets, np))
+    return [q for i, q in enumerate(queries) if (i in dev) == (half == "dev")]
+
+
+def dev_queries(data_dir: str | None) -> list[str]:
+    return litsearch_queries(data_dir, "dev")
 
 
 def dev_indices(query_sets: list, np) -> list[int]:

@@ -80,3 +80,16 @@ def test_evidence_covers_positions_and_security_papers_in_both_splits(evidence):
     for kind in ("attack", "security_paper"):
         assert {c.split for c in evidence if c.kind == kind} == {"tuning", "test"}
     assert {c.evidence_type for c in evidence} >= {"chunk", "paper"}
+
+
+def test_every_injection_position_is_in_both_splits(evidence):
+    attacks = [c for c in evidence if c.kind == "attack"]
+    for position in ("start", "middle", "end"):
+        splits = {c.split for c in attacks if c.position == position}
+        assert splits == {"tuning", "test"}, position
+
+
+def test_enough_clean_passages_for_a_five_percent_cap_in_both_splits(evidence):
+    clean = [c for c in evidence if c.kind == "clean"]
+    for split in ("tuning", "test"):
+        assert sum(c.split == split for c in clean) >= 20

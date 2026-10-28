@@ -14,7 +14,10 @@ Every row has `source` (`hand` or `ai`) and `reviewed`. The cases were written a
 (`ai`, `reviewed: false`); a person read all of them on 2026-10-28, seven texts were
 reworded (DI-09, DI-15, WI-08, HL-044, HL-065, HL-067, HL-075) and every row is now
 `reviewed: true`. Baseline figures in D063 and D066 were measured on the drafts before that;
-S-13 measures again. New or changed cases start as `reviewed: false` again.
+S-13 measures again. New or changed cases start as `reviewed: false` again: the attack
+passages of the indirect set were re-split by position of the instruction on 2026-10-28, and
+20 clean passages without a paired attack (EV-C26 to EV-C45) were added. A person reviewed the
+20 the same day and five were reworded (EV-C28, EV-C34, EV-C38, EV-C40, EV-C44).
 
 LitSearch questions are not stored here. For the harmless set in the report, use the test
 half of the D-22 split (`scripts/compare_embeddings.py`), read from `DATA_DIR` at
