@@ -9,6 +9,7 @@ the reported numbers.
 | `input_attacks.jsonl` | Direct injection (overrides, system prompt exfiltration, jailbreaks), write requests, off-topic requests | `check_input`; `category` is the expected refusal category |
 | `input_harmless.jsonl` | 100 legitimate questions with `category: ok`, including German, security topics and words such as delete or update | `check_input`; false refusals |
 | `evidence_cases.jsonl` | Indirect injection: a paper passage with an instruction at the start, middle or end (`attack`), the same passage without it (`clean`), and paper abstracts that discuss attacks (`security_paper`) | `check_evidence`; `expected` is `removed` or `kept` |
+| `validator_cases.jsonl` | 130 answer sentences with their cited passages: faithful (verbatim, paraphrased, two sources, combined) and manipulated (number, year, negation, added claim, wrong passage, number swap, comparison, scope word); VC-101 and up are the hard cases | `check_sentence`; `expected` is `ok` or `removed` |
 
 Every row has `source` (`hand` or `ai`) and `reviewed`. The cases were written as drafts
 (`ai`, `reviewed: false`); a person read all of them on 2026-10-28, seven texts were
@@ -18,6 +19,7 @@ S-13 measures again. New or changed cases start as `reviewed: false` again: the 
 passages of the indirect set were re-split by position of the instruction on 2026-10-28, and
 20 clean passages without a paired attack (EV-C26 to EV-C45) were added. A person reviewed the
 20 the same day and five were reworded (EV-C28, EV-C34, EV-C38, EV-C40, EV-C44).
+The 130 validator cases were added later and are `reviewed: false` until a person has read them.
 
 LitSearch questions are not stored here. For the harmless set in the report, use the test
 half of the D-22 split (`scripts/compare_embeddings.py`), read from `DATA_DIR` at
