@@ -41,6 +41,8 @@ class Settings:
     nli_model: str = DEFAULT_NLI_MODEL
     nli_entailment_threshold: float = 0.5
     nli_contradiction_threshold: float = 0.5
+    # NLI on the inference server (deploy/modal), authorized with llm_api_key; None runs on CPU.
+    nli_url: str | None = None
     # Bearer token for a protected endpoint such as the Modal proxy; kept out of repr and logs.
     llm_api_key: str | None = field(default=None, repr=False)
 
@@ -136,6 +138,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
             "EVIDENCE_GUARD_THRESHOLD", env.get("EVIDENCE_GUARD_THRESHOLD", "0.5")
         ),
         nli_model=env.get("NLI_MODEL") or DEFAULT_NLI_MODEL,
+        nli_url=env.get("NLI_URL") or None,
         nli_entailment_threshold=_parse_unit_float(
             "NLI_ENTAILMENT_THRESHOLD", env.get("NLI_ENTAILMENT_THRESHOLD", "0.5")
         ),

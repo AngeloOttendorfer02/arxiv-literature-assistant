@@ -27,6 +27,16 @@ LLM_API_KEY=<token>
 
 The app's LLM client and `bench/benchmark.py` send `LLM_API_KEY` as bearer token. The native Ollama API (`/api/chat`, `/api/ps`) is available under the same host. `GET /healthz` needs no token.
 
+## NLI on the GPU
+
+`POST /nli` runs the app's sentence check (`NLI_MODEL`, ModernCE-large-nli by default, D057) on the same A100, so it does not take 1 to 2 s per source on the laptop CPU (D072). The model loads on the first call and its weights are cached in the Volume. To use it, add to the project `.env`:
+
+```
+NLI_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/nli
+```
+
+The app sends `LLM_API_KEY` as token and its `NLI_MODEL`; the server rejects a different model. Without `NLI_URL` the check runs on the CPU as before.
+
 ## Demo with docker compose
 
 Set these in the project `.env`, then `docker compose up -d --build`:
@@ -34,6 +44,7 @@ Set these in the project `.env`, then `docker compose up -d --build`:
 ```
 API_LLM_BASE_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/v1
 API_LLM_API_KEY=<token>
+API_NLI_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/nli
 LLM_MODEL=qwen3.8:27b-q4_K_M
 ```
 

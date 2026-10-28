@@ -14,6 +14,32 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D072 NLI check on the inference server's GPU (follows from D071)
+
+- Context: The first load test (D071) ran the sentence check (ModernCE-large-nli, D057) on the laptop CPU. At one request at a time it took a median of 20 s of a 38 s request, while the GPU produced the answer's tokens in about 6 s. Throughput did not grow with concurrency, and at 8 concurrent requests 8 of 12 timed out.
+- Options: NLI on the Modal A100 next to Ollama; NLI on a local GPU (needs CUDA torch instead of the CPU build and does not work in the CPU-only api image or on machines without an NVIDIA GPU); a smaller model (ModernCE-base, rejected in D057 because it fails on long premises); CPU tuning only (about 1.5 to 2 times faster, the CPU stays shared by all requests).
+- Decision: The Modal container serves `POST /nli` behind the same bearer token. It loads `NLI_MODEL` on the first call, on the GPU in fp32, and caches the weights in the Volume. With `NLI_URL` set, `check_sentence` sends all cited sources of a sentence in one request and checks that the server runs the configured model; without it, the check runs on the CPU as before. In both cases scoring stops at the first source that entails the sentence, since one is enough.
+- Reason: Same model, label order and thresholds, so D057 and the S-13 tuning stay valid. The orchestrator stays light and the heavy models sit on the inference tier, as in the two-tier design. The demo depends on the Modal endpoint anyway.
+- Validation: 4 new tests (early stop, one request per sentence with token and model id, one retry after a dropped connection, wrong model rejected). On Modal: 401 without token, 400 for another model, the three label-order sentences of the S-09 test classified as before; first call 20.7 s (weights download and load), then about 350 ms for 3 pairs from a train connection, almost all of it network. Load test with the same questions as D071 (12 per level): all 48 requests ok, no timeouts. p50 latency 30 / 34 / 38 / 64 s, completed requests per minute 1.9 / 3.0 / 5.7 / 5.9, summed tokens/s 7.2 / 14.3 / 17.4 / 20.2, median check time per request 9.0 / 6.4 / 7.7 / 6.2 s at 1 / 2 / 4 / 8 concurrent requests. 52 % of checked sentences were removed, 50 % with CPU NLI, so the verdicts did not change.
+- Known limits: Each sentence costs one round trip to Modal, about 0.6 s here, and checks run one after another within a request. Throughput levels off between 4 and 8 requests; at 8 the median TTFT for the user is 60 s. The stages that grow most at 8 are Prompt Guard on the evidence, still on the laptop CPU (median 6.5 s at 1, 15.2 s at 8), and the planner's LLM call (6.2 s at 1, 12.6 s at 8), which shares the GPU with eight generations. Prompt Guard on the GPU and checking sentences while the next ones are generated are the next steps if needed.
+- Date: 2026-10-28
+
+---
+
+### D071 A-13 load test through the API (implements D043)
+
+- Context: D043 fixes the server side of the load test (one Ollama instance, `OLLAMA_NUM_PARALLEL=8`, qwen3.8:27b-q4_K_M, levels 1 / 2 / 4 / 8). The report has to name the resource that saturates first: GPU, NLI on the CPU or the database.
+- Options: requests straight to Ollama, as in the engine benchmark; requests to `POST /query` of the app with all real components.
+- Decision: bench/load_test.py sends requests to the API, always N open at once, 2 warm-up requests before the first level, 24 requests per level by default. The questions come from the LitSearch queries of the benchmark prompts, drawn with seed 1789; every request gets a different question, also across levels. Per request it stores status, client latency, time to the first sentence, the `done` fields and the time spent in `check_sentence`, summed from the sentence events, since the check runs inside the `generate` stage. Timeouts after `REQUEST_TIMEOUT_S` (120 s) are counted, not avoided. Throughput counts completed requests only.
+- Reason: Only the full pipeline shows whether NLI or the database limits throughput before the GPU does. Ollama reuses the KV cache of a matching prompt prefix, so a question repeated in a later level would shorten its TTFT; disjoint questions avoid that at the price of a different sample per level. The NLI time has to be separated from the generation time, otherwise a slow check would look like a slow GPU.
+- Validation: 12 unit tests with a fake SSE stream (concurrency per level, parsing, timeout, refusal, broken stream, summary). Run against the API with mocks: no errors, 53 / 104 / 204 / 416 requests per minute, so the client does not limit up to 8. A short run with the local development model qwen3.5:2b-q4_K_M only hit its output limit or the timeout and says nothing about qwen3.8:27b.
+- Result: API on the laptop (all real components, dump v2), Ollama on Modal with 8 slots; Ollama used its default context of 262,144 tokens shared by the slots, 33.8 GB VRAM, no CPU offload (the engine benchmark fixes 8,192 tokens and one slot, D058). 12 requests per level to fit one session of GPU time. Completed / timed out: 12 / 0, 11 / 1, 9 / 3, 4 / 8 at 1 / 2 / 4 / 8. p50 latency of completed requests 38 / 84 / 96 / 103 s, completed requests per minute 1.4 / 1.2 / 1.6 / 1.1, summed tokens/s 5.5 / 5.8 / 4.4 / 3.7. Median check time 20 / 47 / 55 / 41 s and Prompt Guard on the evidence 6.6 / 20 / 20 / 22 s; retrieval stayed between 0.8 and 3.5 s and the SQL stage under 2 ms.
+- Bottleneck: the laptop CPU. NLI and Prompt Guard on the evidence share it, so throughput stays flat while latency grows until requests time out. The GPU is far from saturated: it decodes about 43 tokens/s per request in A-12, the app consumed 4 to 6 tokens/s in total. The database is not a limit. D072 moves NLI to the GPU.
+- Cost: both load tests and the checks in between took about 75 min of A100 time, about 3 USD.
+- Date: 2026-10-28
+
+---
+
 ### D070 S-15 validator test set and evaluation of check_sentence
 
 - Context: S-15 asks for about 100 sentence/chunk pairs with manipulations and precision and recall of `check_sentence`. S-09 (D061) had measured only the NLI models on sentences taken verbatim from abstracts.

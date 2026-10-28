@@ -43,6 +43,40 @@ class NliModel:
         return self._tokenizer, self._model
 
 
+class RemoteNli:
+    """The same NLI model on the inference server's GPU; one request per sentence."""
+
+    def __init__(self, url: str, model_id: str, api_key: str | None, transport=None) -> None:
+        import httpx
+
+        self._url = url
+        self._model_id = model_id
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        # Modal answers a slow call (cold start, first model load) with a redirect to wait on.
+        self._client = httpx.Client(
+            headers=headers,
+            timeout=httpx.Timeout(30, connect=10),
+            follow_redirects=True,
+            transport=transport,
+        )
+
+    def batch(self, pairs: list[tuple[str, str]]) -> list[dict[str, float]]:
+        import httpx
+
+        body = {"model": self._model_id, "pairs": pairs}
+        try:
+            response = self._client.post(self._url, json=body)
+        # Scoring has no side effects, so a dropped connection is retried once.
+        except httpx.TransportError:
+            response = self._client.post(self._url, json=body)
+        response.raise_for_status()
+        data = response.json()
+        # A different checkpoint on the server would silently change the threshold's meaning.
+        if data.get("model") != self._model_id:
+            raise RuntimeError(f"NLI server runs {data.get('model')}, expected {self._model_id}")
+        return [dict(zip(NLI_LABELS, probs, strict=True)) for probs in data["probabilities"]]
+
+
 def numbers(text: str) -> set[str]:
     found = set()
     for match in NUMBER.findall(text):
@@ -62,8 +96,17 @@ def _source_text(evidence: Evidence) -> str:
 
 # Stage 1 compares numbers and years with the cited sources, stage 2 runs NLI per cited
 # chunk or paper. SQL evidence is only checked by stage 1. One supporting source is enough.
+# With NLI_URL set, stage 2 runs on the inference server instead of the local CPU.
 def build_component(settings: Settings) -> CheckSentence:
-    nli = NliModel(settings.nli_model)
+    if settings.nli_url:
+        remote = RemoteNli(settings.nli_url, settings.nli_model, settings.llm_api_key)
+        score = remote.batch
+    else:
+        local = NliModel(settings.nli_model)
+
+        def score(pairs):
+            # Lazy, so the loop below can stop before the remaining sources are scored.
+            return (local.probabilities(premise, claim) for premise, claim in pairs)
 
     def check_sentence(sentence: str, mapping: EvidenceMapping) -> SentenceCheck:
         start = time.perf_counter()
@@ -90,10 +133,11 @@ def build_component(settings: Settings) -> CheckSentence:
             return result("ok")
 
         best = {name: 0.0 for name in NLI_LABELS}
-        for item in texts:
-            probs = nli.probabilities(item.text, claim)
+        for probs in score([(item.text, claim) for item in texts]):
             if probs["entailment"] >= best["entailment"]:
                 best = probs
+            if best["entailment"] >= settings.nli_entailment_threshold:
+                break
         if best["entailment"] >= settings.nli_entailment_threshold:
             return result("ok", best)
         if best["contradiction"] >= settings.nli_contradiction_threshold:
