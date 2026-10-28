@@ -40,8 +40,10 @@ Year/author filters apply to citing papers, not the target's publication year.
 Ordinary searches return up to k citing papers by descending year, then corpus ID. Baseline
 searches inspect up to 100 citing papers and up to four retrieved passages per paper, returning
 at most k results. The target title or colon-prefix alias must occur with an explicit
-experimental-use expression in the same sentence. Negations and related-work sections are
-excluded. A citation edge, mention, or substring such as BERT inside RoBERTa is insufficient.
+experimental-use expression in the same sentence. The filter requires first-person use or
+comparison, or a statement that the target is the paper's own baseline. Negations,
+hypothetical comparisons and related-work sections are excluded. A comparison attributed
+to earlier work, a citation edge, a mention, or BERT inside RoBERTa is insufficient.
 
 This English lexical filter selects candidates. It can miss abbreviations and paraphrases,
 and can still misread complex comparisons. Human baseline labels and semantic validation
