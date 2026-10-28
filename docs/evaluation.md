@@ -55,7 +55,7 @@ The exporter rejects unknown/out-of-range IDs and missing revisions, deduplicate
 IDs, preserves existing output files, and leaves baseline-use labels unset. For S2 it
 exports the top 20 citing papers by publication year. It considers up to 200 indexed
 passages per target, prioritizing experimental sections and a deterministic hash order.
-The default sample is **20 passages total**, alternating targets and heuristic-positive
+The default sample is **up to 20 passages total**, alternating targets and heuristic-positive
 and negative candidates, with at most one passage per citing paper and target. Adjust
 `--baseline-limit` if necessary. This stratified diagnostic sample is not a corpus-wide
 precision or prevalence estimate. Review passages in context; a mention alone is false.
@@ -75,6 +75,22 @@ It independently recomputes counts rather than copying table values. A run with 
 generation error can still supply a valid SQL scope; this does not mark its answer successful.
 Standalone `--seed-paper` export still requests k=20 and is exploratory until its seed set
 matches an actual run. Freeze the corpus and regenerate references when changing scope.
+
+The scoped export contains its generated S2 cases and selected S3 case. To compare all
+scenarios, add unchanged S1 and reviewed baseline-use questions to a new reference file
+before the final run; preserve the generated S3 query and expectations. For example:
+
+```powershell
+$reference = Get-Content eval/private/scoped-reference.json -Raw | ConvertFrom-Json
+$examples = Get-Content eval/retrieval/cases.live.example.json -Raw | ConvertFrom-Json
+$reference.cases = @($reference.cases) + @($examples.cases | Where-Object { $_.scenario -eq "S1" -or $_.id -eq "s2-baseline" })
+$reference | ConvertTo-Json -Depth 100 | Set-Content eval/private/final-reference.json -Encoding UTF8
+```
+
+Use a new filename, and adapt the baseline question if its target differs from the one
+you reviewed. UTF-8 JSON with or without the Windows PowerShell BOM is accepted. Saved
+reports can only be rescored against matching case IDs and unchanged queries; score a
+matching subset or rerun the finalized set rather than silently changing its scope.
 
 The JSON root contains `cases`, optional `dataset_revision` and `baseline_annotations`.
 Each case needs a unique nonblank id, a scenario S1/S2/S3 and a nonblank query. Optional

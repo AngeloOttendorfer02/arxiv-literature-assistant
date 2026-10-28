@@ -9,4 +9,36 @@
 \todo{Diagram (A-14): Streamlit UI, FastAPI, Ollama on Modal, ParadeDB with pgvector and BM25, relational tables. Put the file in figures/.}
 
 \paragraph{Execution flow.}
-\todo{Lifecycle of one multi-hop query (R-16, see docs/execution\_flow.md): check\_input, plan, retrieve, sql\_facts, generate, check\_sentence, citations; where tokens flow and where guardrails can stop the request.}
+For an S3 question about the most cited authors on a topic, FastAPI first runs
+\texttt{check\_input}: Prompt Guard, the topic/write-intent gate and PII masking.
+A refusal ends the request before planning or database retrieval.
+The model produces a validated scenario plan; explicit year and result-limit filters
+are reconciled in code. Filtered dense and BM25 retrieval selects topic papers and
+their passages. The evidence guard removes flagged sources before SQL and generation.
+SQL follows outgoing citation edges from the surviving paper seeds to cited papers
+and their authors. Each distinct citing/cited-paper pair gives every cited-paper
+coauthor one credit; these are subset counts, not global citation totals.
+The resulting table, its parameters, dataset revision and query ID are emitted directly
+by the application, before generated sentences. The model summarizes paper evidence
+and does not calculate the ranking.
+
+The OpenAI-compatible model stream carries text deltas to a bounded server-side
+sentence buffer. Raw deltas are not forwarded to the UI. Each complete sentence,
+including the final punctuated tail, passes citation-structure checks and
+\texttt{check\_sentence}: numerical consistency against cited evidence, then NLI for
+non-SQL sources. SQL evidence receives the numerical check. Accepted sentences are
+PII-masked, rendered with citation objects and released as sentence SSE events;
+rejected sentences produce a removal status. Timeout or provider failure produces
+a terminal error; disconnect cancels generation and closes its stream.
+
+\paragraph{Citation Engine.}
+Positive integer labels are allocated within each request and map to exact paper,
+chunk or SQL evidence snapshots. Screening preserves surviving labels; SQL evidence
+appends without renumbering them. Before semantic validation, the engine checks label
+syntax, membership and trailing placement. Deterministic rendering attaches corpus
+and chunk IDs, author IDs, title, year, section, source text and a SHA-256 source
+fingerprint; SQL citations resolve by query ID to the emitted table and its scope.
+The UI citation drawer exposes this provenance. Syntactic validity alone does not
+establish support, so evaluation keeps structural checks separate from human citation
+and numerical-claim judgments. Pipeline timing fields include retrieval and guardrails;
+provider token throughput and engine-only TTFT are measured separately by the benchmark.
