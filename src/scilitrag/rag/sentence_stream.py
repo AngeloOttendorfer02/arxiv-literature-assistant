@@ -1,4 +1,10 @@
+import re
+
 from scilitrag.rag.errors import LLMClientError
+
+# Match the splitter's punctuation/closing-delimiter convention at end of stream.
+# A citation may follow the full stop; a label without punctuation is a fragment.
+SENTENCE_END = re.compile(r"[.!?]+[\"”’')]*(?:\s*\[\d+\])*[\"”’')]*$")
 
 
 class SentenceBuffer:
@@ -24,6 +30,6 @@ class SentenceBuffer:
         self.pending = ""
         if not tail:
             return []
-        if tail[-1] not in ".!?":
+        if not SENTENCE_END.search(tail):
             raise LLMClientError("The model stream ended with an incomplete sentence.")
         return [tail]

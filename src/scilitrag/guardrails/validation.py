@@ -3,9 +3,6 @@ import re
 import threading
 import time
 
-import torch
-from transformers import AutoModelForSequenceClassification, AutoTokenizer
-
 from scilitrag.config import Settings
 from scilitrag.contracts import CheckSentence, Evidence, EvidenceMapping, SentenceCheck
 
@@ -26,6 +23,8 @@ class NliModel:
         self._model = None
 
     def probabilities(self, premise: str, hypothesis: str) -> dict[str, float]:
+        import torch
+
         tokenizer, model = self._load()
         inputs = tokenizer(premise, hypothesis, return_tensors="pt", truncation=True)
         with torch.no_grad():
@@ -33,6 +32,8 @@ class NliModel:
         return dict(zip(NLI_LABELS, probs, strict=True))
 
     def _load(self):
+        from transformers import AutoModelForSequenceClassification, AutoTokenizer
+
         with self._lock:
             if self._model is None:
                 self._tokenizer = AutoTokenizer.from_pretrained(self._model_id)
