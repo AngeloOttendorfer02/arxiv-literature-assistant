@@ -40,8 +40,10 @@ Year/author filters apply to citing papers, not the target's publication year.
 Ordinary searches return up to k citing papers by descending year, then corpus ID. Baseline
 searches inspect up to 100 citing papers and up to four retrieved passages per paper, returning
 at most k results. The target title or colon-prefix alias must occur with an explicit
-experimental-use expression in the same sentence. Negations and related-work sections are
-excluded. A citation edge, mention, or substring such as BERT inside RoBERTa is insufficient.
+experimental-use expression in the same sentence. The filter requires first-person use or
+comparison, or a statement that the target is the paper's own baseline. Negations,
+hypothetical comparisons and related-work sections are excluded. A comparison attributed
+to earlier work, a citation edge, a mention, or BERT inside RoBERTa is insufficient.
 
 This English lexical filter selects candidates. It can miss abbreviations and paraphrases,
 and can still misread complex comparisons. Human baseline labels and semantic validation
@@ -91,7 +93,7 @@ provide a transaction-wide snapshot: evaluate against a frozen corpus and stable
 
 ## Configuration and integration
 
-Install dependencies with `uv sync --locked --group rag`. Configure DATABASE_URL with the
+Install dependencies with `uv sync --locked --all-groups`. Configure DATABASE_URL with the
 SELECT-only app login, and LLM_BASE_URL, LLM_MODEL and EMBED_MODEL using `.env.example`.
 The embedding model must match the stored 768-dimensional vectors and schema metadata.
 
@@ -101,32 +103,33 @@ Before real retrieval:
 uv run --locked --group rag python scripts/check_database.py --require-search
 ```
 
-The uploaded branch includes real planner, retrieval, SQL facts, generation and citation
-components. The shared `scilitrag.data.embedding` adapter and corpus/index population are
-still required from the data pipeline. Real guardrail modules remain stubs in this snapshot.
-Use the selective development configuration until those integrations are ready:
+The current main includes real planner, retrieval, SQL facts, generation, citation,
+embedding and guardrail components. Populate or restore the database and verify its
+embedding fingerprint and indexes before real queries. Full validation also needs the
+configured NLI/embedding weights and access to the gated Prompt Guard checkpoint.
+For complete pipeline evaluation use `USE_MOCKS=0`. A selective diagnostic setup is:
 
 ```powershell
 $env:USE_MOCKS = "1"
-$env:REAL_COMPONENTS = "plan,retrieve,sql_facts,generate,render_citations"
-uv run --locked --group rag uvicorn scilitrag.api.app:create_app --factory --reload
+$env:REAL_COMPONENTS = "plan,retrieve,sql_facts,generate,render_citations,check_evidence,check_sentence,mask_pii"
+uv run --locked --all-groups uvicorn scilitrag.api.app:create_app --factory --reload
 ```
 
-This requires the real data adapter and model service; input/semantic checks remain mocked.
+This configuration mocks input checks while exercising the real evidence and output checks;
+it needs their model assets. Reports record the mocked stages and remain development-only.
 Select real retrieve and sql_facts together for S3: mock corpus IDs cannot define a meaningful
-real database ranking. Do not enable USE_MOCKS=0 while required real modules remain stubs.
+real database ranking. See [evaluation](evaluation.md) for complete runs and reviews.
 
 ## Acceptance checklist
 
-| Area | Implemented | Remaining evidence |
+| Requirement | Implemented | Remaining evidence |
 | --- | --- | --- |
-| Model client, JSON planning and filter reconciliation | Yes | Configured-model acceptance run and scenario routing |
-| Hybrid retrieval, linking and S1 coverage | Yes | Frozen corpus, real embedder/index handoff and live query checks |
-| Citation paths and baseline candidate filter | Yes | Representative human labels and precision/recall measurement |
-| SQL author aggregation and provenance | Yes | Disposable-DB tests and independently checked real-corpus references |
-| Guarded streaming and citation rendering | Yes | Real semantic-validator and browser integration |
-| Reference export and quality evaluation | Yes | Real candidate-model runs, reviewed support labels and final model choice |
-| Multi-hop implementation documentation | Yes | Measured timings/results for the final report |
+| R-09: citation paths and baseline candidates | Incoming citation SQL, scoped chunks, conservative experimental-use filter | Human passage labels and real-corpus retrieval acceptance |
+| R-10: guarded sentence streaming | Bounded buffering, real component handoff tests, fragment rejection | Live inference and WP4 browser acceptance |
+| R-13: pipeline model comparison | Fixed cases, model/scenario summaries, timings, failures and coverage | At least two real candidates and joint decision with WP4 |
+| R-14: S2/S3 reference tooling | DB citing IDs, twenty unlabeled passages, independent counts from recorded S3 scope | Human baseline labels and SQL checks on the frozen real corpus |
+| R-15: scenario answer-quality metrics | Per-reference precision, sentence support, year/count Exact Match reviews | Completed source-bound reviews and reported quality values |
+| R-16: execution flow and Citation Engine | Updated flow documentation and report paragraphs | Incorporate measured live examples/results when available |
 
 Run local checks from the repository root:
 
@@ -134,10 +137,11 @@ Run local checks from the repository root:
 $env:USE_MOCKS = "1"
 $env:REAL_COMPONENTS = ""
 $env:LOG_DIR = ""
-uv run --locked --group data --group rag --group ui ruff check .
-uv run --locked --group data --group rag --group ui ruff format --check .
-uv run --locked --group data --group rag --group ui pytest -q
-uv run --locked --group data --group rag --group ui python scripts/smoke.py
+$env:EMBED_MODEL = "ibm-granite/granite-embedding-english-r2"
+uv run --locked --all-groups ruff check .
+uv run --locked --all-groups ruff format --check .
+uv run --locked --all-groups pytest -q -rs
+uv run --locked --all-groups python scripts/smoke.py
 ```
 
 Tests in `tests/rag/` cover retrieval/generation behavior. Tests in `tests/evaluation/`

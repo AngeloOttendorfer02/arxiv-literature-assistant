@@ -16,6 +16,14 @@ def test_buffer_releases_complete_sentences_and_flushes_a_complete_tail():
     assert buffer.finish() == ["Second result [2]."]
 
 
+@pytest.mark.parametrize("tail", ["Claim. [1]", '"Claim [1]."', "Claim [1][2]!"])
+def test_complete_final_citation_or_quote_is_not_a_fragment(tail):
+    buffer = SentenceBuffer(split_sentences)
+    for character in tail:
+        assert buffer.feed(character) == []
+    assert buffer.finish() == [tail]
+
+
 @pytest.mark.parametrize("token", [None, 123])
 def test_nontext_deltas_are_controlled_errors(token):
     with pytest.raises(LLMClientError):

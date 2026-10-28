@@ -33,18 +33,26 @@ def baseline_candidate(text: str, title: str, section: str | None = None) -> boo
         return False
     aliases = {title.strip(), title.split(":", 1)[0].strip()}
     for sentence in re.split(r"(?<=[.!?])\s+", text):
-        if re.search(r"\b(?:not|no|never|without|neither)\b", sentence, re.IGNORECASE):
+        if re.search(
+            r"\b(?:not|no|never|without|neither|could|might|would|will)\b|\?",
+            sentence,
+            re.IGNORECASE,
+        ):
             continue
         for alias in aliases:
             if len(alias) < 4:
                 continue
             target = r"(?<!\w)" + re.escape(alias) + r"(?!\w)"
+            # A generic comparison in a survey is not evidence that this paper
+            # ran that baseline. Require first-person experimental use, or an
+            # explicit statement that the target is *our* baseline.
             patterns = (
-                r"\b(?:use|used|using|adopt|adopted|evaluate|evaluated)\b[^.!?]{0,100}"
+                r"\b(?:we|our (?:experiments|evaluation))\s+"
+                r"(?:use|used|are using|adopt|adopted|evaluate|evaluated)\b[^.!?]{0,100}"
                 + target
                 + r"[^.!?]{0,50}\bas (?:a |the |our )?baseline\b",
-                r"\bcompar(?:e|ed|ing|ison)\b[^.!?]{0,60}\b(?:with|against|to)\s+" + target,
-                target + r"\s+(?:is|was|serves as|served as)\s+(?:a |the |our )?baseline\b",
+                r"\bwe\s+compar(?:e|ed)\b[^.!?]{0,60}\b(?:with|against|to)\s+" + target,
+                target + r"\s+(?:is|was|serves as|served as)\s+our baseline\b",
             )
             if any(re.search(pattern, sentence, re.IGNORECASE) for pattern in patterns):
                 return True

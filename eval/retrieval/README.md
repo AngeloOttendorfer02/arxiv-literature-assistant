@@ -3,6 +3,10 @@
 `cases.example.json` contains synthetic S1/S2/S3 questions for the mock pipeline.
 It contains no LitSearch records or reviewed quality labels.
 
+`cases.live.example.json` supplies public S1/S2/S3 questions, including a baseline-use
+request, for initial real-service diagnostics. Verify the named target is indexed and
+replace cases without usable full-text coverage before freezing the final quality set.
+
 ```powershell
 $env:USE_MOCKS = "1"
 $env:REAL_COMPONENTS = ""
