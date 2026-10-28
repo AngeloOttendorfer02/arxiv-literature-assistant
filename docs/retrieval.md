@@ -32,8 +32,28 @@ abstracts are not presented as proof of full-text experimental results.
 
 ### S2: citation paths and experimental baseline candidates
 
-EntityLinker resolves a numeric corpus ID, full title, unambiguous title prefix or confident
-trigram match. Ambiguous references produce a clarification with candidate IDs. SQL follows
+EntityLinker resolves full titles, unambiguous title prefixes, reviewed aliases such as `DPR`,
+and author-year references such as `Karpukhin et al. (2020)` or
+`DPR (Karpukhin et al., 2020)`. Internal corpus IDs remain optional. The same reviewed registry
+supports user lookup and passage matching. Other author-year citations use stored surname/year
+metadata; all coauthors are considered because author order is not stored. Missing metadata
+can prevent a match, and multiple matches produce a clarification with paper titles and
+optional IDs. Parsed author-year citations and reviewed aliases must match an indexed
+identity; missing matches do not fall back to a different fuzzy paper. Ordinary title typos
+can still use a confident trigram match.
+Generic citation parsing requires a surname with `et al.`, or a surname with a parenthesized
+or comma-separated year. A bare trailing year, as in `BERT 2019`, does not by itself trigger
+citation parsing.
+Exact titles and title prefixes take priority over generic author-year interpretation.
+Single-word titles with citation punctuation, such as `RoBERTa (2019)` or `ELECTRA, 2020`,
+can still be interpreted as surname/year references when no exact title, prefix or reviewed
+alias matches. Fuzzy title search is then skipped. Use the title without the added year or
+the full paper title to avoid this ambiguity.
+Surname lookup materializes the matching authors once before joining their paper links,
+so it does not repeat the unindexed surname scan for each candidate paper.
+The planner keeps the target citation's author/year in `paper_ref`, separate from explicit
+filters on the citing papers. For example, ask `Which papers use DPR as an experimental baseline?`.
+SQL follows
 incoming edges: `citations.cited_id` is the target and `citations.citing_id` is a result.
 Year/author filters apply to citing papers, not the target's publication year.
 

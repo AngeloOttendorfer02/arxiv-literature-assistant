@@ -14,6 +14,16 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D074 R-09 natural paper references (extends D073)
+
+- Context: Users should be able to select DPR by abbreviation or author-year citation without knowing its full title or internal ID.
+- Decision: Reuse the reviewed registry for paper lookup and preserve target citations in the planner. Resolve other citation-shaped surname/year inputs from metadata with one materialized author scan and existing paper-author links. Exact titles take priority; ambiguous references request clarification instead of selecting a fuzzy other paper.
+- Scope: Arbitrary titles ending in a year stay on the title path. Single-word titles with citation punctuation remain ambiguous (see retrieval.md). Baseline passage rules and database contents are unchanged.
+- Validation: DPR and both citation forms resolve to 215737187 on the real database. Local surname-query execution was 33–52 ms (0.50–1.69 s total calls). Unit tests cover ambiguity and title regressions; the live model-planner check timed out.
+- Date: 2026-10-28
+
+---
+
 ### D073 R-09 reviewed aliases for baseline passages
 
 - Context: S2's title-only passage filter misses DPR abbreviations and author-year citations.

@@ -5,6 +5,7 @@ from scilitrag.rag.errors import RagUserError
 from scilitrag.rag.retrieval import retrieve_with
 from scilitrag.rag.scenarios.citation_path import CITING_SQL, baseline_candidate
 from scilitrag.rag.search.backend import SearchBackend
+from scilitrag.rag.search.entities import AUTHOR_YEAR_SQL
 
 PLAN = Plan(scenario="S2", paper_ref="1", topic="retrieval", k=3)
 DPR_ID = 215737187
@@ -264,6 +265,44 @@ def test_full_title_dpr_search_uses_aliases_only_for_baselines_and_keeps_limits(
     evidence = retrieve_with(
         PLAN.model_copy(update={"paper_ref": DPR_TITLE, "require_baseline": require_baseline}),
         DprBackend(),
+    )
+    assert {item.corpus_id for item in evidence} == {DPR_ID, 2}
+    assert any(item.chunk_id == "2-0" for item in evidence)
+
+
+@pytest.mark.parametrize(
+    "reference",
+    [DPR_TITLE, "DPR", "Karpukhin et al. (2020)", "DPR (Karpukhin et al., 2020)"],
+)
+def test_natural_dpr_references_flow_through_real_linker_to_baseline_filter(reference):
+    target = {"corpus_id": DPR_ID, "title": DPR_TITLE, "year": 2020, "abstract": "Retrieval"}
+
+    def reader(sql, params):
+        if sql == CITING_SQL:
+            assert params["target_id"] == DPR_ID and params["author_id"] is None
+            return [{"corpus_id": 2, "title": "Comparison", "has_indexed_chunks": True}]
+        if sql == AUTHOR_YEAR_SQL or "ANY(%(ids)s)" in sql or "year,abstract" in sql:
+            return [target.copy()]
+        if "lower(title)=" in sql and params["ref"] == DPR_TITLE:
+            return [target.copy()]
+        return []
+
+    class AliasBackend(SearchBackend):
+        def chunks(self, plan, ids, per_paper):
+            assert ids == [2] and per_paper == 4
+            assert "DPR" in plan.topic
+            return [
+                {
+                    "corpus_id": 2,
+                    "chunk_id": "2-0",
+                    "section": "Experiments",
+                    "text": "DPR was used as a baseline in our experiments.",
+                }
+            ]
+
+    backend = AliasBackend(reader, lambda _: pytest.fail("Fake passages must not load a model"))
+    evidence = retrieve_with(
+        PLAN.model_copy(update={"paper_ref": reference, "require_baseline": True}), backend
     )
     assert {item.corpus_id for item in evidence} == {DPR_ID, 2}
     assert any(item.chunk_id == "2-0" for item in evidence)

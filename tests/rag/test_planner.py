@@ -41,6 +41,25 @@ def test_validated_plan_preserves_full_question():
 
 
 @pytest.mark.parametrize(
+    "reference", ["DPR", "Karpukhin et al. (2020)", "DPR (Karpukhin et al., 2020)"]
+)
+def test_target_citation_is_preserved_without_inventing_result_year_filters(reference):
+    query = f"Which papers use {reference} as an experimental baseline?"
+    result = build_plan(query, Client(payload(paper_ref=reference, year_from=2020, year_to=2020)))
+    assert result.scenario == "S2" and result.require_baseline
+    assert result.paper_ref == reference
+    assert result.author_ref is None
+    assert result.year_from is None and result.year_to is None
+
+
+def test_citation_year_and_explicit_result_filter_are_independent():
+    query = "Find top 10 papers since 2022 that use Karpukhin et al. (2020) as a baseline."
+    result = build_plan(query, Client(payload(paper_ref="Karpukhin et al. (2020)", year_from=2020)))
+    assert result.paper_ref == "Karpukhin et al. (2020)"
+    assert result.year_from == 2022 and result.year_to is None and result.k == 10
+
+
+@pytest.mark.parametrize(
     "raw",
     [
         "not JSON",
