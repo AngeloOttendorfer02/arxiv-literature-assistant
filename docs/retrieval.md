@@ -39,14 +39,42 @@ Year/author filters apply to citing papers, not the target's publication year.
 
 Ordinary searches return up to k citing papers by descending year, then corpus ID. Baseline
 searches inspect up to 100 citing papers and up to four retrieved passages per paper, returning
-at most k results. The target title or colon-prefix alias must occur with an explicit
-experimental-use expression in the same sentence. The filter requires first-person use or
-comparison, or a statement that the target is the paper's own baseline. Negations,
+at most k results. The target title, colon-prefix alias or reviewed identity-specific alias
+must occur with an explicit
+experimental-use expression in the same sentence. The filter requires wording tied to the
+paper's own experiments, comparison or baseline, including the passive forms below. Negations,
 hypothetical comparisons and related-work sections are excluded. A comparison attributed
 to earlier work, a citation edge, a mention, or BERT inside RoBERTa is insufficient.
 
-This English lexical filter selects candidates. It can miss abbreviations and paraphrases,
-and can still misread complex comparisons. Human baseline labels and semantic validation
+`rag/search/paper_aliases.py` holds the shared registry. Initially it covers DPR (corpus ID
+215737187), `DPR` and `Karpukhin et al.` with year 2020 (comma, parenthesized and plain-year
+forms). Other short names and citation aliases need reviewed entries; the code does not
+guess acronyms or first-author order. Baseline passage queries include the reviewed aliases.
+Matching supports `we use DPR ... as its pretrained baseline`, `our comparisons with DPR`,
+`DPR (Karpukhin et al., 2020) is our baseline` and `DPR [12] serves as our baseline`.
+Passive use is accepted when directly linked to own-study context, for example `DPR was
+used as a baseline in our experiments`, `in our evaluation, DPR was used as the baseline`,
+`DPR was used as our baseline` or `our method was compared with DPR`. A study cue elsewhere
+in the sentence does not suffice; generic passive mentions and descriptions of earlier
+work remain excluded.
+Recognized author-year aliases are normalized before sentence splitting, preventing their
+internal punctuation from breaking the match. This is not a general fix for every `et al.`.
+An `outperforms` statement alone does not qualify, even with `our experiments` or `we find`;
+the explicit baseline/comparison patterns above are still required.
+Reviewed short names also exclude adjoining hyphens: `DPR-PAQ`, `DPR-based` and `pre-DPR`
+do not count as the standalone target `DPR`. Titles and colon-prefix aliases retain the
+existing word boundaries, so `we use BERT-base as our baseline` and `we use BERT-large as
+a baseline` can still match the BERT title.
+
+Known conservative gaps remain: plural `baselines`, an intervening word in `we also use`,
+en-dash citation ranges such as `[12–14]`, and parentheses containing multiple citations.
+These forms need a separately evaluated extension and remain outside the current rules.
+
+Offline baseline scoring passes the annotation's `target_id` into the same matching rule.
+
+This English lexical filter selects candidates. Reviewed aliases improve abbreviation coverage,
+but retrieval limits and restrictive patterns can still miss relevant passages and paraphrases.
+The filter can also misread complex comparisons. Human baseline labels and semantic validation
 are required before reporting its quality. A no-support response describes the bounded
 search and possible absence of indexed full text; it does not claim global absence of use.
 

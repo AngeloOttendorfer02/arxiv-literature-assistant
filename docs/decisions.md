@@ -14,6 +14,16 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D073 R-09 reviewed aliases for baseline passages
+
+- Context: S2's title-only passage filter misses DPR abbreviations and author-year citations.
+- Decision: Use reviewed aliases from `rag/search/paper_aliases.py`, initially DPR (215737187) and Karpukhin et al. (2020), in passage queries, filtering and offline scoring. Normalize recognized citation punctuation. Require explicit own-study context, including passive use, and preserve exclusions and the 100-paper/four-passage limits.
+- Scope: Paper-reference lookup and planning are unchanged. Performance-only matching (`outperforms`) remains excluded. No database rebuild is needed.
+- Validation: On dump v2, scanning 4,389 chunks from the first 100 citing papers gives 0 matches before and 1 after the change (254877181); adding passive patterns leaves this count unchanged. The previously checked four-passage retrieval also finds that paper. This demo does not establish general precision/recall.
+- Date: 2026-10-28
+
+---
+
 ### D072 NLI check on the inference server's GPU (follows from D071)
 
 - Context: The first load test (D071) ran the sentence check (ModernCE-large-nli, D057) on the laptop CPU. At one request at a time it took a median of 20 s of a 38 s request, while the GPU produced the answer's tokens in about 6 s. Throughput did not grow with concurrency, and at 8 concurrent requests 8 of 12 timed out.
