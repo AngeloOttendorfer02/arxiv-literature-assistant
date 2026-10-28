@@ -14,6 +14,19 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D071 S-14 latency of the guardrail stages, measured in a replay
+
+- Context: S-14 asks for the latency overhead of each guardrail stage as median and p95 from the logs. The request log has times per stage, but the sentence checks sit inside `generate` together with the model's time, and no language model was available locally.
+- Options: a real end-to-end run with a language model (needs an endpoint, and the sentence checks cannot be separated from the model); a run with real guardrails and retrieval and an answer replayed from the retrieved sources (no model); both.
+- Decision: Both are supported by `scripts/measure_guardrail_latency.py`; the figures come from the replay. The replay runs the 100 harmless questions of `eval/guardrails` (first 30) as S1 through the real input check, retrieval, evidence guard and sentence checks, with a fixed plan and an answer built from the first sentence of each retrieved source with its label. The answer arrives without delay, so `generate` is the time of the sentence checks. The script writes the same log records as the API (`RequestLog`), wraps `check_sentence`, `mask_pii` and `render_citations` with timers (no change to the pipeline) and reports median and p95 per stage, the wait for the first sentence (user TTFT minus engine TTFT) and the cold start of each stage, which is left out of the distributions. `--from-log` evaluates a `requests.jsonl` of the real API; `--live` runs all components against the configured model. Results go to `eval/results/guardrail_latency_<mode>.json` and `docs/guardrail_latency_<mode>.md`.
+- Results (replay, 30 requests, 16 logical CPUs, models on CPU): Prompt Guard 81 ms median (p95 177), topic gate 40 ms (92), PII 0.4 ms, evidence guard 1.9 s (4.1 s), sentence checks 2.6 s per request (5.6 s) and 554 ms per sentence (1.1 s) with real chunks as premise, all guardrails together 4.7 s per request (p95 8.5 s, max 12.1 s), wait for the first sentence 0.5 s (3.0 s). For scale `retrieve` took 35 s median (46 s p95) on this machine.
+- Findings: (1) The cold start of the first request is over six minutes: Prompt Guard 171 s, the NLI model 172 s, first retrieval 35 s; the models need to be loaded when the API starts. The slow load of an 86M model was not investigated. (2) With real chunks `check_sentence` takes about three times as long per sentence as on the short passages of S-15 (178 ms). (3) 7 of 136 sentences (5 percent) were removed although each is the first sentence of its source with its label; the cause was not investigated (numbers the number check does not find, or a weak NLI score on long sources). In S-15 verbatim sentences on short passages were never removed.
+- Not done: The run against a language model failed: the shared endpoint answers HTTP 429 ("Plan credits cannot be applied to shared endpoint usage. Add a payment method or increase your spend limit"), also for a short request, so there are no live figures. The `--live` path produced one answered request before the endpoint refused. The share of the guardrails in the total time must come from the benchmark (A-12) or a later live run.
+- Known limits: One machine, 30 questions run as S1, extractive replayed answers (the sentences are easier than model output, the number of sources and sentences is what the retrieval returns). The retrieval time of this setup is not representative of a tuned database.
+- Date: 2026-10-28
+
+---
+
 ### D070 S-15 validator test set and evaluation of check_sentence
 
 - Context: S-15 asks for about 100 sentence/chunk pairs with manipulations and precision and recall of `check_sentence`. S-09 (D061) had measured only the NLI models on sentences taken verbatim from abstracts.

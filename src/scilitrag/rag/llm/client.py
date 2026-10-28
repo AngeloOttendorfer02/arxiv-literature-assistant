@@ -56,6 +56,8 @@ class ChatClient:
             "temperature": 0,
             "max_tokens": self.settings.llm_max_output_tokens,
         }
+        if self.settings.llm_reasoning_effort:
+            payload["reasoning_effort"] = self.settings.llm_reasoning_effort
         if schema is not None:
             payload["response_format"] = {
                 "type": "json_schema",

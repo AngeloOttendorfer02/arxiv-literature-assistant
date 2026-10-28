@@ -18,9 +18,27 @@ def test_configured_completion_payload():
         assert str(request.url) == "http://model/v1/chat/completions"
         assert data["model"] == "candidate" and data["max_tokens"] == 1024
         assert data["temperature"] == 0 and data["stream"] is False
+        assert "reasoning_effort" not in data
         return httpx.Response(200, json={"choices": [{"message": {"content": "answer"}}]})
 
     assert ChatClient(SETTINGS, transport=httpx.MockTransport(handler)).complete([]) == "answer"
+
+
+def test_reasoning_effort_is_sent_only_when_configured():
+    settings = load_settings(
+        {
+            "USE_MOCKS": "1",
+            "LLM_BASE_URL": "http://model/v1",
+            "LLM_MODEL": "candidate",
+            "LLM_REASONING_EFFORT": "none",
+        }
+    )
+
+    def handler(request):
+        assert json.loads(request.content)["reasoning_effort"] == "none"
+        return httpx.Response(200, json={"choices": [{"message": {"content": "answer"}}]})
+
+    assert ChatClient(settings, transport=httpx.MockTransport(handler)).complete([]) == "answer"
 
 
 @pytest.mark.parametrize(
