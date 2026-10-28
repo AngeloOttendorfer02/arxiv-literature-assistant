@@ -1,0 +1,8 @@
+{
+  "cases": [
+    {"id": "s1-topic", "scenario": "S1", "query": "Find up to 3 papers about dense passage retrieval published from 2020 to 2023."},
+    {"id": "s2-citations", "scenario": "S2", "query": "Find up to 3 papers that cite BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding."},
+    {"id": "s2-baseline", "scenario": "S2", "query": "Find up to 3 papers that cite BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding and use it as an experimental baseline."},
+    {"id": "s3-authors", "scenario": "S3", "query": "Rank up to 3 most cited authors for dense passage retrieval."}
+  ]
+}

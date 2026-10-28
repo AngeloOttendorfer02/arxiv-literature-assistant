@@ -69,6 +69,11 @@ def test_s2_baseline_requires_target_specific_experimental_passage():
         ("We use BERT as a baseline.", "Related work"),
         ("We use RoBERTa as a baseline.", "Experiments"),
         ("BERT is mentioned. We use RoBERTa as a baseline.", "Experiments"),
+        ("Earlier studies compare their methods against BERT.", "Introduction"),
+        ("BERT is a baseline in the literature.", "Experiments"),
+        ("We could compare our method against BERT.", "Experiments"),
+        ("Will we compare against BERT?", "Experiments"),
+        ("We compare against BERT without running experiments.", "Experiments"),
     ],
 )
 def test_mentions_negations_and_other_models_are_not_baseline_candidates(text, section):
@@ -81,6 +86,7 @@ def test_mentions_negations_and_other_models_are_not_baseline_candidates(text, s
         "We use BERT as a baseline for retrieval.",
         "We compare our method against BERT on the retrieval task.",
         "BERT serves as our baseline.",
+        "Our experiments used BERT as the baseline.",
     ],
 )
 def test_explicit_target_use_is_a_candidate(text):
@@ -108,6 +114,25 @@ def test_cross_paper_passage_is_rejected():
 
     with pytest.raises(RagUserError, match="citing papers"):
         retrieve_with(PLAN, WrongScope())
+
+
+def test_baseline_search_keeps_citation_and_filter_scope():
+    class Scoped(Backend):
+        def reader(self, sql, params):
+            assert params == {
+                "target_id": 1,
+                "low": 2020,
+                "high": 2023,
+                "author_id": 10,
+                "limit": 100,
+            }
+            return super().reader(sql, params)
+
+    plan = PLAN.model_copy(
+        update={"require_baseline": True, "year_from": 2020, "year_to": 2023, "author_ref": "Alice"}
+    )
+    evidence = retrieve_with(plan, Scoped())
+    assert {e.corpus_id for e in evidence if e.section != "Citation target"} == {2}
 
 
 def test_s2_real_citation_direction_years_and_author_filter(fixture_reader):
