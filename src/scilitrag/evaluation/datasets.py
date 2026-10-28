@@ -7,6 +7,7 @@ from typing import Self
 from pydantic import BaseModel, ConfigDict, Field, StrictBool, model_validator
 
 from scilitrag.contracts import Scenario
+from scilitrag.rag.evidence.provenance import digest
 
 MAX_DATABASE_ID = 9_223_372_036_854_775_807
 
@@ -21,6 +22,7 @@ class ReferenceCase(BaseModel):
     expected_years: dict[str, int | None] | None = None
     seed_ids: list[int] | None = None
     expected_author_counts: dict[str, int] | None = None
+    source_run_sha256: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
 
     @model_validator(mode="after")
     def validate_reference(self) -> Self:
@@ -65,6 +67,15 @@ class BaselineAnnotation(BaseModel):
     target_id: int = Field(ge=1, le=MAX_DATABASE_ID)
     baseline_use: StrictBool | None = None
     reviewer_note: str = ""
+    source_hash: str | None = Field(default=None, pattern=r"^[0-9a-f]{64}$")
+
+    @model_validator(mode="after")
+    def validate_source(self) -> Self:
+        if self.source_hash and self.source_hash != digest(
+            self.model_dump(exclude={"source_hash", "baseline_use", "reviewer_note"})
+        ):
+            raise ValueError("Baseline source content has changed")
+        return self
 
 
 class ReferenceSet(BaseModel):
@@ -81,6 +92,9 @@ class ReferenceSet(BaseModel):
             raise ValueError("Case IDs must be unique")
         if self.dataset_revision is not None and not self.dataset_revision.strip():
             raise ValueError("dataset_revision must be nonempty when supplied")
+        keys = [(row.target_id, row.chunk_id) for row in self.baseline_annotations]
+        if len(keys) != len(set(keys)):
+            raise ValueError("Baseline target/chunk pairs must be unique")
         return self
 
 
@@ -88,3 +102,22 @@ def load_reference_set(path: Path) -> dict:
     """Validate input before contacting a model or database; preserve absent expectations."""
     value = ReferenceSet.model_validate(json.loads(path.read_text(encoding="utf-8")))
     return value.model_dump(exclude_unset=True)
+
+
+def run_fingerprint(record: dict) -> str:
+    """Bind reviews/references to immutable run content, excluding scores and labels."""
+    return digest(
+        {
+            key: record.get(key)
+            for key in (
+                "id",
+                "model",
+                "query",
+                "dataset_revision",
+                "dataset_changed",
+                "plan",
+                "evidence",
+                "events",
+            )
+        }
+    )

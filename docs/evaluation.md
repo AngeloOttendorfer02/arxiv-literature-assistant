@@ -48,16 +48,29 @@ uv run --locked --group rag python scripts/build_reference_set.py --target-paper
 ```
 
 The exporter rejects unknown/out-of-range IDs and missing revisions, deduplicates selected
-IDs, and leaves baseline-use labels unset. For S2 it exports the top 20 citing papers by
-publication year and the first 20 indexed citing passages per target. This ordered sample
-is a review worksheet, not a representative quality benchmark; expand and balance it
-before reporting baseline-filter generalization.
+IDs, preserves existing output files, and leaves baseline-use labels unset. For S2 it
+exports the top 20 citing papers by publication year. It considers up to 200 indexed
+passages per target, prioritizing experimental sections and a deterministic hash order.
+The default sample is **20 passages total**, alternating targets and heuristic-positive
+and negative candidates, with at most one passage per citing paper and target. Adjust
+`--baseline-limit` if necessary. This stratified diagnostic sample is not a corpus-wide
+precision or prevalence estimate. Review passages in context; a mention alone is false.
+Source hashes bind the text, target and passage identity while labels and notes stay editable.
 
 For S3, an independent reference enumerates distinct citation-pair/author triples, counts
-credits in Python and applies the SQL tie rule. The selected seed IDs must match the actual
-evaluated topic-paper set. The exported query requests k=20, which can select a different
-set in a larger corpus. Inspect a first run, export its exact seeds, and freeze the corpus
-before comparing. If you edit queries, limits or filters, regenerate matching references.
+credits in Python and applies the SQL tie rule. For an actual pipeline run use:
+
+```powershell
+uv run --locked --group rag python scripts/build_reference_set.py --from-run eval/private/model-runs.json --case-id s3-topic --model YOUR_FIRST_MODEL --target-paper 1 --output eval/private/scoped-reference.json
+```
+
+Replace the case, model and target with inspected values from your corpus. This preserves
+the S3 query, case ID, SQL seed IDs, result limit and author filter. It rejects mismatched
+paper evidence, SQL parameters and dataset revisions, and records a source-run fingerprint.
+It independently recomputes counts rather than copying table values. A run with a later
+generation error can still supply a valid SQL scope; this does not mark its answer successful.
+Standalone `--seed-paper` export still requests k=20 and is exploratory until its seed set
+matches an actual run. Freeze the corpus and regenerate references when changing scope.
 
 The JSON root contains `cases`, optional `dataset_revision` and `baseline_annotations`.
 Each case needs a unique nonblank id, a scenario S1/S2/S3 and a nonblank query. Optional
