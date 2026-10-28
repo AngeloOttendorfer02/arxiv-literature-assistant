@@ -94,6 +94,10 @@ Every application read uses a read-only transaction and a statement timeout capp
 at ten seconds. These settings complement role grants. All SQL templates are
 application constants with bound values; the LLM never supplies SQL.
 
+`tests/test_app_role_readonly.py` (S-08) runs when `DATABASE_URL` is set. It tries
+INSERT, UPDATE, DELETE, TRUNCATE and DDL with the app login inside rolled-back
+transactions and requires the database to answer with insufficient privilege.
+
 Tests use `RETRIEVAL_TEST_DATABASE_URL` only when explicitly set to a disposable
 ParadeDB instance. The harness applies the actual checked-in schema in a unique
 schema, inserts synthetic rows, and removes that schema afterward. Run those
