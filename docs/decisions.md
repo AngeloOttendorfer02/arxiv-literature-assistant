@@ -14,6 +14,16 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D075 D-18 database retrieval comparison
+
+- Context: Compare dense, BM25 and hybrid paper search over title + abstract on D-22's 597 queries and identical Dev/Test split. Results: [D-18 comparison](d18_retrieval_comparison.md).
+- Evidence: Hybrid increases Recall@20 by 1.60 percentage points on Dev and 2.08 on Test, while MRR@100 and NDCG@10 decrease. Paired bootstrap (10,000 resamples, seed 42) gives six pointwise 95% intervals including zero: no clear advantage is established, and equivalence is not established either.
+- Decision: Keep RRF k=60 and title boost 0.5. Any tuning remains Dev-only team follow-up, with the primary metric agreed beforehand and settings frozen for Test. The offline SQL budget is 60 s; the API retains its default 10 s cap.
+- Provenance: Database counts match D064/v2, including 48,860 chunks, and the local v2 archive checksum was verified. Overall Recall@20 is 0.690 dense / 0.607 BM25 / 0.709 hybrid; the small gap to D064's 0.694 / 0.607 / 0.710 remains unexplained.
+- Date: 2026-10-29
+
+---
+
 ### D072 NLI check on the inference server's GPU (follows from D071)
 
 - Context: The first load test (D071) ran the sentence check (ModernCE-large-nli, D057) on the laptop CPU. At one request at a time it took a median of 20 s of a 38 s request, while the GPU produced the answer's tokens in about 6 s. Throughput did not grow with concurrency, and at 8 concurrent requests 8 of 12 timed out.
