@@ -53,6 +53,8 @@ Surname lookup materializes the matching authors once before joining their paper
 so it does not repeat the unindexed surname scan for each candidate paper.
 The planner keeps the target citation's author/year in `paper_ref`, separate from explicit
 filters on the citing papers. For example, ask `Which papers use DPR as an experimental baseline?`.
+When the model sets a nonblank `paper_ref` and `require_baseline=true`, a deterministic
+rule selects S2 before scenario validation, correcting an S1 or S3 classification.
 SQL follows
 incoming edges: `citations.cited_id` is the target and `citations.citing_id` is a result.
 Year/author filters apply to citing papers, not the target's publication year.

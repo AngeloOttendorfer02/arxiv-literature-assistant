@@ -32,6 +32,10 @@ class QueryPlan(BaseModel):
 
     @model_validator(mode="after")
     def validate_semantics(self) -> Self:
+        # A target paper plus requested baseline use always follows its citations.
+        # Reconcile before S3 validation so a missing topic cannot trigger S1 fallback.
+        if self.require_baseline and self.paper_ref and self.paper_ref.strip():
+            self.scenario = "S2"
         if (
             self.year_from is not None
             and self.year_to is not None
