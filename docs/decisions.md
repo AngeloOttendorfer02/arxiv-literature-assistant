@@ -19,8 +19,28 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Context: Compare dense, BM25 and hybrid paper search over title + abstract on D-22's 597 queries and identical Dev/Test split. Results: [D-18 comparison](d18_retrieval_comparison.md).
 - Evidence: Hybrid increases Recall@20 by 1.60 percentage points on Dev and 2.08 on Test, while MRR@100 and NDCG@10 decrease. Paired bootstrap (10,000 resamples, seed 42) gives six pointwise 95% intervals including zero: no clear advantage is established, and equivalence is not established either.
 - Decision: Keep RRF k=60 and title boost 0.5. Any tuning remains Dev-only team follow-up, with the primary metric agreed beforehand and settings frozen for Test. The offline SQL budget is 60 s; the API retains its default 10 s cap.
-- Provenance: Database counts match D064/v2, including 48,860 chunks, and the local v2 archive checksum was verified. Overall Recall@20 is 0.690 dense / 0.607 BM25 / 0.709 hybrid; the small gap to D064's 0.694 / 0.607 / 0.710 remains unexplained.
+- Validation: Run on dump v2 (counts match D064, archive checksum verified). Overall Recall@20 is 0.690 dense / 0.607 BM25 / 0.709 hybrid against 0.694 / 0.607 / 0.710 in D064. BM25 is identical, so the small dense gap is probably the approximate HNSW index rebuilt on restore (not verified).
 - Date: 2026-10-29
+
+---
+
+### D074 R-09 natural paper references (extends D073)
+
+- Context: Users should be able to select DPR by abbreviation or author-year citation without knowing its full title or internal ID.
+- Decision: Reuse the reviewed registry for paper lookup and preserve target citations in the planner. Resolve other citation-shaped surname/year inputs from metadata with one materialized author scan and existing paper-author links. Exact titles take priority; ambiguous references request clarification instead of selecting a fuzzy other paper. When `paper_ref` is nonblank and `require_baseline` is true, a deterministic rule selects S2 before scenario validation, correcting S1/S3 routing by the model.
+- Scope: Arbitrary titles ending in a year stay on the title path. Single-word titles with citation punctuation remain ambiguous (see retrieval.md). Baseline passage rules and database contents are unchanged.
+- Validation: DPR and both citation forms resolve to 215737187 on the real database. Local surname-query execution was 33 to 52 ms (0.50 to 1.69 s total calls). Unit tests cover ambiguity and title regressions; the live model-planner check timed out.
+- Date: 2026-10-28
+
+---
+
+### D073 R-09 reviewed aliases for baseline passages
+
+- Context: S2's title-only passage filter misses DPR abbreviations and author-year citations.
+- Decision: Use reviewed aliases from `rag/search/paper_aliases.py`, initially DPR (215737187) and Karpukhin et al. (2020), in passage queries, filtering and offline scoring. Normalize recognized citation punctuation. Require explicit own-study context, including passive use, and preserve exclusions and the 100-paper/four-passage limits.
+- Scope: Paper-reference lookup and planning are unchanged. Performance-only matching (`outperforms`) remains excluded. No database rebuild is needed.
+- Validation: On dump v2, scanning 4,389 chunks from the first 100 citing papers gives 0 matches before and 1 after the change (254877181); adding passive patterns leaves this count unchanged. The previously checked four-passage retrieval also finds that paper. This demo does not establish general precision/recall.
+- Date: 2026-10-28
 
 ---
 

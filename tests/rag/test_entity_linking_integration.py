@@ -26,8 +26,15 @@ PAPERS = [
     (102, "Atlas: Dense Retrieval"),
     (103, "Atlas: Sparse Retrieval"),
     (104, "Orion: Scientific Language Models"),
+    (105, "Another study by Smith"),
+    (215737187, "Dense Passage Retrieval for Open-Domain Question Answering"),
 ]
-AUTHORS = [(201, "Alice Smith"), (202, "Alice Smith"), (203, "Bob Jones")]
+AUTHORS = [
+    (201, "Alice Smith"),
+    (202, "Alice Smith"),
+    (203, "Bob Jones"),
+    (204, "Vladimir Karpukhin"),
+]
 
 
 @pytest.fixture(scope="module")
@@ -60,7 +67,15 @@ def entity_reader():
                 )
                 cursor.executemany(
                     "INSERT INTO paper_authors (corpus_id,author_id) VALUES (%s,%s)",
-                    [(101, 201), (102, 202), (104, 203)],
+                    [(101, 201), (102, 202), (104, 203), (105, 201), (215737187, 204)],
+                )
+                cursor.executemany(
+                    "UPDATE papers SET year=%s WHERE corpus_id=%s",
+                    [(2020, 101), (2021, 102), (2020, 104), (2021, 105), (2020, 215737187)],
+                )
+                cursor.executemany(
+                    "UPDATE authors SET last_name=%s WHERE author_id=%s",
+                    [("Smith", 201), ("Smith", 202), ("Jones", 203), ("Karpukhin", 204)],
                 )
 
             def reader(statement, params=None):
@@ -96,6 +111,32 @@ def test_real_trigram_query_resolves_a_clear_typo(entity_reader):
     reference = "A Deterministic Study of Neural Document Retreival"
     assert EntityLinker(observed_reader).paper(reference) == 101
     assert any("similarity(title" in statement and " %% " in statement for statement in statements)
+
+
+@pytest.mark.parametrize(
+    "reference,expected",
+    [
+        ("DPR", 215737187),
+        ("Karpukhin et al. (2020)", 215737187),
+        ("DPR (Karpukhin et al., 2020)", 215737187),
+        ("Jones et al., 2020", 104),
+        ("Smith (2020)", 101),
+    ],
+)
+def test_real_alias_and_author_year_resolution(entity_reader, reference, expected):
+    assert EntityLinker(entity_reader).paper(reference) == expected
+
+
+def test_real_same_surname_and_year_requires_disambiguation(entity_reader):
+    with pytest.raises(RagUserError, match="Which paper") as error:
+        EntityLinker(entity_reader).paper("Smith et al. (2021)")
+    assert "102: Atlas: Dense Retrieval" in str(error.value)
+    assert "105: Another study by Smith" in str(error.value)
+
+
+def test_real_missing_author_year_does_not_substitute_a_fuzzy_title(entity_reader):
+    with pytest.raises(RagUserError, match="Paper not found"):
+        EntityLinker(entity_reader).paper("Jones et al. (2021)")
 
 
 def test_real_author_lookup_normalizes_case_spacing_and_punctuation(entity_reader):

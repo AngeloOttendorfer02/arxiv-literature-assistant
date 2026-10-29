@@ -218,7 +218,10 @@ def score_baselines(annotations: list[dict]) -> dict:
     tp = fp = fn = tn = 0
     for item in reviewed:
         predicted = baseline_candidate(
-            item["text"], item.get("target_title") or "", item.get("section")
+            item["text"],
+            item.get("target_title") or "",
+            item.get("section"),
+            target_id=item.get("target_id"),
         )
         truth = item["baseline_use"]
         tp += predicted and truth
