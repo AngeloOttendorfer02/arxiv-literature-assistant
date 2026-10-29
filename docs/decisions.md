@@ -14,6 +14,16 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D076 D-23 data statistics for the report (updates D-08 statistics)
+
+- Context: The report needs dataset sizes, citation coverage, papers without links, dropped authors and the full-text share. The numbers were spread over D032, D045, D046, D048 and D-08, and the D-08 author count (74,949) differed from the database (70,171).
+- Decision: `scripts/data_statistics.py` recomputes the counts from the local D-03 and D-12 files with the loading code (`build_citations`, `extract_authors`) and writes aggregate counts only to `eval/results/d23_data_statistics.json`. Tables with sources: [D-23 data statistics](d23_data_statistics.md).
+- Result: Citation coverage is 23.8 %: 342,467 of 1,437,622 S2ORC bibliography entries point to another corpus paper (the plan estimated about 22 %). 2,536 papers list a corpus paper more than once; without these 13,845 repeated entries, 328,622 distinct pairs remain, exactly the database pairs. 6,233 papers have no citation link. 5 papers, all query targets, have neither title nor abstract; 451 have no year. Years range from 1956 to 2024, median 2016; 74.4 % are from 2010 or later. Authors 70,171 and links 196,079, equal to the database. The D-08 statistics predate the doubled-span fix (b2c3bb0): it removed 4,778 authors and 4 links; dropped affiliations are now 2,471 (was 2,463) and same-paper duplicates 10,448 (was 10,452).
+- Known limits: Author variants stay unmerged under O2: 464 extra authors differ only by accents, 1,108 only by a middle initial (1,575 together). Accent folding would change `normalize_name` (WP2); middle initials may join different people. Same-name different people cannot be counted without author IDs.
+- Date: 2026-10-29
+
+---
+
 ### D075 D-18 database retrieval comparison
 
 - Context: Compare dense, BM25 and hybrid paper search over title + abstract on D-22's 597 queries and identical Dev/Test split. Results: [D-18 comparison](d18_retrieval_comparison.md).

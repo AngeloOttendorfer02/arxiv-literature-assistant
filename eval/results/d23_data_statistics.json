@@ -1,0 +1,158 @@
+{
+  "dataset": "princeton-nlp/LitSearch",
+  "dataset_revision": "9573fb284a1026c998df47024b888a163f0f0e25",
+  "d03": {
+    "counts": {
+      "input_papers": 64183,
+      "retained_papers": 56115,
+      "rejected_papers": 8068,
+      "queries": 597,
+      "target_papers": 574,
+      "retained_target_papers": 574,
+      "targets_with_rejection_criteria": 7
+    },
+    "rules": {
+      "empty_full_paper": {
+        "affected": 10,
+        "rejected": 10,
+        "protected_targets": 0
+      },
+      "full_paper_length_1": {
+        "affected": 2,
+        "rejected": 2,
+        "protected_targets": 0
+      },
+      "empty_title": {
+        "affected": 6760,
+        "rejected": 6753,
+        "protected_targets": 7
+      },
+      "title_over_500": {
+        "affected": 75,
+        "rejected": 75,
+        "protected_targets": 0
+      },
+      "missing_sectionheader": {
+        "affected": 1599,
+        "rejected": 1599,
+        "protected_targets": 0
+      },
+      "missing_author_names": {
+        "affected": 1720,
+        "rejected": 1720,
+        "protected_targets": 0
+      }
+    }
+  },
+  "papers": {
+    "without_title": 7,
+    "without_abstract": 1230,
+    "without_title_and_abstract": 5,
+    "without_year": 451,
+    "by_year": {
+      "1956": 2,
+      "1957": 1,
+      "1960": 1,
+      "1965": 10,
+      "1967": 14,
+      "1969": 25,
+      "1973": 7,
+      "1974": 1,
+      "1975": 25,
+      "1976": 5,
+      "1977": 3,
+      "1978": 30,
+      "1979": 15,
+      "1980": 95,
+      "1981": 38,
+      "1982": 86,
+      "1983": 76,
+      "1984": 94,
+      "1985": 77,
+      "1986": 153,
+      "1987": 105,
+      "1988": 187,
+      "1989": 153,
+      "1990": 255,
+      "1991": 245,
+      "1992": 364,
+      "1993": 293,
+      "1994": 336,
+      "1995": 180,
+      "1996": 345,
+      "1997": 327,
+      "1998": 520,
+      "1999": 278,
+      "2000": 699,
+      "2001": 416,
+      "2002": 636,
+      "2003": 625,
+      "2004": 1172,
+      "2005": 763,
+      "2006": 1398,
+      "2007": 935,
+      "2008": 1491,
+      "2009": 1448,
+      "2010": 1976,
+      "2011": 1335,
+      "2012": 2230,
+      "2013": 1830,
+      "2014": 2409,
+      "2015": 1897,
+      "2016": 2806,
+      "2017": 2462,
+      "2018": 3524,
+      "2019": 2843,
+      "2020": 3566,
+      "2021": 4465,
+      "2022": 6215,
+      "2023": 3726,
+      "2024": 451
+    }
+  },
+  "citations": {
+    "entries": 340484,
+    "outside_corpus": 11767,
+    "self_citation": 95,
+    "citations": 328622,
+    "papers_citing_no_corpus_paper": 10037,
+    "papers_not_cited": 23117,
+    "papers_without_links": 6233,
+    "mutual_pairs": 964
+  },
+  "bibliography": {
+    "papers": 56115,
+    "entries": 1437622,
+    "matched_entries": 980745,
+    "in_corpus_entries": 342467,
+    "in_corpus_distinct_pairs": 328622,
+    "papers_with_repeated_entries": 2536,
+    "papers_without_bibliography": 1409,
+    "median_entries_per_paper": 22,
+    "citation_pairs": 328622
+  },
+  "authors": {
+    "author_blocks": 227528,
+    "affiliation_or_header": 2471,
+    "missing_first_or_last": 18530,
+    "duplicate_in_paper": 10448,
+    "authors": 70171,
+    "paper_authors": 196079,
+    "papers_without_author": 255,
+    "open_variants": {
+      "accents_only": 464,
+      "middle_initial_only": 1108,
+      "accents_or_middle_initial": 1575
+    }
+  },
+  "fulltext": {
+    "papers": 1000,
+    "groups": {
+      "query_targets": 574,
+      "rag_topic": 36,
+      "s2_demo_papers": 1,
+      "s2_citing": 192,
+      "random": 197
+    }
+  }
+}
