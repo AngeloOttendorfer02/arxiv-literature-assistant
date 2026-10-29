@@ -14,6 +14,16 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D075 D-18 database retrieval comparison
+
+- Context: Compare dense, BM25 and hybrid paper search over title + abstract on D-22's 597 queries and identical Dev/Test split. Results: [D-18 comparison](d18_retrieval_comparison.md).
+- Evidence: Hybrid increases Recall@20 by 1.60 percentage points on Dev and 2.08 on Test, while MRR@100 and NDCG@10 decrease. Paired bootstrap (10,000 resamples, seed 42) gives six pointwise 95% intervals including zero: no clear advantage is established, and equivalence is not established either.
+- Decision: Keep RRF k=60 and title boost 0.5. Any tuning remains Dev-only team follow-up, with the primary metric agreed beforehand and settings frozen for Test. The offline SQL budget is 60 s; the API retains its default 10 s cap.
+- Validation: Run on dump v2 (counts match D064, archive checksum verified). Overall Recall@20 is 0.690 dense / 0.607 BM25 / 0.709 hybrid against 0.694 / 0.607 / 0.710 in D064. BM25 is identical, so the small dense gap is probably the approximate HNSW index rebuilt on restore (not verified).
+- Date: 2026-10-29
+
+---
+
 ### D074 R-09 natural paper references (extends D073)
 
 - Context: Users should be able to select DPR by abbreviation or author-year citation without knowing its full title or internal ID.

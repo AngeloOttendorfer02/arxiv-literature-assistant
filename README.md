@@ -371,6 +371,19 @@ The UI imports nothing from the package except `scilitrag.contracts`.
 
 ## Evaluate retrieval
 
+Compare the real database's dense, BM25 and hybrid paper search on all 597 LitSearch
+queries, reusing D-22's stratified dev/test split and metrics:
+
+```powershell
+uv run --locked --group data --group rag --group embed python scripts/compare_retrieval.py
+```
+
+This needs the local D-03 files (`DATA_DIR`), the full search-ready database
+(`DATABASE_URL`) and the pinned embedding model. It uses real search even with mocks
+enabled and does not call the planner or LLM. See the [D-18 guide](docs/d18_retrieval_evaluation.md)
+for smoke runs, outputs and the MRR@100 cutoff.
+The [D-18 comparison tables](docs/d18_retrieval_comparison.md) contain the full 597-query run.
+
 Run the synthetic cases with mocks before using real references or models:
 
 ```powershell

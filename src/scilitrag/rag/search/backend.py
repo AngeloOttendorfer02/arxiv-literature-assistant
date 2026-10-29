@@ -188,9 +188,9 @@ class SearchBackend:
         return result
 
 
-def default_backend(settings=None) -> SearchBackend:
+def default_backend(settings=None, *, statement_timeout_s=None) -> SearchBackend:
     settings = settings or load_settings()
-    reader = DatabaseReader(settings)
+    reader = DatabaseReader(settings, statement_timeout_s=statement_timeout_s)
     metadata = validate_database(reader, settings.embed_model)
     validate_search_indexes(reader)
     dimension = metadata.embed_dim

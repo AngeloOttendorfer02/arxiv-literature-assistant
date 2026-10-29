@@ -50,7 +50,8 @@ def test_missing_schema_field_is_reported_before_metadata_query():
         validate_database(metadata_reader(missing=("papers", "corpus_id")), "model")
 
 
-def test_reader_binds_values_and_sets_readonly_before_first_statement():
+@pytest.mark.parametrize("timeout,expected_ms", [(None, "10000"), (60.0, "60000")])
+def test_reader_binds_values_and_sets_readonly_before_first_statement(timeout, expected_ms):
     calls = []
 
     class Connection:
@@ -71,9 +72,18 @@ def test_reader_binds_values_and_sets_readonly_before_first_statement():
             return [{"value": 1}]
 
     settings = load_settings({"USE_MOCKS": "1", "DATABASE_URL": "postgresql://local/db"})
-    reader = DatabaseReader(settings, connect=lambda *args, **kwargs: Connection())
+    reader = DatabaseReader(
+        settings, connect=lambda *args, **kwargs: Connection(), statement_timeout_s=timeout
+    )
     assert reader("SELECT %(value)s", {"value": 1}) == [{"value": 1}]
-    assert calls[0][1] == ("10000",) and calls[1][1] == {"value": 1}
+    assert calls[0][1] == (expected_ms,) and calls[1][1] == {"value": 1}
+
+
+@pytest.mark.parametrize("timeout", [0, -1, float("inf"), float("nan")])
+def test_invalid_statement_timeout_is_rejected(timeout):
+    settings = load_settings({"USE_MOCKS": "1"})
+    with pytest.raises(ValueError, match="positive and finite"):
+        DatabaseReader(settings, statement_timeout_s=timeout)
 
 
 @pytest.mark.parametrize("error", [psycopg.OperationalError, psycopg.errors.QueryCanceled])
