@@ -40,6 +40,53 @@ def test_validated_plan_preserves_full_question():
     assert result.query == query and result.paper_ref == "BERT"
 
 
+@pytest.mark.parametrize("scenario", ["S1", "S3"])
+@pytest.mark.parametrize("topic", ["retrieval baseline", None])
+@pytest.mark.parametrize(
+    "reference", ["DPR", "Karpukhin et al. (2020)", "DPR (Karpukhin et al., 2020)"]
+)
+def test_target_baseline_request_overrides_incorrect_model_scenario(scenario, topic, reference):
+    query = f"Find top 10 papers since 2022 that use {reference} as a baseline."
+    result = build_plan(
+        query,
+        Client(payload(scenario=scenario, topic=topic, paper_ref=reference, year_from=2020)),
+    )
+    assert result.scenario == "S2" and result.require_baseline
+    assert result.paper_ref == reference and result.query == query
+    assert result.year_from == 2022 and result.year_to is None and result.k == 10
+
+
+@pytest.mark.parametrize(
+    ("scenario", "paper_ref", "require_baseline"),
+    [("S1", "DPR", False), ("S3", "DPR", False), ("S1", None, True)],
+)
+def test_other_requests_keep_model_scenario(scenario, paper_ref, require_baseline):
+    result = build_plan(
+        "retrieval question",
+        Client(payload(scenario=scenario, paper_ref=paper_ref, require_baseline=require_baseline)),
+    )
+    assert result.scenario == scenario
+
+
+@pytest.mark.parametrize(
+    "reference", ["DPR", "Karpukhin et al. (2020)", "DPR (Karpukhin et al., 2020)"]
+)
+def test_target_citation_is_preserved_without_inventing_result_year_filters(reference):
+    query = f"Which papers use {reference} as an experimental baseline?"
+    result = build_plan(query, Client(payload(paper_ref=reference, year_from=2020, year_to=2020)))
+    assert result.scenario == "S2" and result.require_baseline
+    assert result.paper_ref == reference
+    assert result.author_ref is None
+    assert result.year_from is None and result.year_to is None
+
+
+def test_citation_year_and_explicit_result_filter_are_independent():
+    query = "Find top 10 papers since 2022 that use Karpukhin et al. (2020) as a baseline."
+    result = build_plan(query, Client(payload(paper_ref="Karpukhin et al. (2020)", year_from=2020)))
+    assert result.paper_ref == "Karpukhin et al. (2020)"
+    assert result.year_from == 2022 and result.year_to is None and result.k == 10
+
+
 @pytest.mark.parametrize(
     "raw",
     [
