@@ -12,6 +12,7 @@ The project uses [LitSearch](https://huggingface.co/datasets/princeton-nlp/LitSe
 
 The full database is shared as a dump; restoring or building it is described in
 [Full database and dump (D-16)](#full-database-and-dump-d-16).
+Sizes, citation coverage and author counts are in [D-23 data statistics](docs/d23_data_statistics.md).
 
 ## Setup
 
