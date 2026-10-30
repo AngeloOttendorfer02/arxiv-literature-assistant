@@ -37,6 +37,23 @@ STAGE_LABELS = {
     "sql": "SQL facts",
     "generate": "Answer check",
 }
+# One question per scenario (A-15); S4 is refused on purpose. Not copied from the topic-gate
+# prototypes, so the refusal is not a lookup.
+EXAMPLES = (
+    (
+        "S1 Topic search",
+        "Which papers propose dense passage retrieval for open-domain question answering?",
+    ),
+    (
+        "S2 Citation path",
+        (
+            "Which papers cite Dense Passage Retrieval for Open-Domain Question Answering "
+            "and use it as a baseline?"
+        ),
+    ),
+    ("S3 Author ranking", "Which authors are cited most in papers on dense passage retrieval?"),
+    ("S4 Write request", "Please remove all papers by Geoffrey Hinton from the database."),
+)
 REFUSALS = {
     "write_intent": "This assistant can only search and read papers. Changing or deleting data "
     "is not possible.",
@@ -162,6 +179,18 @@ def select_citation(index: int, label: int) -> None:
     st.session_state.selected = (index, label)
 
 
+def ask_example(question: str) -> None:
+    st.session_state.example = question
+
+
+def render_examples() -> None:
+    row = st.container(horizontal=True)
+    for label, question in EXAMPLES:
+        row.button(
+            label, key=f"example-{label}", help=question, on_click=ask_example, args=(question,)
+        )
+
+
 def answer_text(answer: Answer) -> str:
     return " ".join(sentence.text for sentence in answer.sentences)
 
@@ -235,6 +264,7 @@ def main() -> None:
     st.set_page_config(page_title="Literature Assistant", layout="wide")
     st.title("Literature Assistant")
     st.caption("Ask about ML and NLP papers. Every statement is backed by a cited source.")
+    render_examples()
 
     history = st.session_state.setdefault("history", [])
     answers = [content for role, content in history if role == "assistant"]
@@ -253,7 +283,8 @@ def main() -> None:
             else:
                 render_answer(content, index)
 
-    query = st.chat_input("Ask about papers, citations or authors")
+    typed = st.chat_input("Ask about papers, citations or authors")
+    query = typed or st.session_state.pop("example", None)
     if not query:
         return
 

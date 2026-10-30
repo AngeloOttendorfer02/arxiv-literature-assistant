@@ -14,6 +14,18 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D077 A-12 benchmark results: q4_K_M stays the serving precision (completes D065)
+
+- Context: D065 fixed prompts and scoring, the full run was open. qwen3.8:27b-q4_K_M is the demo tag, chosen before any quality numbers existed.
+- Options: keep q4_K_M; move to q8_0 or bf16 if quantization costs citation quality.
+- Decision: Keep q4_K_M. Report Section 4 shows the full run (597 queries once per tag) against bf16.
+- Reason: q4_K_M needs 17.1 GB instead of 52.5 GB, decodes at 43.6 instead of 27.6 tokens/s and finishes 522 of 597 answers faster than bf16 (total median 7.2 against 9.5 s). Engine TTFT is about 1.2 s higher (2,308 against 1,078 ms), which is small next to planner and source guard in the app. Citation quality is not worse: recall 0.806 against 0.768 (+0.029 [+0.011, +0.047]), precision 0.791 against 0.749 (+0.032 [+0.013, +0.052]), target paper cited in 0.994 against 1.000 (n.s.), "not found" 0.171 against 0.161 (n.s.). q8_0 equals bf16 in recall and precision and says "not found" slightly more often (+0.010 [+0.003, +0.018]).
+- Validation: Modal A100 80 GB, Ollama 0.40.5, 0 failed requests and 0 answers cut at 1,024 tokens in all 1,791 requests. The 30 x 3 sample gives the same medians within 0.15 s TTFT and 0.5 tokens/s. Manual check of the "not found" pattern (20 flagged, 20 not flagged, seed 1789): no misclassification. The higher scores of q4_K_M come with shorter answers (median 187 against 213 tokens, 7.1 against 7.8 sentences) and fewer sentences with several citations (6.2 against 8.5 %), which are the hardest to entail; we do not read it as a quality gain from quantization. Scoring ran on the laptop CPU, results in eval/private/bench/quality.json and quality_30.json (not tracked).
+- Side run, not in the report: gemma4:31b-it-q4_K_M on the 30 x 3 sample, total median 7.1 s, recall 0.797 and precision 0.836 against bf16 0.802 and 0.801 (both n.s., intervals about +-0.08 to +-0.12 at 30 queries). No reason to change the model. Checked on 3 prompts in one container with nvidia-smi: gemma uses 22.9 GB on the GPU against 17.7 GB for qwen q4_K_M (Ollama's /api/ps reports 2.7 GB for gemma, wrong for its llama.cpp runner; for qwen it matches). The tag is a dense 30.7B model built from an MTP variant (`dhiltgen/gemma4:31b-it-mtp-q4_K_M-llamacpp`), so its 75 to 86 tokens/s come from speculative decoding with the multi-token-prediction head, while qwen decodes plainly at 46 tokens/s. Prefill of about 3,000 tokens took 3.0 s against 2.2 s for qwen. The speed comparison is therefore not like for like.
+- Date: 2026-10-29
+
+---
+
 ### D076 D-23 data statistics for the report (updates D-08 statistics)
 
 - Context: The report needs dataset sizes, citation coverage, papers without links, dropped authors and the full-text share. The numbers were spread over D032, D045, D046, D048 and D-08, and the D-08 author count (74,949) differed from the database (70,171).
