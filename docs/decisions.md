@@ -14,6 +14,17 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D078 R-09 direct baseline routing for reviewed references (extends D073/D074)
+
+- Context: The model can leave `paper_ref` empty for DPR/BERT baseline questions, so D074's scenario correction cannot apply.
+- Decision: Match supported explicit English baseline requests against the shared registry before model planning. A known reference selects S2 with `require_baseline=true`, without an LLM call or database lookup in the planner. Add the checked BERT short name (52967399); DPR and its reviewed citation forms remain supported. The S2 linker checks existence and ambiguity.
+- Reason: Recognize these references independently of model output. BERT already resolves by title prefix in the linker; its registry entry also enables direct routing. Preserve title-prefix passage matching for BERT-base/BERT-large and strict DPR boundaries.
+- Limits: Full titles, BERT-base/BERT-large in user questions, unregistered names and other question forms still use model planning. Missing registered papers are reported only during S2 retrieval. Further direct-routing names require reviewed entries.
+- Validation: Tests cover routing with LLM/DB calls forbidden, explicit filters, linker failures and passage boundaries.
+- Date: 2026-10-30
+
+---
+
 ### D077 A-12 benchmark results: q4_K_M stays the serving precision (completes D065)
 
 - Context: D065 fixed prompts and scoring, the full run was open. qwen3.8:27b-q4_K_M is the demo tag, chosen before any quality numbers existed.

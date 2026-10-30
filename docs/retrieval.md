@@ -53,8 +53,23 @@ Surname lookup materializes the matching authors once before joining their paper
 so it does not repeat the unindexed surname scan for each candidate paper.
 The planner keeps the target citation's author/year in `paper_ref`, separate from explicit
 filters on the citing papers. For example, ask `Which papers use DPR as an experimental baseline?`.
+For explicit English requests such as `Which papers use DPR as a baseline?` or
+`Which papers cite BERT and use it as a baseline?`, the planner extracts the target from
+the question and matches it against the reviewed alias registry before calling the LLM.
+Known references select S2 directly with `require_baseline=true`, without a database
+query in the planner. The S2 linker subsequently checks database existence and ambiguity.
+Unrecognized references and other question forms keep model planning. This is not a
+general method-baseline search. Explicit year and result limits are still reconciled.
+This direct route covers only supported English baseline-request forms and references
+already in the registry. Full DPR/BERT titles, `BERT-base`, `BERT-large`, unregistered
+names and other question forms still use model planning; this does not automatically
+mean S1. New names need reviewed registry entries to receive direct routing. The planner
+does not check corpus availability: a missing registered paper is reported as
+`Paper not found` during S2 retrieval, including on smaller fixture databases.
 When the model sets a nonblank `paper_ref` and `require_baseline=true`, a deterministic
 rule selects S2 before scenario validation, correcting an S1 or S3 classification.
+This existing rule does not verify that a model-supplied reference such as `BM25`
+identifies a paper; it is subsequently handled by the ordinary S2 linker.
 SQL follows
 incoming edges: `citations.cited_id` is the target and `citations.citing_id` is a result.
 Year/author filters apply to citing papers, not the target's publication year.
@@ -68,10 +83,12 @@ paper's own experiments, comparison or baseline, including the passive forms bel
 hypothetical comparisons and related-work sections are excluded. A comparison attributed
 to earlier work, a citation edge, a mention, or BERT inside RoBERTa is insufficient.
 
-`rag/search/paper_aliases.py` holds the shared registry. Initially it covers DPR (corpus ID
+`rag/search/paper_aliases.py` holds the shared registry. It covers DPR (corpus ID
 215737187), `DPR` and `Karpukhin et al.` with year 2020 (comma, parenthesized and plain-year
-forms). Other short names and citation aliases need reviewed entries; the code does not
-guess acronyms or first-author order. Baseline passage queries include the reviewed aliases.
+forms), plus the short name `BERT` (corpus ID 52967399). Other short names and citation aliases
+need reviewed entries; the code does not guess acronyms or first-author order.
+BERT is already discoverable by its title prefix in the linker; its registry entry also
+enables routing without a database lookup. Baseline passage queries include the reviewed aliases.
 Matching supports `we use DPR ... as its pretrained baseline`, `our comparisons with DPR`,
 `DPR (Karpukhin et al., 2020) is our baseline` and `DPR [12] serves as our baseline`.
 Passive use is accepted when directly linked to own-study context, for example `DPR was
