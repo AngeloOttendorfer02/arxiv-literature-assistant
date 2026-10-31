@@ -153,8 +153,10 @@ def build_plan(masked_query: str, client: JsonCompletionClient) -> Plan:
         topic = result.topic.strip()
         topic_request = re.search(
             r"\b(?:papers|articles|studies|research|work)\s+(?:about|on)\s+"
-            + re.escape(topic) + r"(?=$|[\s.,?])",
-            masked_query, flags=re.IGNORECASE,
+            + re.escape(topic)
+            + r"(?=$|[\s.,?])",
+            masked_query,
+            flags=re.IGNORECASE,
         )
         if topic and paper_ref.strip().casefold() == topic.casefold() and topic_request:
             paper_ref = None
@@ -168,7 +170,11 @@ def build_plan(masked_query: str, client: JsonCompletionClient) -> Plan:
             masked_query,
             flags=re.IGNORECASE,
         )
-        if acronym and acronym.group(1).casefold() == author_ref.strip().casefold() and not explicit:
+        if (
+            acronym
+            and acronym.group(1).casefold() == author_ref.strip().casefold()
+            and not explicit
+        ):
             author_ref = None
     # Explicit user constraints are authoritative. Unsupported inferred years
     # are removed instead of silently narrowing the search.

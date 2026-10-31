@@ -100,7 +100,9 @@ def baseline_candidate(
     for sentence in re.split(r"(?<=[.!?])\s+", normalized):
         # "Without fine-tuning" describes how a baseline is used, not whether it is used.
         negation_text = re.sub(
-            r"\bwithout\s+(?:any\s+)?fine[- ]tuning\b", "", sentence,
+            r"\bwithout\s+(?:any\s+)?fine[- ]tuning\b",
+            "",
+            sentence,
             flags=re.IGNORECASE,
         )
         if re.search(
@@ -121,9 +123,7 @@ def baseline_candidate(
             return True
         # In a baselines section, an explicitly named target-based baseline
         # directly using the target is a comparison candidate, not a mention.
-        named_baseline = (
-            target + r"\s+\w+\s+directly\s+uses\s+(?:the\s+)?" + target + r"\b"
-        )
+        named_baseline = target + r"\s+\w+\s+directly\s+uses\s+(?:the\s+)?" + target + r"\b"
         if re.search(r"\bbaselines?\b", section or "", re.IGNORECASE) and re.search(
             named_baseline, sentence, re.IGNORECASE
         ):

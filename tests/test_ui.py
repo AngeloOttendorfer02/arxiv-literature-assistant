@@ -120,9 +120,7 @@ def test_table_is_rendered_before_stream_ends(monkeypatch):
         def iter_lines(self):
             return iter(())
 
-    table = TableEvent(
-        columns=["name"], rows=[["Ada"]], query_id="q1", sql="SELECT 1"
-    )
+    table = TableEvent(columns=["name"], rows=[["Ada"]], query_id="q1", sql="SELECT 1")
 
     def events(_lines):
         yield "table", table

@@ -379,7 +379,9 @@ def test_composite_baseline_does_not_match_an_unrelated_retriever():
     assert not baseline_candidate(text, DPR_TITLE, "Evaluation setup", target_id=DPR_ID)
     assert not baseline_candidate(
         "Our baseline is not a model with a dense passage retriever (DPR; details).",
-        DPR_TITLE, "Evaluation setup", target_id=DPR_ID,
+        DPR_TITLE,
+        "Evaluation setup",
+        target_id=DPR_ID,
     )
 
 
@@ -388,5 +390,7 @@ def test_without_finetuning_is_not_negated_baseline_use():
     assert baseline_candidate(text, DPR_TITLE, "Baseline Methods", target_id=DPR_ID)
     assert not baseline_candidate(
         "Our baseline works without using DPR and without fine-tuning.",
-        DPR_TITLE, "Baseline Methods", target_id=DPR_ID,
+        DPR_TITLE,
+        "Baseline Methods",
+        target_id=DPR_ID,
     )

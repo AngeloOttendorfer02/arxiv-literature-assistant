@@ -16,7 +16,8 @@ def _is_plain_author_ranking(plan: Plan) -> bool:
         r"\s*(?:rank|list|show|find)\s+(?:the\s+)?"
         r"(?:(?:up to|top)\s+\d+\s+)?most\s+cited\s+authors\s+"
         r"(?:for|on|about|in)\s+(.+?)\s*[?.]?\s*",
-        plan.query, flags=re.IGNORECASE,
+        plan.query,
+        flags=re.IGNORECASE,
     )
     return bool(match and match.group(1).strip().casefold() == plan.topic.strip().casefold())
 

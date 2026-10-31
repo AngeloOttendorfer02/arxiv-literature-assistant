@@ -27,7 +27,9 @@ def test_explicit_constraints(query, expected):
     assert (value.year_from, value.year_to, value.k) == expected
 
 
-@pytest.mark.parametrize("query", ["after 2024 before 2020", "from 2023 to 2020", "top 30 papers", "top 3 and top 4"])
+@pytest.mark.parametrize(
+    "query", ["after 2024 before 2020", "from 2023 to 2020", "top 30 papers", "top 3 and top 4"]
+)
 def test_conflicting_requests_require_clarification(query):
     with pytest.raises(RagUserError):
         parse_filters(query)

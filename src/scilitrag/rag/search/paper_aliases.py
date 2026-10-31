@@ -17,9 +17,7 @@ class VerifiedAliases:
 
 # Reviewed identities; do not guess acronyms or author order from IDs.
 VERIFIED_ALIASES = {
-    215737187: VerifiedAliases(
-        ("DPR",), "Karpukhin et al.", 2020, ("Dense Passage Retrieval",)
-    ),
+    215737187: VerifiedAliases(("DPR",), "Karpukhin et al.", 2020, ("Dense Passage Retrieval",)),
     52967399: VerifiedAliases(("BERT",)),
 }
 
