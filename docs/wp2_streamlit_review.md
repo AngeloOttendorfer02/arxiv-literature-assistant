@@ -20,7 +20,9 @@ failed run does not make that answer successful. Compare candidate models with
 WP4 on the same cases and record the model, endpoint, settings, coverage and
 results; a few UI examples do not establish model superiority. Citation
 precision and year/count exact match require recorded human judgments and
-denominators. Current UI interactions do not create the structured evaluation
-run reports described in `evaluation.md`, so record these results separately.
+denominators. Use **Review answer quality** below a completed chat answer to
+record and download these judgments. Unreviewed items are excluded; rates apply
+only to that answer. Current UI interactions do not create the structured
+evaluation run reports described in `evaluation.md`, so keep them separate.
 
 Do not commit reference JSON, reviewed excerpts, API keys or database credentials.
