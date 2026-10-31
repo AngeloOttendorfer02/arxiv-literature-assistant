@@ -1,0 +1,4032 @@
+{
+ "meta": {
+  "mode": "live",
+  "source": "live",
+  "hardware": {
+   "platform": "Windows-11-10.0.26300-SP0",
+   "processor": "Intel64 Family 6 Model 141 Stepping 1, GenuineIntel",
+   "cpu_count": 16,
+   "python": "3.13.17",
+   "torch": "2.14.1+cpu",
+   "torch_threads": 8,
+   "gpu": null
+  },
+  "llm": "Qwen/Qwen3.8-2.4T-A95B",
+  "llm_reasoning_effort": "none",
+  "llm_max_output_tokens": "4096"
+ },
+ "summary": {
+  "requests": {
+   "total": 30,
+   "answered": 29,
+   "refused": 1,
+   "failed": 0,
+   "in_per_request_figures": 28
+  },
+  "cold_start_ms": {
+   "topic_gate": 2438.1,
+   "prompt_guard": 171215.0,
+   "sentence_checks": 176190.9,
+   "pii": 1.0,
+   "retrieve": 35333.8,
+   "generate": 178522.1,
+   "evidence_guard": 1300.9,
+   "plan": 1447.8,
+   "sql": 0.4
+  },
+  "stages": {
+   "prompt_guard": {
+    "n": 29,
+    "median": 77.90330005809665,
+    "p95": 165.88480002246797,
+    "max": 172.72450006566942
+   },
+   "topic_gate": {
+    "n": 29,
+    "median": 37.75719995610416,
+    "p95": 71.18560001254082,
+    "max": 95.87089996784925
+   },
+   "pii": {
+    "n": 28,
+    "median": 0.47859991900622845,
+    "p95": 0.950399786233902,
+    "max": 1.7641999293118715
+   },
+   "evidence_guard": {
+    "n": 28,
+    "median": 1788.0023000761867,
+    "p95": 2999.238600023091,
+    "max": 4114.981299964711
+   },
+   "plan": {
+    "n": 28,
+    "median": 1189.2281000036746,
+    "p95": 1497.6332997903228,
+    "max": 1544.8692999780178
+   },
+   "retrieve": {
+    "n": 28,
+    "median": 35415.296599967405,
+    "p95": 45515.93660004437,
+    "max": 45527.40119979717
+   },
+   "sql": {
+    "n": 28,
+    "median": 0.4854998551309109,
+    "p95": 0.6853998638689518,
+    "max": 0.7261999417096376
+   },
+   "generate": {
+    "n": 28,
+    "median": 9038.291099946946,
+    "p95": 17640.938499942422,
+    "max": 18669.11910008639
+   }
+  },
+  "wait_for_first_sentence_ms": {
+   "n": 26,
+   "median": 5716.370299924165,
+   "p95": 11287.98729996197,
+   "max": 14155.89729999192
+  },
+  "sentence_checks": {
+   "sentence_checks_total": {
+    "n": 28,
+    "median": 7541.56,
+    "p95": 14298.235999999999,
+    "max": 17709.903
+   },
+   "generate_without_checks": {
+    "n": 28,
+    "median": 1011.8309998762752,
+    "p95": 4626.160000025198,
+    "max": 5247.201499942423
+   },
+   "check_sentence_per_call": {
+    "n": 28,
+    "median": 532.2199230769231,
+    "p95": 1180.867,
+    "max": 1190.4634166666667
+   }
+  },
+  "guardrail_total_ms": {
+   "n": 28,
+   "median": 8950.699300200402,
+   "p95": 17048.747200167236,
+   "max": 20779.750299950196
+  },
+  "sentences": {
+   "checked": 577,
+   "removed": 422
+  }
+ },
+ "records": [
+  {
+   "ts": "2026-10-28T22:38:44.076+00:00",
+   "request_id": "d3166a9dbdbd489d935c0f2dc59935df",
+   "status": "refused",
+   "error_code": null,
+   "query_chars": 82,
+   "scenario": null,
+   "ttft_engine_ms": null,
+   "ttft_user_ms": null,
+   "total_ms": 174006.79240003228,
+   "stage_latency_ms": {
+    "prompt_guard": 171214.95799999684,
+    "topic_gate": 2438.051899895072
+   },
+   "tokens": 0,
+   "tokens_per_s": null,
+   "sentences_checked": 0,
+   "sentences_removed": 0,
+   "component_ms": {},
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 171214.95799999684,
+     "score": 0.00044279213761910796
+    },
+    {
+     "stage": "topic_gate",
+     "result": "write_intent",
+     "latency_ms": 2438.051899895072,
+     "score": 0.0010914032702804555
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:42:20.796+00:00",
+   "request_id": "39fae576f06f4f5fad2e76a1c4861b81",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 47,
+   "scenario": "S1",
+   "ttft_engine_ms": 38199.017899809405,
+   "ttft_user_ms": 216719.6490999777,
+   "total_ms": 216719.70999985933,
+   "stage_latency_ms": {
+    "prompt_guard": 76.81959983892739,
+    "topic_gate": 35.92229983769357,
+    "pii": 0.9518999140709639,
+    "plan": 1447.8019999805838,
+    "retrieve": 35333.80359993316,
+    "evidence_guard": 1300.9246999863535,
+    "sql": 0.42329984717071056,
+    "generate": 178522.12350000627
+   },
+   "tokens": 22,
+   "tokens_per_s": 0.12,
+   "sentences_checked": 18,
+   "sentences_removed": 17,
+   "component_ms": {
+    "paper_dense_ms": 5083.011,
+    "paper_bm25_ms": 5042.023,
+    "paper_fusion_ms": 0.144,
+    "check_sentence_ms": 176189.907,
+    "check_sentence_calls": 10.0,
+    "mask_pii_ms": 0.83,
+    "render_citations_ms": 0.156
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 76.81959983892739,
+     "score": 0.0004833394486922771
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 35.92229983769357,
+     "score": -0.04037456764610092
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.9518999140709639,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1300.9246999863535,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 170759.67810000293
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 424.66200003400445
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 564.9678998161107
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 316.7167000938207
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 545.491699827835
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 968.5949999839067
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 854.4213999994099
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 399.7258001472801
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 456.69910009019077
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:43:07.416+00:00",
+   "request_id": "c5ddfca53b9846fb84d7a69f8b499076",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 75,
+   "scenario": "S1",
+   "ttft_engine_ms": 38152.87999995053,
+   "ttft_user_ms": 46620.507299900055,
+   "total_ms": 46620.583300013095,
+   "stage_latency_ms": {
+    "prompt_guard": 78.10360006988049,
+    "topic_gate": 30.436899978667498,
+    "pii": 0.3866998013108969,
+    "plan": 1497.6332997903228,
+    "retrieve": 35346.40520019457,
+    "evidence_guard": 1197.8477998636663,
+    "sql": 0.32519991509616375,
+    "generate": 8468.631000025198
+   },
+   "tokens": 30,
+   "tokens_per_s": 3.69,
+   "sentences_checked": 31,
+   "sentences_removed": 30,
+   "component_ms": {
+    "paper_dense_ms": 5091.862,
+    "paper_bm25_ms": 5054.761,
+    "paper_fusion_ms": 0.106,
+    "check_sentence_ms": 3841.445,
+    "check_sentence_calls": 8.0,
+    "mask_pii_ms": 0.895,
+    "render_citations_ms": 0.131
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 78.10360006988049,
+     "score": 0.0005550036439672112
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 30.436899978667498,
+     "score": -0.05371110365299192
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.3866998013108969,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1197.8477998636663,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 349.66190019622445
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 326.9573000725359
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 458.2837000489235
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 578.7311000749469
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 301.71529995277524
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 601.0402000974864
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 619.3965000566095
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:44:14.677+00:00",
+   "request_id": "2b6388a0e8864c689b86321d82df67a9",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 60,
+   "scenario": "S1",
+   "ttft_engine_ms": 49621.0648000706,
+   "ttft_user_ms": 60909.05210003257,
+   "total_ms": 67260.21570013836,
+   "stage_latency_ms": {
+    "prompt_guard": 77.90330005809665,
+    "topic_gate": 40.71459989063442,
+    "pii": 0.3926998469978571,
+    "plan": 1487.6743000932038,
+    "retrieve": 45483.34360006265,
+    "evidence_guard": 2527.8310000430793,
+    "sql": 0.42910012416541576,
+    "generate": 17640.938499942422
+   },
+   "tokens": 43,
+   "tokens_per_s": 2.58,
+   "sentences_checked": 29,
+   "sentences_removed": 25,
+   "component_ms": {
+    "paper_dense_ms": 5102.325,
+    "paper_bm25_ms": 5052.451,
+    "paper_fusion_ms": 0.21,
+    "chunk_dense_ms": 5034.322,
+    "chunk_bm25_ms": 5048.745,
+    "check_sentence_ms": 12317.282,
+    "check_sentence_calls": 12.0,
+    "mask_pii_ms": 75.936,
+    "render_citations_ms": 0.519
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 77.90330005809665,
+     "score": 0.000535395578481257
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 40.71459989063442,
+     "score": -0.038304110806150704
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.3926998469978571,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2527.8310000430793,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1300.251099979505
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 494.55760000273585
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 571.3903000578284
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 314.03899984434247
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 2042.046600021422
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 538.0895000416785
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 697.4374998826534
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1342.556499876082
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:45:00.470+00:00",
+   "request_id": "d5af06f31c294e2ab735b659fdb50753",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 70,
+   "scenario": "S1",
+   "ttft_engine_ms": 38034.08750006929,
+   "ttft_user_ms": 42295.63460010104,
+   "total_ms": 45793.17470011301,
+   "stage_latency_ms": {
+    "prompt_guard": 78.61399999819696,
+    "topic_gate": 37.75719995610416,
+    "pii": 0.46300003305077553,
+    "plan": 1378.1512000132352,
+    "retrieve": 35334.91239999421,
+    "evidence_guard": 1201.959199970588,
+    "sql": 0.32679992727935314,
+    "generate": 7760.07439987734
+   },
+   "tokens": 20,
+   "tokens_per_s": 2.61,
+   "sentences_checked": 13,
+   "sentences_removed": 6,
+   "component_ms": {
+    "paper_dense_ms": 5096.456,
+    "paper_bm25_ms": 5054.688,
+    "paper_fusion_ms": 0.23,
+    "check_sentence_ms": 6918.859,
+    "check_sentence_calls": 13.0,
+    "mask_pii_ms": 7.617,
+    "render_citations_ms": 1.114
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 78.61399999819696,
+     "score": 0.0004228294128552079
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 37.75719995610416,
+     "score": -0.043689294136237344
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.46300003305077553,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1201.959199970588,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 419.4383998401463
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 381.58849999308586
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 445.7048000767827
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 456.9973999168724
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 379.1163000278175
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 830.4672001395375
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:45:48.022+00:00",
+   "request_id": "1fbd606901474bfd984d7823fd643d81",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 54,
+   "scenario": "S1",
+   "ttft_engine_ms": 38514.22080001794,
+   "ttft_user_ms": 45379.35820012353,
+   "total_ms": 47551.49220000021,
+   "stage_latency_ms": {
+    "prompt_guard": 73.63490015268326,
+    "topic_gate": 37.04049997031689,
+    "pii": 0.336499884724617,
+    "plan": 1404.067900031805,
+    "retrieve": 35354.29699998349,
+    "evidence_guard": 1642.0294002164155,
+    "sql": 0.7261999417096376,
+    "generate": 9038.291099946946
+   },
+   "tokens": 14,
+   "tokens_per_s": 1.49,
+   "sentences_checked": 11,
+   "sentences_removed": 5,
+   "component_ms": {
+    "paper_dense_ms": 5092.2,
+    "paper_bm25_ms": 5051.102,
+    "paper_fusion_ms": 0.119,
+    "check_sentence_ms": 4740.303,
+    "check_sentence_calls": 11.0,
+    "mask_pii_ms": 4.366,
+    "render_citations_ms": 0.743
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 73.63490015268326,
+     "score": 0.000539598404429853
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 37.04049997031689,
+     "score": -0.1677011038827576
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.336499884724617,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1642.0294002164155,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 304.7042000107467
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 361.10229999758303
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 350.8431001100689
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 801.6994001809508
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 393.0777998175472
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:46:36.815+00:00",
+   "request_id": "d821a4a7ffe84efe9df9306d0a731149",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 52,
+   "scenario": "S1",
+   "ttft_engine_ms": 38023.91139999963,
+   "ttft_user_ms": 42862.64770012349,
+   "total_ms": 48792.9465000052,
+   "stage_latency_ms": {
+    "prompt_guard": 64.66359994374216,
+    "topic_gate": 36.667299922555685,
+    "pii": 0.2802000381052494,
+    "plan": 1189.2281000036746,
+    "retrieve": 35336.12019987777,
+    "evidence_guard": 1394.8605000041425,
+    "sql": 0.30399998649954796,
+    "generate": 10770.050500053912
+   },
+   "tokens": 40,
+   "tokens_per_s": 3.62,
+   "sentences_checked": 38,
+   "sentences_removed": 33,
+   "component_ms": {
+    "paper_dense_ms": 5087.959,
+    "paper_bm25_ms": 5073.728,
+    "paper_fusion_ms": 0.135,
+    "check_sentence_ms": 9844.719,
+    "check_sentence_calls": 15.0,
+    "mask_pii_ms": 5.622,
+    "render_citations_ms": 0.71
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 64.66359994374216,
+     "score": 0.0004945987602695823
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 36.667299922555685,
+     "score": -0.06195537307051391
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.2802000381052494,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1394.8605000041425,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 548.4454999677837
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 542.5410000607371
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 441.85830000787973
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 801.7808001022786
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 376.01480004377663
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 510.9059000387788
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 879.4839000329375
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 358.81570004858077
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1200.8410000707954
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 886.6765999700874
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:47:21.518+00:00",
+   "request_id": "e802335558cb470da33210abdf427440",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 54,
+   "scenario": "S1",
+   "ttft_engine_ms": 37699.43669997156,
+   "ttft_user_ms": 41475.22410005331,
+   "total_ms": 44702.91509991512,
+   "stage_latency_ms": {
+    "prompt_guard": 73.0868000537157,
+    "topic_gate": 35.76030000112951,
+    "pii": 0.47859991900622845,
+    "plan": 1099.1009001154453,
+    "retrieve": 35331.252600066364,
+    "evidence_guard": 1156.8668999243528,
+    "sql": 0.569300027564168,
+    "generate": 7004.566099960357
+   },
+   "tokens": 17,
+   "tokens_per_s": 2.41,
+   "sentences_checked": 13,
+   "sentences_removed": 5,
+   "component_ms": {
+    "paper_dense_ms": 5088.762,
+    "paper_bm25_ms": 5060.571,
+    "paper_fusion_ms": 0.132,
+    "check_sentence_ms": 6243.12,
+    "check_sentence_calls": 13.0,
+    "mask_pii_ms": 7.269,
+    "render_citations_ms": 1.066
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 73.0868000537157,
+     "score": 0.0006009463686496019
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 35.76030000112951,
+     "score": -0.022311810178201497
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.47859991900622845,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1156.8668999243528,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 353.5637001041323
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 524.6869998518378
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 475.0755000859499
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 346.62079997360706
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 453.7982000038028
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:48:15.903+00:00",
+   "request_id": "122d3f9daadd4073ba5701abfd820f15",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 49,
+   "scenario": "S1",
+   "ttft_engine_ms": 39218.9998999238,
+   "ttft_user_ms": 46116.21719994582,
+   "total_ms": 54384.06329997815,
+   "stage_latency_ms": {
+    "prompt_guard": 81.76090009510517,
+    "topic_gate": 39.84190011397004,
+    "pii": 0.354900024831295,
+    "plan": 1219.9586001224816,
+    "retrieve": 35396.22929994948,
+    "evidence_guard": 2477.2427999414504,
+    "sql": 0.5568999331444502,
+    "generate": 15167.07480000332
+   },
+   "tokens": 19,
+   "tokens_per_s": 1.27,
+   "sentences_checked": 12,
+   "sentences_removed": 6,
+   "component_ms": {
+    "paper_dense_ms": 5145.286,
+    "paper_bm25_ms": 5063.06,
+    "paper_fusion_ms": 0.23,
+    "check_sentence_ms": 14170.404,
+    "check_sentence_calls": 12.0,
+    "mask_pii_ms": 12.543,
+    "render_citations_ms": 1.48
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 81.76090009510517,
+     "score": 0.000520517525728792
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 39.84190011397004,
+     "score": -0.03310951849024113
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.354900024831295,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2477.2427999414504,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 920.1682999264449
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 914.038100047037
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1032.6487000565976
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 974.877400090918
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1051.5687998849899
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1918.2380000129342
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:49:09.752+00:00",
+   "request_id": "6571d23183ac44218148a364601e75a9",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 64,
+   "scenario": "S1",
+   "ttft_engine_ms": 39286.49889980443,
+   "ttft_user_ms": 48899.14229977876,
+   "total_ms": 53849.13260000758,
+   "stage_latency_ms": {
+    "prompt_guard": 137.54120003432035,
+    "topic_gate": 68.3661000803113,
+    "pii": 0.69650006480515,
+    "plan": 1162.1260999236256,
+    "retrieve": 35406.32380009629,
+    "evidence_guard": 2505.531700095162,
+    "sql": 0.5908999592065811,
+    "generate": 14566.301499959081
+   },
+   "tokens": 37,
+   "tokens_per_s": 2.64,
+   "sentences_checked": 25,
+   "sentences_removed": 19,
+   "component_ms": {
+    "paper_dense_ms": 5114.345,
+    "paper_bm25_ms": 5049.38,
+    "paper_fusion_ms": 0.237,
+    "check_sentence_ms": 12427.472,
+    "check_sentence_calls": 12.0,
+    "mask_pii_ms": 10.768,
+    "render_citations_ms": 1.397
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 137.54120003432035,
+     "score": 0.0010357073042541742
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 68.3661000803113,
+     "score": -0.1317191269681227
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.69650006480515,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2505.531700095162,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 830.1969999447465
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 976.3116000685841
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1195.8366001490504
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 836.8671999778599
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 1012.4275998678058
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1334.27880005911
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:50:01.988+00:00",
+   "request_id": "d0eba9ddf36a450b92ee4c4fc3644505",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 44,
+   "scenario": "S1",
+   "ttft_engine_ms": 39099.152999930084,
+   "ttft_user_ms": 45387.31330004521,
+   "total_ms": 52235.532499849796,
+   "stage_latency_ms": {
+    "prompt_guard": 172.72450006566942,
+    "topic_gate": 71.18560001254082,
+    "pii": 0.9049999061971903,
+    "plan": 1168.9424999058247,
+    "retrieve": 35380.117299966514,
+    "evidence_guard": 2300.3813999239355,
+    "sql": 0.6451001390814781,
+    "generate": 13138.877100078389
+   },
+   "tokens": 17,
+   "tokens_per_s": 1.32,
+   "sentences_checked": 13,
+   "sentences_removed": 6,
+   "component_ms": {
+    "paper_dense_ms": 5117.214,
+    "paper_bm25_ms": 5063.471,
+    "paper_fusion_ms": 0.199,
+    "check_sentence_ms": 12313.29,
+    "check_sentence_calls": 13.0,
+    "mask_pii_ms": 10.046,
+    "render_citations_ms": 1.686
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 172.72450006566942,
+     "score": 0.0005115250241942704
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 71.18560001254082,
+     "score": -0.07924619016566226
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.9049999061971903,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2300.3813999239355,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 929.9558999482542
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 800.2027999609709
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 591.0898998845369
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 938.4212999138981
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 1129.7138999216259
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 929.8797999508679
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:50:55.052+00:00",
+   "request_id": "94a250826d054ddb9538e12d3ef59ffb",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 69,
+   "scenario": "S1",
+   "ttft_engine_ms": 39271.141699980944,
+   "ttft_user_ms": 44987.51199990511,
+   "total_ms": 53063.573099905625,
+   "stage_latency_ms": {
+    "prompt_guard": 165.88480002246797,
+    "topic_gate": 69.26529994234443,
+    "pii": 0.7863000500947237,
+    "plan": 1391.8425000738353,
+    "retrieve": 35443.62880010158,
+    "evidence_guard": 2195.7377998623997,
+    "sql": 0.5249001551419497,
+    "generate": 13794.286699965596
+   },
+   "tokens": 19,
+   "tokens_per_s": 1.41,
+   "sentences_checked": 14,
+   "sentences_removed": 6,
+   "component_ms": {
+    "paper_dense_ms": 5140.974,
+    "paper_bm25_ms": 5053.593,
+    "paper_fusion_ms": 0.305,
+    "check_sentence_ms": 12797.803,
+    "check_sentence_calls": 14.0,
+    "mask_pii_ms": 12.752,
+    "render_citations_ms": 2.029
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 165.88480002246797,
+     "score": 0.0005467984592542052
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 69.26529994234443,
+     "score": -0.0793147454747557
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.7863000500947237,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2195.7377998623997,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 475.7087000180036
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 689.4940999336541
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 757.6979999430478
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 1130.8279000222683
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 994.4291999563575
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1168.2075997814536
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:51:49.128+00:00",
+   "request_id": "a02ac0844cda40faabb29f9a22358e9c",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 50,
+   "scenario": "S1",
+   "ttft_engine_ms": 39223.81190001033,
+   "ttft_user_ms": 46153.576200129464,
+   "total_ms": 54075.08850004524,
+   "stage_latency_ms": {
+    "prompt_guard": 144.39740008674562,
+    "topic_gate": 66.45860010758042,
+    "pii": 0.6402998697012663,
+    "plan": 1187.9631001502275,
+    "retrieve": 35364.061600062996,
+    "evidence_guard": 2456.278400029987,
+    "sql": 0.5469000898301601,
+    "generate": 14853.323499904945
+   },
+   "tokens": 19,
+   "tokens_per_s": 1.33,
+   "sentences_checked": 13,
+   "sentences_removed": 5,
+   "component_ms": {
+    "paper_dense_ms": 5109.327,
+    "paper_bm25_ms": 5055.199,
+    "paper_fusion_ms": 0.272,
+    "check_sentence_ms": 14042.075,
+    "check_sentence_calls": 13.0,
+    "mask_pii_ms": 17.087,
+    "render_citations_ms": 2.036
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 144.39740008674562,
+     "score": 0.0004604757414199412
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 66.45860010758042,
+     "score": -0.13587152278188463
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.6402998697012663,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2456.278400029987,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 764.4952000118792
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 1114.0730001498014
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 995.1718000229448
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 818.698399933055
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 1239.5300001371652
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:52:44.092+00:00",
+   "request_id": "571e7f036a004e81854ae1c4e9df58ad",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 61,
+   "scenario": "S1",
+   "ttft_engine_ms": 39715.010799933225,
+   "ttft_user_ms": 46565.312599996105,
+   "total_ms": 54963.61489989795,
+   "stage_latency_ms": {
+    "prompt_guard": 161.6424999665469,
+    "topic_gate": 95.87089996784925,
+    "pii": 0.5742001812905073,
+    "plan": 1544.8692999780178,
+    "retrieve": 35415.296599967405,
+    "evidence_guard": 2492.423600051552,
+    "sql": 0.6083999760448933,
+    "generate": 15250.666900072247
+   },
+   "tokens": 17,
+   "tokens_per_s": 1.24,
+   "sentences_checked": 12,
+   "sentences_removed": 6,
+   "component_ms": {
+    "paper_dense_ms": 5142.391,
+    "paper_bm25_ms": 5061.377,
+    "paper_fusion_ms": 0.24,
+    "check_sentence_ms": 14285.561,
+    "check_sentence_calls": 12.0,
+    "mask_pii_ms": 11.197,
+    "render_citations_ms": 1.478
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 161.6424999665469,
+     "score": 0.0003902358002960682
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 95.87089996784925,
+     "score": -0.07518896244469819
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.5742001812905073,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2492.423600051552,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1193.8151000067592
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1054.215099895373
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 801.818500040099
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 800.7498998194933
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 875.9401000570506
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 2303.537999978289
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:53:44.571+00:00",
+   "request_id": "0272519e75f94942a4bc14ac7bd7a075",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 50,
+   "scenario": "S1",
+   "ttft_engine_ms": 49998.47769993357,
+   "ttft_user_ms": 53546.09580012038,
+   "total_ms": 60479.50550005771,
+   "stage_latency_ms": {
+    "prompt_guard": 156.40809992328286,
+    "topic_gate": 65.39420015178621,
+    "pii": 0.950399786233902,
+    "plan": 1256.4024000894278,
+    "retrieve": 45515.93660004437,
+    "evidence_guard": 2999.238600023091,
+    "sql": 0.4854998551309109,
+    "generate": 10483.353900024667
+   },
+   "tokens": 20,
+   "tokens_per_s": 1.98,
+   "sentences_checked": 10,
+   "sentences_removed": 7,
+   "component_ms": {
+    "paper_dense_ms": 5093.784,
+    "paper_bm25_ms": 5056.274,
+    "paper_fusion_ms": 0.152,
+    "chunk_dense_ms": 5045.858,
+    "chunk_bm25_ms": 5064.609,
+    "check_sentence_ms": 9117.207,
+    "check_sentence_calls": 10.0,
+    "mask_pii_ms": 3.758,
+    "render_citations_ms": 0.428
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 156.40809992328286,
+     "score": 0.0004323020693846047
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 65.39420015178621,
+     "score": -0.03180484957811969
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.950399786233902,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2999.238600023091,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 610.1798000745475
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 560.3935001417994
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1160.3002999909222
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1199.5367999188602
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 646.4728999417275
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1139.8577999789268
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1253.397500142455
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:54:31.185+00:00",
+   "request_id": "937f4cd03fd444abbb633d5c152ec63a",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 79,
+   "scenario": "S1",
+   "ttft_engine_ms": 37956.54959999956,
+   "ttft_user_ms": 43859.033399960026,
+   "total_ms": 46613.56469988823,
+   "stage_latency_ms": {
+    "prompt_guard": 77.54720002412796,
+    "topic_gate": 39.27740012295544,
+    "pii": 0.34900009632110596,
+    "plan": 1171.4164998847991,
+    "retrieve": 35328.888499876484,
+    "evidence_guard": 1336.7890999652445,
+    "sql": 0.3925000783056021,
+    "generate": 8657.921799924225
+   },
+   "tokens": 32,
+   "tokens_per_s": 3.85,
+   "sentences_checked": 24,
+   "sentences_removed": 23,
+   "component_ms": {
+    "paper_dense_ms": 5099.777,
+    "paper_bm25_ms": 5057.233,
+    "paper_fusion_ms": 0.147,
+    "check_sentence_ms": 7832.836,
+    "check_sentence_calls": 13.0,
+    "mask_pii_ms": 1.822,
+    "render_citations_ms": 0.153
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 77.54720002412796,
+     "score": 0.00106100516859442
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 39.27740012295544,
+     "score": -0.02287432906298803
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.34900009632110596,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1336.7890999652445,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 573.4550000634044
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 283.9734998997301
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 446.484100073576
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 455.4031000006944
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 380.16220019198954
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 273.4356001019478
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 456.53950003907084
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 505.6886998936534
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 379.1068000718951
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 640.5756000895053
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 2142.399299889803
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 607.573099900037
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:55:27.901+00:00",
+   "request_id": "c9a3df78e9e048edac9783df9c46015c",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 65,
+   "scenario": "S1",
+   "ttft_engine_ms": 48408.622400136665,
+   "ttft_user_ms": 54530.886800028384,
+   "total_ms": 56715.6122000888,
+   "stage_latency_ms": {
+    "prompt_guard": 56.186100002378225,
+    "topic_gate": 33.46739988774061,
+    "pii": 0.5372997839003801,
+    "plan": 1109.665700001642,
+    "retrieve": 45480.10620009154,
+    "evidence_guard": 1725.506099872291,
+    "sql": 0.32650004141032696,
+    "generate": 8308.864699909464
+   },
+   "tokens": 45,
+   "tokens_per_s": 5.3,
+   "sentences_checked": 26,
+   "sentences_removed": 22,
+   "component_ms": {
+    "paper_dense_ms": 5101.489,
+    "paper_bm25_ms": 5061.02,
+    "paper_fusion_ms": 0.141,
+    "chunk_dense_ms": 5044.538,
+    "chunk_bm25_ms": 5052.779,
+    "check_sentence_ms": 4511.264,
+    "check_sentence_calls": 20.0,
+    "mask_pii_ms": 4.115,
+    "render_citations_ms": 0.631
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 56.186100002378225,
+     "score": 0.0005398471839725971
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 33.46739988774061,
+     "score": -0.11596148314307186
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.5372997839003801,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1725.506099872291,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 491.4038002025336
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 514.6748998668045
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 524.7331999707967
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 294.0555000677705
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.19149994477629662
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.14350004494190216
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.16440008766949177
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.04449998959898949
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.15820004045963287
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.036899931728839874
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.15130010433495045
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 505.0123000983149
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.05230004899203777
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.07550022564828396
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.13149995356798172
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.05460018292069435
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:56:20.572+00:00",
+   "request_id": "e5e86b87710446ffb1eb5e0ebd149aad",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 97,
+   "scenario": "S1",
+   "ttft_engine_ms": 48284.12239998579,
+   "ttft_user_ms": null,
+   "total_ms": 52671.05080001056,
+   "stage_latency_ms": {
+    "prompt_guard": 79.57800012081861,
+    "topic_gate": 43.80420013330877,
+    "pii": 0.42230007238686085,
+    "plan": 1102.5097998790443,
+    "retrieve": 45491.5632000193,
+    "evidence_guard": 1563.7129000388086,
+    "sql": 0.30319998040795326,
+    "generate": 4388.302699895576
+   },
+   "tokens": 20,
+   "tokens_per_s": 4.33,
+   "sentences_checked": 10,
+   "sentences_removed": 10,
+   "component_ms": {
+    "paper_dense_ms": 5101.88,
+    "paper_bm25_ms": 5052.295,
+    "paper_fusion_ms": 0.174,
+    "chunk_dense_ms": 5044.187,
+    "chunk_bm25_ms": 5041.149,
+    "check_sentence_ms": 1929.216,
+    "check_sentence_calls": 9.0
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 79.57800012081861,
+     "score": 0.0004595193895511329
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 43.80420013330877,
+     "score": -0.12210418078574492
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.42230007238686085,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1563.7129000388086,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 418.9319000579417
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 487.8805000334978
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 611.43340007402
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 410.15359992161393
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.037899939343333244
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.04859990440309048
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.15259999781847
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.16300007700920105
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.06580003537237644
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:57:13.931+00:00",
+   "request_id": "f5de968783744a7696ff62116bd9ea0f",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 66,
+   "scenario": "S1",
+   "ttft_engine_ms": 49065.19729993306,
+   "ttft_user_ms": 52095.072499942034,
+   "total_ms": 53358.37879986502,
+   "stage_latency_ms": {
+    "prompt_guard": 79.23709996975958,
+    "topic_gate": 37.99009998328984,
+    "pii": 0.5291998386383057,
+    "plan": 1042.2273001167923,
+    "retrieve": 45480.12640001252,
+    "evidence_guard": 2421.492900000885,
+    "sql": 0.31940010376274586,
+    "generate": 4295.447299955413
+   },
+   "tokens": 18,
+   "tokens_per_s": 3.96,
+   "sentences_checked": 10,
+   "sentences_removed": 7,
+   "component_ms": {
+    "paper_dense_ms": 5098.563,
+    "paper_bm25_ms": 5060.153,
+    "paper_fusion_ms": 0.107,
+    "chunk_dense_ms": 5045.594,
+    "chunk_bm25_ms": 5052.067,
+    "check_sentence_ms": 3161.067,
+    "check_sentence_calls": 10.0,
+    "mask_pii_ms": 2.598,
+    "render_citations_ms": 0.401
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 79.23709996975958,
+     "score": 0.0007949005230329931
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 37.99009998328984,
+     "score": -0.022379225121350266
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.5291998386383057,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2421.492900000885,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 499.389800010249
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 364.88149990327656
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 621.6079001314938
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.14979997649788857
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.0950000248849392
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 418.3710999786854
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.055900076404213905
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:58:18.675+00:00",
+   "request_id": "3ccc676100fd4295805f7797f60d37eb",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 68,
+   "scenario": "S1",
+   "ttft_engine_ms": 49211.5102999378,
+   "ttft_user_ms": 53171.95180011913,
+   "total_ms": 64743.388700066134,
+   "stage_latency_ms": {
+    "prompt_guard": 73.16539995372295,
+    "topic_gate": 37.5686998013407,
+    "pii": 0.5869998130947351,
+    "plan": 1156.2319998629391,
+    "retrieve": 45484.522100072354,
+    "evidence_guard": 2455.604999791831,
+    "sql": 0.6103001069277525,
+    "generate": 15534.071000060067
+   },
+   "tokens": 56,
+   "tokens_per_s": 3.54,
+   "sentences_checked": 48,
+   "sentences_removed": 27,
+   "component_ms": {
+    "paper_dense_ms": 5102.486,
+    "paper_bm25_ms": 5038.684,
+    "paper_fusion_ms": 0.227,
+    "chunk_dense_ms": 5043.671,
+    "chunk_bm25_ms": 5044.989,
+    "check_sentence_ms": 12834.083,
+    "check_sentence_calls": 33.0,
+    "mask_pii_ms": 16.24,
+    "render_citations_ms": 3.22
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 73.16539995372295,
+     "score": 0.0006668789428658783
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 37.5686998013407,
+     "score": -0.0528696650003323
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.5869998130947351,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2455.604999791831,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 448.6593999899924
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.13930001296103
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.10719988495111465
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.06939982995390892
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 510.1081000175327
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 418.6957001220435
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.07029995322227478
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.04910002462565899
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 499.2458999622613
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.049900030717253685
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 559.6321001648903
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.06320001557469368
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T22:59:15.156+00:00",
+   "request_id": "3c4d2c5c6c0b41f5bad5a4b3371ffaaf",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 53,
+   "scenario": "S1",
+   "ttft_engine_ms": 49281.52359998785,
+   "ttft_user_ms": 51770.01089998521,
+   "total_ms": 56481.39450000599,
+   "stage_latency_ms": {
+    "prompt_guard": 73.85489996522665,
+    "topic_gate": 36.20889992453158,
+    "pii": 0.5085000302642584,
+    "plan": 1292.2211000695825,
+    "retrieve": 45476.23679996468,
+    "evidence_guard": 2399.7233000118285,
+    "sql": 0.39599998854100704,
+    "generate": 7201.426999876276
+   },
+   "tokens": 27,
+   "tokens_per_s": 3.78,
+   "sentences_checked": 13,
+   "sentences_removed": 4,
+   "component_ms": {
+    "paper_dense_ms": 5098.488,
+    "paper_bm25_ms": 5064.839,
+    "paper_fusion_ms": 0.206,
+    "chunk_dense_ms": 5043.969,
+    "chunk_bm25_ms": 5044.702,
+    "check_sentence_ms": 6177.693,
+    "check_sentence_calls": 12.0,
+    "mask_pii_ms": 10.391,
+    "render_citations_ms": 1.512
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 73.85489996522665,
+     "score": 0.0035357584711164236
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 36.20889992453158,
+     "score": -0.05032161888153852
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.5085000302642584,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2399.7233000118285,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 333.123299991712
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 344.15740007534623
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 442.8394001442939
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T23:00:15.481+00:00",
+   "request_id": "c561e90ebab94daaaf272b2ca695ba8b",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 49,
+   "scenario": "S1",
+   "ttft_engine_ms": 52013.92890000716,
+   "ttft_user_ms": 55330.55099984631,
+   "total_ms": 60324.06600005925,
+   "stage_latency_ms": {
+    "prompt_guard": 72.60309997946024,
+    "topic_gate": 34.362199949100614,
+    "pii": 0.37189992144703865,
+    "plan": 1325.2187999896705,
+    "retrieve": 45527.40119979717,
+    "evidence_guard": 4114.981299964711,
+    "sql": 0.5408998113125563,
+    "generate": 9247.596399858594
+   },
+   "tokens": 36,
+   "tokens_per_s": 4.21,
+   "sentences_checked": 17,
+   "sentences_removed": 12,
+   "component_ms": {
+    "paper_dense_ms": 5106.177,
+    "paper_bm25_ms": 5047.444,
+    "paper_fusion_ms": 0.144,
+    "chunk_dense_ms": 5051.421,
+    "chunk_bm25_ms": 5066.349,
+    "check_sentence_ms": 7535.002,
+    "check_sentence_calls": 13.0,
+    "mask_pii_ms": 5.782,
+    "render_citations_ms": 0.776
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 72.60309997946024,
+     "score": 0.0032231847289949656
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 34.362199949100614,
+     "score": -0.1220828581741159
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.37189992144703865,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 4114.981299964711,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.20150002092123032
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1424.9070999212563
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.05370005965232849
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.10689999908208847
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.085099833086133
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 796.046799980104
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1768.4003999456763
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.057399971410632133
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T23:01:09.607+00:00",
+   "request_id": "e5535bf82eca4c009d3959de7e0b833b",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 71,
+   "scenario": "S1",
+   "ttft_engine_ms": 48402.78050000779,
+   "ttft_user_ms": 51301.443399861455,
+   "total_ms": 54126.56299979426,
+   "stage_latency_ms": {
+    "prompt_guard": 78.93240009434521,
+    "topic_gate": 42.28469985537231,
+    "pii": 0.4591001197695732,
+    "plan": 1168.5810999479145,
+    "retrieve": 45512.40439992398,
+    "evidence_guard": 1597.338399849832,
+    "sql": 0.5764001980423927,
+    "generate": 5725.152699975297
+   },
+   "tokens": 23,
+   "tokens_per_s": 4.23,
+   "sentences_checked": 11,
+   "sentences_removed": 4,
+   "component_ms": {
+    "paper_dense_ms": 5107.059,
+    "paper_bm25_ms": 5072.928,
+    "paper_fusion_ms": 0.166,
+    "chunk_dense_ms": 5046.294,
+    "chunk_bm25_ms": 5045.904,
+    "check_sentence_ms": 4950.776,
+    "check_sentence_calls": 11.0,
+    "mask_pii_ms": 8.913,
+    "render_citations_ms": 1.292
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 78.93240009434521,
+     "score": 0.0008465104619972408
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 42.28469985537231,
+     "score": -0.07830608853388143
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.4591001197695732,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1597.338399849832,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 334.7467000130564
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 382.08890007808805
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 376.2003998272121
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 497.3685999866575
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T23:01:55.491+00:00",
+   "request_id": "731ef8db717c41df92302d2fd0b14192",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 60,
+   "scenario": "S1",
+   "ttft_engine_ms": 39012.36370019615,
+   "ttft_user_ms": 43792.386000044644,
+   "total_ms": 45883.504800032824,
+   "stage_latency_ms": {
+    "prompt_guard": 70.16770006157458,
+    "topic_gate": 38.52560021914542,
+    "pii": 0.605100067332387,
+    "plan": 1285.0393000990152,
+    "retrieve": 35367.17350012623,
+    "evidence_guard": 2248.7831998150796,
+    "sql": 0.2592001110315323,
+    "generate": 6872.034100117162
+   },
+   "tokens": 30,
+   "tokens_per_s": 4.22,
+   "sentences_checked": 15,
+   "sentences_removed": 11,
+   "component_ms": {
+    "paper_dense_ms": 5111.498,
+    "paper_bm25_ms": 5057.779,
+    "paper_fusion_ms": 0.119,
+    "check_sentence_ms": 5924.99,
+    "check_sentence_calls": 14.0,
+    "mask_pii_ms": 4.893,
+    "render_citations_ms": 0.64
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 70.16770006157458,
+     "score": 0.0004868072865065187
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 38.52560021914542,
+     "score": -0.06382445307324991
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.605100067332387,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2248.7831998150796,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 710.4982999153435
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 591.5471999906003
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 552.164199994877
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 687.6701998990029
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 467.08040009252727
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.060900114476680756
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.05369982682168484
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.04720012657344341
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.18259999342262745
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.060399994254112244
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T23:02:52.899+00:00",
+   "request_id": "e6f2dbe1aa444784a30208a0f980abbe",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 55,
+   "scenario": "S1",
+   "ttft_engine_ms": 48424.63649995625,
+   "ttft_user_ms": 52520.86419984698,
+   "total_ms": 57407.98210003413,
+   "stage_latency_ms": {
+    "prompt_guard": 79.86279996111989,
+    "topic_gate": 35.5509000364691,
+    "pii": 0.6397000979632139,
+    "plan": 1254.2479999829084,
+    "retrieve": 45420.57859990746,
+    "evidence_guard": 1630.8999001048505,
+    "sql": 0.6853998638689518,
+    "generate": 8984.480599872768
+   },
+   "tokens": 47,
+   "tokens_per_s": 5.12,
+   "sentences_checked": 39,
+   "sentences_removed": 37,
+   "component_ms": {
+    "paper_dense_ms": 5085.588,
+    "paper_bm25_ms": 5044.755,
+    "paper_fusion_ms": 0.218,
+    "chunk_dense_ms": 5038.862,
+    "chunk_bm25_ms": 5038.817,
+    "check_sentence_ms": 7200.681,
+    "check_sentence_calls": 16.0,
+    "mask_pii_ms": 2.753,
+    "render_citations_ms": 0.312
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 79.86279996111989,
+     "score": 0.00048422280815429986
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 35.5509000364691,
+     "score": -0.08187281902258503
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.6397000979632139,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1630.8999001048505,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 527.456299867481
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 317.111800191924
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 365.7033999916166
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 405.27090011164546
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 286.4209001418203
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 432.9765997827053
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 509.14059998467565
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 421.452600043267
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 372.72710003890097
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 519.7243001312017
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 905.8980999980122
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 792.2733000013977
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 556.9873000495136
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.0491999089717865
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T23:03:35.543+00:00",
+   "request_id": "12efb17962ea465f89a56e209d250bbd",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 64,
+   "scenario": "S1",
+   "ttft_engine_ms": 37733.39159996249,
+   "ttft_user_ms": null,
+   "total_ms": 42642.62709999457,
+   "stage_latency_ms": {
+    "prompt_guard": 69.7624001186341,
+    "topic_gate": 36.098800133913755,
+    "pii": 0.5375000182539225,
+    "plan": 1106.2648000661284,
+    "retrieve": 35329.703100025654,
+    "evidence_guard": 1188.7691000010818,
+    "sql": 0.4585999995470047,
+    "generate": 4910.177899990231
+   },
+   "tokens": 21,
+   "tokens_per_s": 4.08,
+   "sentences_checked": 11,
+   "sentences_removed": 11,
+   "component_ms": {
+    "paper_dense_ms": 5087.441,
+    "paper_bm25_ms": 5057.065,
+    "paper_fusion_ms": 0.112,
+    "check_sentence_ms": 2269.676,
+    "check_sentence_calls": 10.0
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 69.7624001186341,
+     "score": 0.000421816308517009
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 36.098800133913755,
+     "score": -0.08282993590264975
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.5375000182539225,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1188.7691000010818,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 523.849599994719
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 406.99089993722737
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 405.95439984463155
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 544.3828999996185
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 387.41460000164807
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.07700012065470219
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.10750000365078449
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.18979981541633606
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.11849985457956791
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.1642999704927206
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T23:04:43.808+00:00",
+   "request_id": "ec3fbcbe46364424b5a206efd9550418",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 69,
+   "scenario": "S1",
+   "ttft_engine_ms": 49597.99790009856,
+   "ttft_user_ms": 63753.89520009048,
+   "total_ms": 68265.44119999744,
+   "stage_latency_ms": {
+    "prompt_guard": 73.87070008553565,
+    "topic_gate": 38.08939992450178,
+    "pii": 1.7641999293118715,
+    "plan": 1055.2767999470234,
+    "retrieve": 45469.31469999254,
+    "evidence_guard": 2956.123000010848,
+    "sql": 0.5333998706191778,
+    "generate": 18669.11910008639
+   },
+   "tokens": 39,
+   "tokens_per_s": 2.22,
+   "sentences_checked": 31,
+   "sentences_removed": 30,
+   "component_ms": {
+    "paper_dense_ms": 5096.582,
+    "paper_bm25_ms": 5043.865,
+    "paper_fusion_ms": 0.234,
+    "chunk_dense_ms": 5044.881,
+    "chunk_bm25_ms": 5052.29,
+    "check_sentence_ms": 17708.831,
+    "check_sentence_calls": 16.0,
+    "mask_pii_ms": 0.92,
+    "render_citations_ms": 0.152
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 73.87070008553565,
+     "score": 0.0004748119681607932
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 38.08939992450178,
+     "score": -0.07804440300820137
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 1.7641999293118715,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 2956.123000010848,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 651.2580001726747
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 355.2176000084728
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 494.8130000848323
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 1642.38249999471
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 665.7455998938531
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 319.63529996573925
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 543.2593999430537
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1754.16380004026
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 1278.134800028056
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 4329.358299961314
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 601.5637000091374
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 728.1657001003623
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 397.4034001585096
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1864.178700139746
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 1515.8189001958817
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T23:05:30.193+00:00",
+   "request_id": "22eca961291c42d5bd21ba4b598166f6",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 62,
+   "scenario": "S1",
+   "ttft_engine_ms": 37869.388200109825,
+   "ttft_user_ms": 41223.199900006875,
+   "total_ms": 46384.73640009761,
+   "stage_latency_ms": {
+    "prompt_guard": 70.43719990178943,
+    "topic_gate": 37.479199934750795,
+    "pii": 0.4252998623996973,
+    "plan": 1260.4606999084353,
+    "retrieve": 35343.99550012313,
+    "evidence_guard": 1154.163399944082,
+    "sql": 0.5669000092893839,
+    "generate": 8516.072999918833
+   },
+   "tokens": 31,
+   "tokens_per_s": 3.7,
+   "sentences_checked": 18,
+   "sentences_removed": 6,
+   "component_ms": {
+    "paper_dense_ms": 5108.863,
+    "paper_bm25_ms": 5055.582,
+    "paper_fusion_ms": 0.151,
+    "check_sentence_ms": 7566.352,
+    "check_sentence_calls": 18.0,
+    "mask_pii_ms": 11.029,
+    "render_citations_ms": 1.572
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 70.43719990178943,
+     "score": 0.000978955184109509
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 37.479199934750795,
+     "score": -0.07142937078876588
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.4252998623996973,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1154.163399944082,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 450.4637001082301
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 436.4765998907387
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 274.3752000387758
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 461.36979991570115
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 364.3042000476271
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.07979990914463997
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T23:06:28.134+00:00",
+   "request_id": "2970364c555a4b41b0c22f6d7839fdbe",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 60,
+   "scenario": "S1",
+   "ttft_engine_ms": 48611.47730005905,
+   "ttft_user_ms": 55044.48090004735,
+   "total_ms": 57939.967199927196,
+   "stage_latency_ms": {
+    "prompt_guard": 70.63660002313554,
+    "topic_gate": 33.191700000315905,
+    "pii": 0.2657999284565449,
+    "plan": 1240.4658000450581,
+    "retrieve": 45476.032900158316,
+    "evidence_guard": 1788.0023000761867,
+    "sql": 0.3831998910754919,
+    "generate": 9330.120500177145
+   },
+   "tokens": 38,
+   "tokens_per_s": 4.2,
+   "sentences_checked": 24,
+   "sentences_removed": 18,
+   "component_ms": {
+    "paper_dense_ms": 5097.956,
+    "paper_bm25_ms": 5050.916,
+    "paper_fusion_ms": 0.136,
+    "chunk_dense_ms": 5029.741,
+    "chunk_bm25_ms": 5052.217,
+    "check_sentence_ms": 6429.426,
+    "check_sentence_calls": 12.0,
+    "mask_pii_ms": 6.308,
+    "render_citations_ms": 1.114
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 70.63660002313554,
+     "score": 0.0009428962366655469
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 33.191700000315905,
+     "score": -0.06808443646644957
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.2657999284565449,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1788.0023000761867,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 491.4795998483896
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 346.77339997142553
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 476.0771000292152
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 462.0848000049591
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 564.8806001991034
+    },
+    {
+     "stage": "generate",
+     "result": "removed: fact_mismatch",
+     "latency_ms": 0.054800184443593025
+    }
+   ]
+  },
+  {
+   "ts": "2026-10-28T23:07:27.271+00:00",
+   "request_id": "d415fcfc12cd4acd838d9ae151ce11ef",
+   "status": "ok",
+   "error_code": null,
+   "query_chars": 50,
+   "scenario": "S1",
+   "ttft_engine_ms": 48323.789100162685,
+   "ttft_user_ms": 57761.32720010355,
+   "total_ms": 59136.80059998296,
+   "stage_latency_ms": {
+    "prompt_guard": 80.17229987308383,
+    "topic_gate": 34.17269978672266,
+    "pii": 0.3078998997807503,
+    "plan": 1139.7404000163078,
+    "retrieve": 45452.426800038666,
+    "evidence_guard": 1614.5558001007885,
+    "sql": 0.44929981231689453,
+    "generate": 10814.097700174898
+   },
+   "tokens": 43,
+   "tokens_per_s": 4.09,
+   "sentences_checked": 28,
+   "sentences_removed": 24,
+   "component_ms": {
+    "paper_dense_ms": 5097.339,
+    "paper_bm25_ms": 5047.265,
+    "paper_fusion_ms": 0.11,
+    "chunk_dense_ms": 5048.724,
+    "chunk_bm25_ms": 5038.631,
+    "check_sentence_ms": 9050.978,
+    "check_sentence_calls": 12.0,
+    "mask_pii_ms": 5.071,
+    "render_citations_ms": 0.615
+   },
+   "guardrail_events": [
+    {
+     "stage": "prompt_guard",
+     "result": "ok",
+     "latency_ms": 80.17229987308383,
+     "score": 0.0006523895426653326
+    },
+    {
+     "stage": "topic_gate",
+     "result": "ok",
+     "latency_ms": 34.17269978672266,
+     "score": -0.07479412040270028
+    },
+    {
+     "stage": "pii",
+     "result": "ok",
+     "latency_ms": 0.3078998997807503,
+     "score": 0.0
+    },
+    {
+     "stage": "evidence_guard",
+     "result": "ok",
+     "latency_ms": 1614.5558001007885,
+     "score": null
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 310.1661999244243
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 400.7033999077976
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 339.9736999999732
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 414.1332998406142
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 2140.6304999254644
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 2091.4098999928683
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: no_citation",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 0.0
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 996.5423999819905
+    },
+    {
+     "stage": "generate",
+     "result": "removed: unsupported",
+     "latency_ms": 569.534300127998
+    }
+   ]
+  }
+ ]
+}

@@ -31,6 +31,8 @@ class Settings:
     llm_max_retries: int = 1
     llm_retry_backoff_s: float = 0.2
     llm_max_output_tokens: int = 1024
+    # Sent as reasoning_effort when set; "none" turns thinking off on thinking models.
+    llm_reasoning_effort: str | None = None
     context_char_budget: int = 16000
     evidence_item_char_limit: int = 2400
     max_sentence_buffer_chars: int = 32768
@@ -155,4 +157,5 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         llm_max_output_tokens=_parse_int(
             "LLM_MAX_OUTPUT_TOKENS", env.get("LLM_MAX_OUTPUT_TOKENS", "1024"), 64, 8192
         ),
+        llm_reasoning_effort=env.get("LLM_REASONING_EFFORT") or None,
     )
