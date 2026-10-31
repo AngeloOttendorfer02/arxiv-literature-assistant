@@ -14,6 +14,18 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D081 The frame sentence for abstract-only sources passes check_sentence without NLI (fixes a finding of D080)
+
+- Context: `rag/generation.py` writes "Only abstract evidence is present in this context for this result [n]." in front of the model's answer for every paper source that has only an abstract (R-07, R-08: frame sentences come from code). The sentence goes through `check_sentence` like all others, and the NLI model rejects it, because the abstract does not entail a statement about itself. In a run with the model of the team 34 of 58 sentences were this sentence, all removed (D080); the user never saw the hint and "sentences removed" in the interface and the logs was inflated.
+- Options: (A) `check_sentence` accepts the exact sentence for a source that is marked abstract-only, without NLI; (B) emit the hint outside the checked stream (a new event or a field, contract and UI change); (C) leave it and explain the figure in the report.
+- Decision: A. The text and the section name are constants in `rag/evidence/labels.py`, used by `generation.py` and by `is_abstract_notice`, which `check_sentence` calls after the label check and before the number and NLI stages. A sentence passes only if it equals the template for a label whose evidence is a paper with section "Abstract only"; any other wording, or the same text on a source with full text, is checked as before.
+- Reason: Smallest change that keeps the frame sentence from code and keeps every model-written sentence under the full check; no contract change. A sentence written by our own code is not a claim of the model, so it does not need the groundedness check.
+- Validation: 4 new tests (passes without an NLI call, not exempt for a source with full text or a chunk, a changed wording is still checked, generator and check share the text). Live, same setup as D080 (team model, 4 questions): 24 sentences, 14 of them the frame sentence, all kept; 1 sentence removed (4 percent, an unsupported sentence of the model with entailment 0.17), before 64 percent. A new guardrail import from `rag.evidence.labels` (pure regex helpers) is the only coupling added.
+- Known limits: Four questions, one model; the three other removed sentences of the earlier run were genuine model sentences. Validation couples to the text of the template: if the wording changes, the shared constant must change in one place.
+- Date: 2026-10-31
+
+---
+
 ### D080 S-14 latency of the guardrail stages, measured in a replay and a live run
 
 - Context: S-14 asks for the latency overhead of each guardrail stage as median and p95 from the logs. The request log has times per stage, but the sentence checks sit inside `generate` together with the model's time, and no language model was available locally.
