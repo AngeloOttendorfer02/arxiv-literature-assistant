@@ -57,7 +57,8 @@ All guards, per request & & & & 2{,}391 / 2{,}818 (4{,}729 / 8{,}540) \\
 \paragraph{Overhead and limits.}
 With NLI and the evidence guard on the Modal GPU the guards add a median of 2.4\,s per request (p95 2.8\,s); with all models on the CPU it is 4.7\,s (p95 8.5\,s).
 The sentence checks dominate (1.7\,s of 2.4\,s): each sentence costs a round trip of about 0.35\,s, and a sentence is only released after its check, so the user waits 0.54\,s for the first sentence (p95 0.83\,s).
-Retrieval takes 35\,s per request in our setup and exceeds all guards together.
+A second run by a teammate (6-thread CPU, same Modal GPU, 100 questions) gives the same picture: guards 2.8\,s median (p95 3.6\,s), 0.40\,s wait for the first sentence, 0.39\,s per sentence check, and retrieval 0.95\,s, so the guards add about three times the time of retrieval.
+Our own retrieval measurement (35\,s) was an artefact: on that laptop \texttt{localhost} resolved to IPv6 first and every database connection waited for the fallback to IPv4, while the queries themselves take about 0.1\,s.
 On the CPU, loading Prompt Guard and the NLI model took almost three minutes at the first request, so the models must be loaded at start-up.
 In live runs the check first removed 64\,\% of the sentences (37 of 58), but 34 of them were the notice ``only abstract evidence is present'' that our own code writes in front of the answer; a check of the model's claims cannot ground it, so it now passes by exact template match.
 Of the 24 sentences the model itself wrote, 3 were removed (13\,\%); after the change a second run removed 1 of 24 sentences (4\,\%).
