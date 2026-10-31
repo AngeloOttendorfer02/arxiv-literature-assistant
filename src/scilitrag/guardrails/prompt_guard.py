@@ -29,12 +29,17 @@ class PromptGuard:
         self._tokenizer = None
         self._model = None
 
-    def score(self, text: str) -> float:
-        """Highest malicious probability over all windows of the text."""
-        tokenizer, model = self._load()
+    def windows(self, text: str) -> list[list[int]]:
+        """Model inputs for the text: overlapping windows with CLS and SEP."""
+        tokenizer = self._load_tokenizer()
         ids = tokenizer(text, add_special_tokens=False)["input_ids"]
         cls, sep = tokenizer.cls_token_id, tokenizer.sep_token_id
-        windows = [[cls, *w, sep] for w in _windows(ids)]
+        return [[cls, *w, sep] for w in _windows(ids)]
+
+    def score(self, text: str) -> float:
+        """Highest malicious probability over all windows of the text."""
+        windows = self.windows(text)
+        tokenizer, model = self._load()
         worst = 0.0
         for i in range(0, len(windows), BATCH_SIZE):
             batch = windows[i : i + BATCH_SIZE]
@@ -47,14 +52,59 @@ class PromptGuard:
             worst = max(worst, logits.softmax(-1)[:, MALICIOUS].max().item())
         return worst
 
+    def _load_tokenizer(self):
+        with self._lock:
+            if self._tokenizer is None:
+                self._tokenizer = AutoTokenizer.from_pretrained(self._model_id)
+        return self._tokenizer
+
     def _load(self):
+        tokenizer = self._load_tokenizer()
         with self._lock:
             if self._model is None:
-                self._tokenizer = AutoTokenizer.from_pretrained(self._model_id)
                 self._model = AutoModelForSequenceClassification.from_pretrained(
                     self._model_id
                 ).eval()
-        return self._tokenizer, self._model
+        return tokenizer, self._model
+
+
+class RemoteGuard:
+    """The same model on the inference server's GPU (D079). Windows are cut here, so the
+    server only runs the model; one request per evidence check."""
+
+    def __init__(self, url: str, api_key: str | None, model_id: str = MODEL_ID, transport=None):
+        import httpx
+
+        self._url = url
+        self._model_id = model_id
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        # Modal answers a slow call (cold start, first model load) with a redirect to wait on.
+        self._client = httpx.Client(
+            headers=headers,
+            timeout=httpx.Timeout(30, connect=10),
+            follow_redirects=True,
+            transport=transport,
+        )
+
+    def scores(self, windows: list[list[list[int]]]) -> list[float]:
+        """Highest malicious probability per text, given the windows of each text."""
+        import httpx
+
+        flat = [w for text_windows in windows for w in text_windows]
+        if not flat:
+            return []
+        body = {"model": self._model_id, "windows": flat}
+        try:
+            response = self._client.post(self._url, json=body)
+        # Scoring has no side effects, so a dropped connection is retried once.
+        except httpx.TransportError:
+            response = self._client.post(self._url, json=body)
+        response.raise_for_status()
+        data = response.json()
+        if data.get("model") != self._model_id:
+            raise RuntimeError(f"guard server runs {data.get('model')}, expected {self._model_id}")
+        probs = iter(data["malicious"])
+        return [max(next(probs) for _ in text_windows) for text_windows in windows]
 
 
 @lru_cache(maxsize=1)
