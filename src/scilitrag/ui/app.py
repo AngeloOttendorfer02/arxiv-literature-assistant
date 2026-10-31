@@ -19,6 +19,7 @@ from scilitrag.contracts import (
     StatusEvent,
     TableEvent,
 )
+from scilitrag.ui.baseline_review import render_baseline_review
 from scilitrag.ui.citation_details import citation_details
 from scilitrag.ui.sse import iter_events
 
@@ -278,6 +279,7 @@ def main() -> None:
     st.title("Literature Assistant")
     st.caption("Ask about ML and NLP papers and inspect the sources cited in each answer.")
     render_examples()
+    render_baseline_review()
 
     history = st.session_state.setdefault("history", [])
     answers = [content for role, content in history if role == "assistant"]
