@@ -1,9 +1,10 @@
 """Route literature questions through a strict plan and explicit user filters."""
 
 import logging
+import re
 from typing import Self
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from scilitrag.config import Settings, load_settings
 from scilitrag.contracts import Plan, PlanQuery, Scenario
@@ -29,6 +30,14 @@ class QueryPlan(BaseModel):
     author_ref: str | None
     require_baseline: bool
     k: int = Field(ge=1, le=20)
+
+    @field_validator("paper_ref", "author_ref", mode="before")
+    @classmethod
+    def normalize_null_references(cls, value):
+        """Treat a model's stringified JSON null as an absent reference."""
+        if isinstance(value, str) and value.strip().casefold() == "null":
+            return None
+        return value
 
     @model_validator(mode="after")
     def validate_semantics(self) -> Self:
@@ -102,10 +111,24 @@ def build_plan(masked_query: str, client: JsonCompletionClient) -> Plan:
     """Apply explicit year/result constraints to model routing, including fallback."""
     filters = parse_filters(masked_query)
     result = _model_plan(masked_query, client)
+    author_ref = result.author_ref
+    # An LLM may copy a paper acronym into the citing-author filter. Remove it
+    # only when it matches the target citation's acronym and is absent from the
+    # question; explicitly supplied author references remain intact.
+    if result.scenario == "S2" and result.paper_ref and author_ref:
+        acronym = re.match(r"^\s*([A-Za-z][A-Za-z0-9-]{1,15})\s*\(", result.paper_ref)
+        explicit = re.search(
+            r"(?<!\w)" + re.escape(author_ref.strip()) + r"(?!\w)",
+            masked_query,
+            flags=re.IGNORECASE,
+        )
+        if acronym and acronym.group(1).casefold() == author_ref.strip().casefold() and not explicit:
+            author_ref = None
     # Explicit user constraints are authoritative. Unsupported inferred years
     # are removed instead of silently narrowing the search.
     return result.model_copy(
         update={
+            "author_ref": author_ref,
             "year_from": filters.year_from,
             "year_to": filters.year_to,
             "k": filters.k if filters.k is not None else result.k,

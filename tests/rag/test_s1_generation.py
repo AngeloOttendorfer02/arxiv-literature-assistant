@@ -80,3 +80,43 @@ def test_closing_generation_closes_the_provider_stream():
 
     asyncio.run(scenario())
     assert state == ["closed"]
+
+
+def test_plain_s3_ranking_uses_sql_without_calling_language_model():
+    plan = Plan(
+        scenario="S3", query="Rank up to 3 most cited authors for dense passage retrieval.",
+        topic="dense passage retrieval", k=3,
+    )
+    evidence = [Evidence(label=10, type="sql", query_id="ranking", text="ranking data")]
+
+    class Forbidden:
+        def stream(self, *args):
+            raise AssertionError("plain ranking must not request a paper summary")
+
+    async def collect():
+        return [token async for token in generate_with(plan, evidence, Forbidden())]
+
+    result = asyncio.run(collect())
+    assert len(result) == 1 and "[10]" in result[0]
+
+
+def test_s3_ranking_with_a_summary_still_calls_language_model():
+    plan = Plan(
+        scenario="S3",
+        query="Rank authors for dense passage retrieval and explain their work.",
+        topic="dense passage retrieval", k=3,
+    )
+    evidence = [
+        Evidence(label=1, type="paper", corpus_id=1, text="source"),
+        Evidence(label=2, type="sql", query_id="ranking", text="ranking data"),
+    ]
+
+    class Client:
+        async def stream(self, messages):
+            yield "A paper discusses retrieval [1]. "
+
+    async def collect():
+        return [token async for token in generate_with(plan, evidence, Client())]
+
+    result = asyncio.run(collect())
+    assert len(result) == 2 and "retrieval" in result[-1]

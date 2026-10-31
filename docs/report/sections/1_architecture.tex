@@ -19,8 +19,9 @@ SQL follows outgoing citation edges from the surviving paper seeds to cited pape
 and their authors. Each distinct citing/cited-paper pair gives every cited-paper
 coauthor one credit; these are subset counts, not global citation totals.
 The resulting table, its parameters, dataset revision and query ID are emitted directly
-by the application, before generated sentences. The model summarizes paper evidence
-and does not calculate the ranking.
+by the application, before generated sentences. For a plain ranking request the
+application can finish using the table and a cited counting-rule sentence. For other
+S3 requests the model summarizes paper evidence and does not calculate the ranking.
 
 The OpenAI-compatible model stream carries text deltas to a bounded server-side
 sentence buffer. Raw deltas are not forwarded to the UI. Each complete sentence,
@@ -42,3 +43,27 @@ The UI citation drawer exposes this provenance. Syntactic validity alone does no
 establish support, so evaluation keeps structural checks separate from human citation
 and numerical-claim judgments. Pipeline timing fields include retrieval and guardrails;
 provider token throughput and engine-only TTFT are measured separately by the benchmark.
+
+\paragraph{Local WP2 verification.}
+A local diagnostic on the recorded dataset revision tested the citation path for the
+paper with corpus ID 215737187. Direct S2 retrieval returned 20 citing papers; all
+20 IDs and publication years matched a separately exported bounded database reference.
+All 80 retrieved passages belonged to those 20 citing papers. This verifies one
+retrieval case; it does not measure answer quality or baseline-use accuracy.
+
+A plain S3 author-ranking request completed in approximately 99.8 seconds in the local
+setup. Its three returned author IDs and counts (32379: 7, 41141: 6, and 12839: 5)
+matched an independently calculated reference for the same three seed papers and
+dataset revision. One sentence was checked and retained. These counts describe the
+recorded subset of the dataset rather than global citation totals. In a separate S2
+application attempt, retrieval returned evidence but the request timed out before an
+answer was emitted; a corpus-ID phrasing was also incorrectly classified as a write
+request. These failures are not counted as completed answers.
+
+Automated retrieval, sentence-streaming and evaluation checks passed 193 tests, with
+three skipped, in one local run. A later focused S2 and metrics run passed 109 tests,
+with one skipped. A separate 20-passage development sample had 17 assistant-reviewed
+labels and three unresolved passages. The baseline matcher was refined using that
+sample; results on it must not be reported as independent human-reviewed accuracy.
+Reviewed citation precision and numerical exact-match results across scenarios remain
+to be measured.
