@@ -191,3 +191,125 @@ def test_component_factory_uses_the_explicit_selected_model(monkeypatch):
     )
     assert get_components(settings).plan("retrieval").scenario == "S1"
     assert seen == ["selected-model"]
+
+
+@pytest.mark.parametrize("null_value", ["null", " NULL ", None])
+def test_s3_stringified_null_references_are_not_author_filters(null_value):
+    result = build_plan(
+        "Rank up to 3 most cited authors for dense passage retrieval.",
+        Client(
+            payload(
+                scenario="S3",
+                topic="dense passage retrieval",
+                paper_ref=null_value,
+                author_ref=null_value,
+                require_baseline=False,
+            )
+        ),
+    )
+    assert result.scenario == "S3"
+    assert result.author_ref is None and result.paper_ref is None
+
+
+def test_s3_explicit_author_filter_is_preserved():
+    result = build_plan(
+        "Rank authors named Yann LeCun for dense passage retrieval.",
+        Client(
+            payload(
+                scenario="S3",
+                topic="dense passage retrieval",
+                paper_ref=None,
+                author_ref="Yann LeCun",
+                require_baseline=False,
+            )
+        ),
+    )
+    assert result.author_ref == "Yann LeCun"
+
+
+def test_s2_stringified_null_paper_is_not_a_valid_target():
+    result = build_plan(
+        "Find papers that cite a paper.",
+        Client(payload(paper_ref="null", author_ref=None, require_baseline=False)),
+    )
+    assert result.scenario == "S1" and result.paper_ref is None
+
+
+def test_s2_does_not_use_unmentioned_target_acronym_as_author_filter():
+    query = "Which papers cite Dense Passage Retrieval for Open-Domain Question Answering?"
+    result = build_plan(
+        query,
+        Client(
+            payload(
+                paper_ref="DPR (Karpukhin et al., 2020)",
+                author_ref="DPR",
+                require_baseline=False,
+            )
+        ),
+    )
+    assert result.scenario == "S2"
+    assert result.paper_ref == "DPR (Karpukhin et al., 2020)"
+    assert result.author_ref is None
+
+
+def test_s2_preserves_explicit_author_filter():
+    query = "Which papers by Yann LeCun cite DPR?"
+    result = build_plan(
+        query,
+        Client(
+            payload(
+                paper_ref="DPR (Karpukhin et al., 2020)",
+                author_ref="Yann LeCun",
+                require_baseline=False,
+            )
+        ),
+    )
+    assert result.author_ref == "Yann LeCun"
+
+
+def test_s2_does_not_silently_drop_unrelated_unresolved_author():
+    query = "Which papers cite Dense Passage Retrieval?"
+    result = build_plan(
+        query,
+        Client(
+            payload(
+                paper_ref="DPR (Karpukhin et al., 2020)",
+                author_ref="Jane Doe",
+                require_baseline=False,
+            )
+        ),
+    )
+    assert result.author_ref == "Jane Doe"
+
+
+def test_s1_topic_is_not_treated_as_a_specific_paper_reference():
+    query = "Find up to 3 papers about dense passage retrieval published from 2020 to 2023."
+    result = build_plan(
+        query,
+        Client(
+            payload(
+                scenario="S1",
+                topic="dense passage retrieval",
+                paper_ref="dense passage retrieval",
+                author_ref=None,
+                require_baseline=False,
+            )
+        ),
+    )
+    assert result.scenario == "S1" and result.paper_ref is None
+    assert result.topic == "dense passage retrieval"
+    assert result.year_from == 2020 and result.year_to == 2023
+
+
+def test_s1_preserves_explicit_paper_reference():
+    query = "Find the paper Dense Passage Retrieval for Open-Domain Question Answering."
+    title = "Dense Passage Retrieval for Open-Domain Question Answering"
+    result = build_plan(
+        query,
+        Client(
+            payload(
+                scenario="S1", topic=title, paper_ref=title, author_ref=None, require_baseline=False
+            )
+        ),
+    )
+    assert result.paper_ref == title

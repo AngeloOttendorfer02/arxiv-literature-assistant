@@ -24,7 +24,9 @@ from scilitrag.ui.sse import iter_events
 
 load_dotenv(find_dotenv(usecwd=True))
 API_URL = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
-TIMEOUT = httpx2.Timeout(10.0, read=120.0)
+# SSE requests may legitimately take longer than the API's default 120-second
+# deadline. Keep the connection open while the server sends its keep-alives.
+TIMEOUT = httpx2.Timeout(10.0, read=None)
 
 GUARD_STAGES = ("prompt_guard", "topic_gate", "pii")
 STAGE_LABELS = {
@@ -236,6 +238,7 @@ def stream_answer(query: str, panel) -> Answer:
     """Send the query, show the answer and the guardrail panel live while events arrive."""
     answer = Answer()
     text = st.empty()
+    tables = st.empty()
     try:
         url = f"{API_URL}/query"
         with httpx2.stream("POST", url, json={"query": query}, timeout=TIMEOUT) as response:
@@ -245,6 +248,16 @@ def stream_answer(query: str, panel) -> Answer:
                 answer.add(event)
                 if isinstance(event, SentenceEvent):
                     text.markdown(answer_text(answer))
+                if isinstance(event, TableEvent):
+                    with tables.container():
+                        for table in answer.tables:
+                            if table.scope:
+                                st.caption(table.scope)
+                            st.dataframe(
+                                [dict(zip(table.columns, row)) for row in table.rows],
+                                hide_index=True,
+                            )
+                            st.caption(f"SQL query `{table.query_id}`")
                 with panel.container():
                     render_guardrails(answer)
     except httpx2.HTTPStatusError as exc:
@@ -263,7 +276,7 @@ def stream_answer(query: str, panel) -> Answer:
 def main() -> None:
     st.set_page_config(page_title="Literature Assistant", layout="wide")
     st.title("Literature Assistant")
-    st.caption("Ask about ML and NLP papers. Every statement is backed by a cited source.")
+    st.caption("Ask about ML and NLP papers and inspect the sources cited in each answer.")
     render_examples()
 
     history = st.session_state.setdefault("history", [])

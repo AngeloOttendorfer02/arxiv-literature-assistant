@@ -27,6 +27,9 @@ def parse_filters(query: str) -> ExplicitFilters:
     ):
         lower_bounds.append(int(match[1]))
         upper_bounds.append(int(match[2]))
+    for match in re.finditer(rf"\bfrom\s+({YEAR})\s+to\s+({YEAR})\b", text):
+        lower_bounds.append(int(match[1]))
+        upper_bounds.append(int(match[2]))
     for match in re.finditer(rf"\b({YEAR})\s*[-–]\s*({YEAR})\b", text):
         lower_bounds.append(int(match[1]))
         upper_bounds.append(int(match[2]))

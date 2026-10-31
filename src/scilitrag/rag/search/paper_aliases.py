@@ -12,11 +12,12 @@ class VerifiedAliases:
     short_names: tuple[str, ...]
     citation_author: str | None = None
     year: int | None = None
+    long_names: tuple[str, ...] = ()
 
 
 # Reviewed identities; do not guess acronyms or author order from IDs.
 VERIFIED_ALIASES = {
-    215737187: VerifiedAliases(("DPR",), "Karpukhin et al.", 2020),
+    215737187: VerifiedAliases(("DPR",), "Karpukhin et al.", 2020, ("Dense Passage Retrieval",)),
     52967399: VerifiedAliases(("BERT",)),
 }
 
@@ -57,6 +58,11 @@ def reviewed_reference_ids(reference: str) -> list[int]:
     for corpus_id, verified in VERIFIED_ALIASES.items():
         aliases = target_aliases("", corpus_id)
         forms = [*aliases]
+        forms.extend(
+            f"{long_name} ({short_name})"
+            for long_name in verified.long_names
+            for short_name in verified.short_names
+        )
         forms.extend(
             f"{name} ({citation})"
             for name in verified.short_names

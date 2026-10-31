@@ -95,14 +95,38 @@ def baseline_candidate(
         own_model + r"\s+" + passive_comparison + target,
         target + r"\s+" + passive_comparison + own_model,
     )
+    # A citation such as "Smith et al., 2022" is not a sentence boundary.
+    normalized = re.sub(r"\bet\s+al\.", "et al", normalized, flags=re.IGNORECASE)
     for sentence in re.split(r"(?<=[.!?])\s+", normalized):
+        # "Without fine-tuning" describes how a baseline is used, not whether it is used.
+        negation_text = re.sub(
+            r"\bwithout\s+(?:any\s+)?fine[- ]tuning\b",
+            "",
+            sentence,
+            flags=re.IGNORECASE,
+        )
         if re.search(
             r"\b(?:not|no|never|without|neither|could|might|would|will)\b|\?",
-            sentence,
+            negation_text,
             re.IGNORECASE,
         ):
             continue
         if any(re.search(pattern, sentence, re.IGNORECASE) for pattern in patterns):
+            return True
+        # A composite baseline can identify its retriever by acronym after a
+        # description, e.g. "our baseline ... with a dense passage retriever (DPR; ...)".
+        composite = (
+            r"\bour baseline\s+is\b[^.!?]{0,200}\bwith\s+(?:a|the)\s+"
+            r"(?:dense\s+)?(?:passage\s+)?retriever\s*\(\s*" + target + r"(?=[\s;,)])"
+        )
+        if re.search(composite, sentence, re.IGNORECASE):
+            return True
+        # In a baselines section, an explicitly named target-based baseline
+        # directly using the target is a comparison candidate, not a mention.
+        named_baseline = target + r"\s+\w+\s+directly\s+uses\s+(?:the\s+)?" + target + r"\b"
+        if re.search(r"\bbaselines?\b", section or "", re.IGNORECASE) and re.search(
+            named_baseline, sentence, re.IGNORECASE
+        ):
             return True
         if re.search(
             r"\b(?:earlier|prior|previous)\s+(?:work|research|studies|study|experiments|evaluations)\b",

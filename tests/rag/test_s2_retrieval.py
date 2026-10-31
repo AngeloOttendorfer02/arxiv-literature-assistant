@@ -357,3 +357,40 @@ def test_s2_real_citation_direction_years_and_author_filter(fixture_reader):
     assert {e.corpus_id for e in evidence if e.type == "paper"} == {1, 3, 5}
     with pytest.raises(RagUserError, match="No indexed papers cite"):
         retrieve_with(PLAN.model_copy(update={"year_to": 2020}), backend)
+
+
+def test_composite_baseline_identifies_the_target_retriever():
+    text = (
+        "Our baseline is a supervised QA model-DPR-BERT (Si et al., 2022) "
+        "with a dense passage retriever (DPR; to feed passages to the reader)."
+    )
+    assert baseline_candidate(text, DPR_TITLE, "Evaluation setup", target_id=DPR_ID)
+
+
+def test_named_target_based_comparison_in_baselines_section():
+    text = "DPR Wiki directly uses the DPR trained on Wikipedia for retrieval."
+    assert baseline_candidate(text, DPR_TITLE, "RACO vs. Baseline Methods", target_id=DPR_ID)
+    assert not baseline_candidate(text, DPR_TITLE, "Related work", target_id=DPR_ID)
+    assert not baseline_candidate(text, DPR_TITLE, "Introduction", target_id=DPR_ID)
+
+
+def test_composite_baseline_does_not_match_an_unrelated_retriever():
+    text = "Our baseline is BERT with a dense passage retriever (ANCE; not DPR)."
+    assert not baseline_candidate(text, DPR_TITLE, "Evaluation setup", target_id=DPR_ID)
+    assert not baseline_candidate(
+        "Our baseline is not a model with a dense passage retriever (DPR; details).",
+        DPR_TITLE,
+        "Evaluation setup",
+        target_id=DPR_ID,
+    )
+
+
+def test_without_finetuning_is_not_negated_baseline_use():
+    text = "DPR Wiki directly uses the DPR trained on Wikipedia without any fine-tuning."
+    assert baseline_candidate(text, DPR_TITLE, "Baseline Methods", target_id=DPR_ID)
+    assert not baseline_candidate(
+        "Our baseline works without using DPR and without fine-tuning.",
+        DPR_TITLE,
+        "Baseline Methods",
+        target_id=DPR_ID,
+    )
