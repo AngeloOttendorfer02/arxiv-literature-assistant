@@ -10,6 +10,7 @@ from scilitrag.contracts import (
     SentenceCheck,
     SentenceEvent,
     StatusEvent,
+    TableEvent,
 )
 from scilitrag.ui.app import Answer, stage_badge
 
@@ -93,3 +94,45 @@ def test_example_button_sends_its_question(monkeypatch):
     history = at.session_state["history"]
     assert history[0] == ("user", question)
     assert "not reachable" in history[1][1].error
+
+
+def test_table_is_rendered_before_stream_ends(monkeypatch):
+    from contextlib import nullcontext
+
+    from scilitrag.ui import app
+
+    order = []
+
+    class Placeholder:
+        def container(self):
+            return nullcontext()
+
+        def markdown(self, text):
+            pass
+
+    class Response:
+        headers = {}
+
+        def raise_for_status(self):
+            pass
+
+        def iter_lines(self):
+            return iter(())
+
+    table = TableEvent(
+        columns=["name"], rows=[["Ada"]], query_id="q1", sql="SELECT 1"
+    )
+
+    def events(_lines):
+        yield "table", table
+        order.append("stream finished")
+
+    monkeypatch.setattr(app.st, "empty", Placeholder)
+    monkeypatch.setattr(app.st, "dataframe", lambda *a, **k: order.append("table rendered"))
+    monkeypatch.setattr(app.st, "caption", lambda *a, **k: None)
+    monkeypatch.setattr(app, "render_guardrails", lambda answer: None)
+    monkeypatch.setattr(app.httpx2, "stream", lambda *a, **k: nullcontext(Response()))
+    monkeypatch.setattr(app, "iter_events", events)
+    answer = app.stream_answer("question", Placeholder())
+    assert order == ["table rendered", "stream finished"]
+    assert answer.tables == [table]
