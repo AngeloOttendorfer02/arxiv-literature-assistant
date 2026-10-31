@@ -1,6 +1,7 @@
 """Route literature questions through a strict plan and explicit user filters."""
 
 import logging
+import re
 from typing import Self
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
@@ -10,7 +11,9 @@ from scilitrag.contracts import Plan, PlanQuery, Scenario
 from scilitrag.rag.errors import LLMClientError, RagUserError
 from scilitrag.rag.llm.client import ChatClient
 from scilitrag.rag.llm.structured import JsonCompletionClient, complete_json
-from scilitrag.rag.search.filters import parse_filters
+from scilitrag.rag.search.entities import MAX_REFERENCE_CHARS
+from scilitrag.rag.search.filters import YEAR, parse_filters
+from scilitrag.rag.search.paper_aliases import reviewed_reference_ids
 
 logger = logging.getLogger(__name__)
 MAX_QUERY_CHARS = 6000
@@ -64,10 +67,28 @@ SYSTEM = (
 )
 
 
-def _model_plan(masked_query: str, client: JsonCompletionClient) -> Plan:
-    query = masked_query.strip()
-    if not query or len(query) > MAX_QUERY_CHARS:
-        raise RagUserError("Use a nonempty literature question with at most 6000 characters.")
+def _baseline_reference(query: str) -> str | None:
+    """Extract the target of a narrow, explicit English baseline-use request."""
+    bounds = (
+        rf"(?:\s+(?:(?:since|from|after|until|through|before|in)\s+{YEAR}"
+        rf"|between\s+{YEAR}\s+and\s+{YEAR}|{YEAR}\s*[-\u2013]\s*{YEAR}))*"
+    )
+    match = re.fullmatch(
+        r"(?:which|what|find|list|show(?:\s+me)?)\s+"
+        r"(?:(?:top|best)\s+\d+\s+)?(?:papers|studies|articles)"
+        rf"{bounds}\s+(?:(?:that|which)\s+)?"
+        r"(?:use|used|using|cite|citing|compare\s+(?:against|with|to))\s+"
+        rf"[\"'\u201c\u2018]?(?P<reference>[\w][\w\s:(),.'\u2019/\u2013\u2014-]"
+        rf"{{0,{MAX_REFERENCE_CHARS - 1}}}?)[\"'\u201d\u2019]?"
+        r"(?:\s+and\s+use\s+it)?\s+as\s+(?:(?:an?|the|their)\s+)?"
+        rf"(?:experimental\s+)?baselines?{bounds}[?.!]?",
+        query,
+        re.IGNORECASE,
+    )
+    return " ".join(match["reference"].split()).strip("\"'“”‘’") if match else None
+
+
+def _model_plan(query: str, client: JsonCompletionClient) -> Plan:
     try:
         payload = complete_json(
             client,
@@ -99,9 +120,24 @@ def plan(masked_query: str) -> Plan:
 
 
 def build_plan(masked_query: str, client: JsonCompletionClient) -> Plan:
-    """Apply explicit year/result constraints to model routing, including fallback."""
-    filters = parse_filters(masked_query)
-    result = _model_plan(masked_query, client)
+    """Route reviewed baseline references without DB access and reconcile filters."""
+    query = masked_query.strip()
+    if not query or len(query) > MAX_QUERY_CHARS:
+        raise RagUserError("Use a nonempty literature question with at most 6000 characters.")
+    filters = parse_filters(query)
+    reference = _baseline_reference(query)
+    if reference and reviewed_reference_ids(reference):
+        result = Plan(
+            scenario="S2",
+            query=query,
+            topic=query,
+            paper_ref=reference,
+            require_baseline=True,
+            k=DEFAULT_RESULT_LIMIT,
+        )
+        logger.info("plan scenario=S2 fallback=false source=explicit_baseline")
+    else:
+        result = _model_plan(query, client)
     # Explicit user constraints are authoritative. Unsupported inferred years
     # are removed instead of silently narrowing the search.
     return result.model_copy(

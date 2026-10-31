@@ -104,9 +104,10 @@ def test_explicit_target_use_is_a_candidate(text):
         "We use BERT-large as a baseline.",
     ],
 )
-def test_title_prefix_preserves_main_matching_for_hyphenated_bert_variants(text):
+@pytest.mark.parametrize("target_id", [None, 52967399])
+def test_title_prefix_preserves_main_matching_for_hyphenated_bert_variants(text, target_id):
     title = "BERT: Pre-training of Deep Bidirectional Transformers for Language Understanding"
-    assert baseline_candidate(text, title, "Experiments")
+    assert baseline_candidate(text, title, "Experiments", target_id=target_id)
 
 
 @pytest.mark.parametrize(
