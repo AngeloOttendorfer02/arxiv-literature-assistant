@@ -12,6 +12,9 @@ from scilitrag.rag.search.filters import parse_filters
         ("since 2020", (2020, None, None)),
         ("after 2020 before 2024", (2021, 2023, None)),
         ("between 2019 and 2022", (2019, 2022, None)),
+        ("published from 2020 to 2023", (2020, 2023, None)),
+        ("FROM 2020 TO 2023", (2020, 2023, None)),
+        ("from 2020 to 2023 after 2021", (2022, 2023, None)),
         ("2018–2021", (2018, 2021, None)),
         ("in 2022", (2022, 2022, None)),
         ("top 7 papers seit 2020", (2020, None, 7)),
@@ -24,7 +27,9 @@ def test_explicit_constraints(query, expected):
     assert (value.year_from, value.year_to, value.k) == expected
 
 
-@pytest.mark.parametrize("query", ["after 2024 before 2020", "top 30 papers", "top 3 and top 4"])
+@pytest.mark.parametrize(
+    "query", ["after 2024 before 2020", "from 2023 to 2020", "top 30 papers", "top 3 and top 4"]
+)
 def test_conflicting_requests_require_clarification(query):
     with pytest.raises(RagUserError):
         parse_filters(query)

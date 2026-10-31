@@ -32,21 +32,88 @@ abstracts are not presented as proof of full-text experimental results.
 
 ### S2: citation paths and experimental baseline candidates
 
-EntityLinker resolves a numeric corpus ID, full title, unambiguous title prefix or confident
-trigram match. Ambiguous references produce a clarification with candidate IDs. SQL follows
+EntityLinker resolves full titles, unambiguous title prefixes, reviewed aliases such as `DPR`,
+and author-year references such as `Karpukhin et al. (2020)` or
+`DPR (Karpukhin et al., 2020)`. Internal corpus IDs remain optional. The same reviewed registry
+supports user lookup and passage matching. Other author-year citations use stored surname/year
+metadata; all coauthors are considered because author order is not stored. Missing metadata
+can prevent a match, and multiple matches produce a clarification with paper titles and
+optional IDs. Parsed author-year citations and reviewed aliases must match an indexed
+identity; missing matches do not fall back to a different fuzzy paper. Ordinary title typos
+can still use a confident trigram match.
+Generic citation parsing requires a surname with `et al.`, or a surname with a parenthesized
+or comma-separated year. A bare trailing year, as in `BERT 2019`, does not by itself trigger
+citation parsing.
+Exact titles and title prefixes take priority over generic author-year interpretation.
+Single-word titles with citation punctuation, such as `RoBERTa (2019)` or `ELECTRA, 2020`,
+can still be interpreted as surname/year references when no exact title, prefix or reviewed
+alias matches. Fuzzy title search is then skipped. Use the title without the added year or
+the full paper title to avoid this ambiguity.
+Surname lookup materializes the matching authors once before joining their paper links,
+so it does not repeat the unindexed surname scan for each candidate paper.
+The planner keeps the target citation's author/year in `paper_ref`, separate from explicit
+filters on the citing papers. For example, ask `Which papers use DPR as an experimental baseline?`.
+For explicit English requests such as `Which papers use DPR as a baseline?` or
+`Which papers cite BERT and use it as a baseline?`, the planner extracts the target from
+the question and matches it against the reviewed alias registry before calling the LLM.
+Known references select S2 directly with `require_baseline=true`, without a database
+query in the planner. The S2 linker subsequently checks database existence and ambiguity.
+Unrecognized references and other question forms keep model planning. This is not a
+general method-baseline search. Explicit year and result limits are still reconciled.
+This direct route covers only supported English baseline-request forms and references
+already in the registry. Full DPR/BERT titles, `BERT-base`, `BERT-large`, unregistered
+names and other question forms still use model planning; this does not automatically
+mean S1. New names need reviewed registry entries to receive direct routing. The planner
+does not check corpus availability: a missing registered paper is reported as
+`Paper not found` during S2 retrieval, including on smaller fixture databases.
+When the model sets a nonblank `paper_ref` and `require_baseline=true`, a deterministic
+rule selects S2 before scenario validation, correcting an S1 or S3 classification.
+This existing rule does not verify that a model-supplied reference such as `BM25`
+identifies a paper; it is subsequently handled by the ordinary S2 linker.
+SQL follows
 incoming edges: `citations.cited_id` is the target and `citations.citing_id` is a result.
 Year/author filters apply to citing papers, not the target's publication year.
 
 Ordinary searches return up to k citing papers by descending year, then corpus ID. Baseline
 searches inspect up to 100 citing papers and up to four retrieved passages per paper, returning
-at most k results. The target title or colon-prefix alias must occur with an explicit
-experimental-use expression in the same sentence. The filter requires first-person use or
-comparison, or a statement that the target is the paper's own baseline. Negations,
+at most k results. The target title, colon-prefix alias or reviewed identity-specific alias
+must occur with an explicit
+experimental-use expression in the same sentence. The filter requires wording tied to the
+paper's own experiments, comparison or baseline, including the passive forms below. Negations,
 hypothetical comparisons and related-work sections are excluded. A comparison attributed
 to earlier work, a citation edge, a mention, or BERT inside RoBERTa is insufficient.
 
-This English lexical filter selects candidates. It can miss abbreviations and paraphrases,
-and can still misread complex comparisons. Human baseline labels and semantic validation
+`rag/search/paper_aliases.py` holds the shared registry. It covers DPR (corpus ID
+215737187), `DPR` and `Karpukhin et al.` with year 2020 (comma, parenthesized and plain-year
+forms), plus the short name `BERT` (corpus ID 52967399). Other short names and citation aliases
+need reviewed entries; the code does not guess acronyms or first-author order.
+BERT is already discoverable by its title prefix in the linker; its registry entry also
+enables routing without a database lookup. Baseline passage queries include the reviewed aliases.
+Matching supports `we use DPR ... as its pretrained baseline`, `our comparisons with DPR`,
+`DPR (Karpukhin et al., 2020) is our baseline` and `DPR [12] serves as our baseline`.
+Passive use is accepted when directly linked to own-study context, for example `DPR was
+used as a baseline in our experiments`, `in our evaluation, DPR was used as the baseline`,
+`DPR was used as our baseline` or `our method was compared with DPR`. A study cue elsewhere
+in the sentence does not suffice; generic passive mentions and descriptions of earlier
+work remain excluded.
+Recognized author-year aliases are normalized before sentence splitting, preventing their
+internal punctuation from breaking the match. This is not a general fix for every `et al.`.
+An `outperforms` statement alone does not qualify, even with `our experiments` or `we find`;
+the explicit baseline/comparison patterns above are still required.
+Reviewed short names also exclude adjoining hyphens: `DPR-PAQ`, `DPR-based` and `pre-DPR`
+do not count as the standalone target `DPR`. Titles and colon-prefix aliases retain the
+existing word boundaries, so `we use BERT-base as our baseline` and `we use BERT-large as
+a baseline` can still match the BERT title.
+
+Known conservative gaps remain: plural `baselines`, an intervening word in `we also use`,
+en-dash citation ranges such as `[12–14]`, and parentheses containing multiple citations.
+These forms need a separately evaluated extension and remain outside the current rules.
+
+Offline baseline scoring passes the annotation's `target_id` into the same matching rule.
+
+This English lexical filter selects candidates. Reviewed aliases improve abbreviation coverage,
+but retrieval limits and restrictive patterns can still miss relevant passages and paraphrases.
+The filter can also misread complex comparisons. Human baseline labels and semantic validation
 are required before reporting its quality. A no-support response describes the bounded
 search and possible absence of indexed full text; it does not claim global absence of use.
 

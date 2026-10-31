@@ -43,6 +43,8 @@ services:
       LLM_API_KEY: ${API_LLM_API_KEY:-}
       # NLI on Modal next to Ollama, authorized with the same token; empty runs NLI on the CPU.
       NLI_URL: ${API_NLI_URL:-}
+      # Prompt Guard on the retrieved sources on Modal, same token; empty runs it on the CPU.
+      GUARD_URL: ${API_GUARD_URL:-}
       LLM_MODEL: ${LLM_MODEL:-}
       EMBED_MODEL: ${EMBED_MODEL:-ibm-granite/granite-embedding-english-r2}
       HF_TOKEN: ${HF_TOKEN:-}

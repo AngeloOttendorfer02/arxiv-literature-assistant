@@ -2,7 +2,7 @@
 
 A locally hosted ML and NLP literature assistant with hybrid retrieval, citation-path exploration, author citation rankings and deterministic sentence-level citations. An asynchronous API streams checked sentences and SQL tables to a separate chat UI.
 
-The default mock configuration runs offline. Real retrieval requires the shared embedding adapter and indexed corpus; real input and semantic guardrails still require integration. See [retrieval implementation and acceptance](docs/retrieval.md).
+The default mock configuration runs offline. With real components, every request goes through input guardrails, planning, hybrid retrieval, a guard on the retrieved sources, generation and a per-sentence citation check; see [Run with real components](#run-with-real-components) and [retrieval implementation and acceptance](docs/retrieval.md).
 
 Developed by Angelo Ottendorfer, Benjamin Storck, Kristof Zörenyi and Nuray Visne.
 
@@ -12,6 +12,7 @@ The project uses [LitSearch](https://huggingface.co/datasets/princeton-nlp/LitSe
 
 The full database is shared as a dump; restoring or building it is described in
 [Full database and dump (D-16)](#full-database-and-dump-d-16).
+Sizes, citation coverage and author counts are in [D-23 data statistics](docs/d23_data_statistics.md).
 
 ## Setup
 
@@ -27,7 +28,7 @@ This installs the base dependencies and the `dev` group. Work package groups are
 uv sync --group data
 ```
 
-Groups: `data`, `rag`, `guardrails`, `ui`, `bench`, `dev`.
+Groups: `data`, `rag`, `guardrails`, `embed`, `ui`, `bench`, `dev`.
 
 Configuration is read from environment variables and from a `.env` file in the project root. Copy the template and adjust it:
 
@@ -102,7 +103,6 @@ The real entry points are `plan`, `retrieve`, `sql_facts`, `generate` and
 `render_citations`. Real search requires frozen corpus metadata, deployed indexes
 and the shared query embedder. Generation requires the configured model endpoint.
 Select real retrieve and sql_facts together for S3; mock IDs are not real ranking seeds.
-Input and semantic sentence validators must also be integrated before all-real evaluation.
 
 Implementation details and acceptance requirements: [retrieval](docs/retrieval.md),
 [evaluation](docs/evaluation.md) and [multi-hop execution](docs/execution_flow.md).
@@ -293,6 +293,79 @@ docker compose up -d --build
 
 Starts `db`, `api` (http://127.0.0.1:8000/health) and `ui` (chat at http://127.0.0.1:8501). Use `--build` after code changes, otherwise the old images are reused. The API container uses the settings from `.env`, but reaches the database as `db` and Ollama on the host as `host.docker.internal`; the UI container reaches the API as `api`. Host ports can be changed with `DB_PORT`, `API_PORT` and `UI_PORT` in `.env`.
 
+## Run with real components
+
+This runs the whole pipeline: Prompt Guard, topic gate and PII masking on the input, the
+LLM planner, hybrid retrieval on the full database, Prompt Guard on the retrieved sources,
+generation, NLI check of every sentence and citation rendering.
+
+1. **Database.** Restore the shared dump as in [Full database and dump (D-16)](#full-database-and-dump-d-16)
+   and check it with `scripts/check_database.py --require-search`.
+2. **Hugging Face access.** Prompt Guard (`meta-llama/Llama-Prompt-Guard-2-86M`) is gated.
+   Request access on its model page, create a read token and set `HF_TOKEN` in `.env`.
+   The embedding model (`ibm-granite/granite-embedding-english-r2`) and the NLI model
+   (`dleemiller/ModernCE-large-nli`) are public. All three are downloaded on first use.
+3. **LLM.** The demo model is `qwen3.8:27b-q4_K_M` (17 GB VRAM; D077). Either
+   - on Modal (recommended, also runs the NLI check and the source guard on the GPU):
+     deploy as in [deploy/modal](deploy/modal/README.md) and set in `.env`
+     ```
+     LLM_MODEL=qwen3.8:27b-q4_K_M
+     LLM_BASE_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/v1
+     LLM_API_KEY=<token>
+     NLI_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/nli
+     GUARD_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/guard
+     API_LLM_BASE_URL=<same as LLM_BASE_URL>
+     API_LLM_API_KEY=<same as LLM_API_KEY>
+     API_NLI_URL=<same as NLI_URL>
+     API_GUARD_URL=<same as GUARD_URL>
+     ```
+     The `API_*` variables are used by the Docker api service, the others by a local API.
+   - or local Ollama: `ollama pull qwen3.8:27b-q4_K_M` (needs a GPU with about 20 GB),
+     keep `LLM_BASE_URL=http://localhost:11434/v1` and leave the `API_*`, `NLI_URL` and
+     `GUARD_URL` variables empty. Then the NLI check and the source guard run on the CPU,
+     which takes several seconds per sentence and about 6 s per request for the sources. For development a small model such as `qwen3.5:2b-mtp-q4_K_M` works, with
+     weaker answers.
+4. **Start.** Set `USE_MOCKS=0` in `.env`, then either Docker
+   ```
+   docker compose up -d --build
+   ```
+   or locally, with the database container running:
+   ```
+   uv run --locked --group rag --group guardrails --group embed uvicorn scilitrag.api.app:create_app --factory
+   uv run --locked --group ui streamlit run src/scilitrag/ui/app.py
+   ```
+5. **Warm up before a demo.** Two things are slow the first time and can exceed
+   `REQUEST_TIMEOUT_S` (120 s):
+   - A Modal container that was scaled down loads the model again (1 to 2 min). Load it
+     before the first query, for example in bash:
+     ```
+     curl -s -H "Authorization: Bearer $LLM_API_KEY" -d '{"model": "qwen3.8:27b-q4_K_M"}' https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/api/generate
+     ```
+     Modal stops the container after 5 minutes without requests.
+   - The API loads its local models on the first query and downloads them first if they
+     are not cached. A new api container starts without cache.
+
+   Send one query through the UI and wait for it to finish; later queries are fast.
+   `GET /health` does not probe a Modal LLM, so `ok` there does not mean the model is loaded.
+6. **Stop.** `docker compose down`, and on Modal `uvx modal@1.6.2 app stop scilitrag-ollama`;
+   a deployed app stays billable while a container runs.
+
+A single query takes about 30 s end to end with Modal and NLI on the GPU (D072): planning
+and the source guard run before generation, and sentences appear only after their check.
+
+### Versions
+
+| Component | Version |
+| --- | --- |
+| Python | 3.13 (dependencies pinned in `uv.lock`) |
+| PostgreSQL | 18, image `paradedb/paradedb:0.26.2-pg18` with pgvector, pg_search, pg_trgm |
+| Ollama on Modal | 0.40.5, GPU A100 80 GB (`deploy/modal/ollama_server.py`) |
+| LLM | `qwen3.8:27b-q4_K_M` |
+| Embedding | `ibm-granite/granite-embedding-english-r2` (D050) |
+| Input and source guard | `meta-llama/Llama-Prompt-Guard-2-86M` |
+| NLI | `dleemiller/ModernCE-large-nli` (D057) |
+| Database dump | `scilitrag_v2`, 256-token chunks (D064) |
+
 ## Request log
 
 The API writes one JSON line per query to stdout and to `logs/requests.jsonl` (folder set by `LOG_DIR`): request id, status (`ok`, `refused`, `error`, `timeout`, `cancelled`), latencies per stage, TTFT, tokens per second, guardrail events with score. `component_ms` holds steps inside a stage that components report with `scilitrag.timings.record_timing` (dense, BM25 and fusion time of the paper and chunk search). The query text is never logged, only its length. The id is also sent as `X-Request-ID` and shown under each answer in the UI.
@@ -370,6 +443,19 @@ relationships and search storage (D-24).
 The UI imports nothing from the package except `scilitrag.contracts`.
 
 ## Evaluate retrieval
+
+Compare the real database's dense, BM25 and hybrid paper search on all 597 LitSearch
+queries, reusing D-22's stratified dev/test split and metrics:
+
+```powershell
+uv run --locked --group data --group rag --group embed python scripts/compare_retrieval.py
+```
+
+This needs the local D-03 files (`DATA_DIR`), the full search-ready database
+(`DATABASE_URL`) and the pinned embedding model. It uses real search even with mocks
+enabled and does not call the planner or LLM. See the [D-18 guide](docs/d18_retrieval_evaluation.md)
+for smoke runs, outputs and the MRR@100 cutoff.
+The [D-18 comparison tables](docs/d18_retrieval_comparison.md) contain the full 597-query run.
 
 Run the synthetic cases with mocks before using real references or models:
 

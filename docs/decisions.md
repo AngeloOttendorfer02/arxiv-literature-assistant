@@ -14,7 +14,7 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
-### D073 S-14 latency of the guardrail stages, measured in a replay and a live run
+### D080 S-14 latency of the guardrail stages, measured in a replay and a live run
 
 - Context: S-14 asks for the latency overhead of each guardrail stage as median and p95 from the logs. The request log has times per stage, but the sentence checks sit inside `generate` together with the model's time, and no language model was available locally.
 - Options: a real end-to-end run with a language model (needs an endpoint, and the sentence checks cannot be separated from the model); a run with real guardrails and retrieval and an answer replayed from the retrieved sources (no model); both.
@@ -24,7 +24,81 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 - Results (live, 30 requests, same machine, language model `Qwen/Qwen3.8-2.4T-A95B` on a Modal shared endpoint, planner and generation real; 29 answered, 1 refused, 28 in the per-request figures): Prompt Guard 78 ms median (p95 166), topic gate 38 ms (71), PII 0.5 ms, evidence guard 1.8 s (3.0 s), `check_sentence` 532 ms per sentence (1.2 s), sentence checks 7.5 s per request (14.3 s), all guardrails together 9.0 s per request (p95 17.0 s, max 20.8 s), wait for the first sentence 5.7 s (11.3 s). For scale `plan` 1.2 s, `retrieve` 35 s, `generate` 9.0 s (17.6 s) including the checks.
 - Findings (live): (4) The sentence checks dominate: about 20 sentences per answer at 0.5 s each on CPU, so they are 84 percent of the guardrail time and, because they run before a sentence is released, the main cause of the wait for the first sentence. The input guards are negligible. (5) 422 of 577 sentences (73 percent) were removed, against 5 percent in the replay. A diagnostic run of 8 questions with the reason per sentence (118 sentences, 85 removed) shows the cause is mostly the model's text, not the checks: 51 of the 85 removed sentences are working notes of the model in the answer ("The user asks ...", "I need to answer using only the supplied evidence", "Let me examine ...", "From label [2]: ...", "Only abstract evidence is present in this context for this result [1]"), which the checks correctly remove (35 by the structure check, 50 by the NLI check; none of the 33 kept sentences is of this kind). The other 34 are partly uncited lists of claims, partly short bullets with a pronoun ("It uses a greedy construction procedure [3]", entailment 0.27) or near the threshold (0.46), which are true but removed. The checks never failed on a number (0 of 18 fact mismatches came from the number check). The model was run with `LLM_REASONING_EFFORT=none`; with thinking on, a short probe gave a clean answer in `content` and the reasoning in `reasoning_content`, so the notes probably move into the answer when thinking is switched off. That was not checked with the full prompt. The share of removed sentences is therefore a property of model and prompt (WP2), not of the guardrails, and it also inflates the number of sentences checked per answer (about 20), so the per-request sentence-check time is higher than for a clean answer; the time per sentence is not affected. (6) Two setup facts cost runs: the thinking model counts its reasoning against `LLM_MAX_OUTPUT_TOKENS` (answers were cut at 1024 and at 4096); `LLM_REASONING_EFFORT=none` switches it off.
 - Earlier attempt: the shared endpoint answered HTTP 429 until a payment method was added ("Plan credits cannot be applied to shared endpoint usage").
-- Known limits: One machine (CPU, no GPU), 30 questions run as S1 in the replay and as planned in the live run; the live figures include the network round trip to Modal only in `plan` and `generate`, the guardrail times are local. The replay uses extractive answers, which are easier than model output. The retrieval time of this setup is not representative of a tuned database. A NLI variant on the Modal GPU (`NLI_URL`, D072) and the early stop after the first supporting source were not part of these runs.
+- Known limits: One machine (CPU, no GPU), 30 questions run as S1 in the replay and as planned in the live run; the live figures include the network round trip to Modal only in `plan` and `generate`, the guardrail times are local. The replay uses extractive answers, which are easier than model output. The retrieval time of this setup is not representative of a tuned database. NLI on the Modal GPU (`NLI_URL`, D072), Prompt Guard on the sources on the GPU (D079) and the early stop after the first supporting source were not part of these runs; both runs used the CPU.
+- Date: 2026-10-31
+
+---
+
+### D079 Prompt Guard on the retrieved sources runs on the inference server's GPU (follows from D072)
+
+- Context: With NLI on the GPU (D072), Prompt Guard on the retrieved sources was the largest CPU block before generation: about 6 s per request on the laptop, since every source is scored on its own on the CPU (13 sources at about 0.47 s).
+- Options: score on the CPU as before; precompute scores for all chunks and abstracts in the database (needs a new table, WP1 and WP3); score on the GPU of the Modal server.
+- Decision: `POST /guard` on the Modal server runs the same checkpoint (`meta-llama/Llama-Prompt-Guard-2-86M`, revision a8ded8e) on the A100. The app still cuts the token windows with its own tokenizer (`PromptGuard.windows`, unchanged window and overlap rules) and sends the windows of all sources in one request; the server only runs the model and returns one probability per window, the app keeps the highest per source. Same bearer token as the LLM; the server rejects another model id. Enabled by `GUARD_URL` (`API_GUARD_URL` for compose); without it the check runs on the CPU as before. The input check on the query stays on the CPU (about 0.15 s). The checkpoint is gated, so its weights are copied once into the private Modal Volume instead of giving the server a Hugging Face token.
+- Reason: Same model, same windows and thresholds, so the decision per source does not change; only where the model runs. The pattern is the one of D072.
+- Validation: CPU and GPU scores on 4 texts (clean, injected, a 5-window text with the attack at the end, a benign literature sentence) differ by at most 1e-8. Through the API, 12 LitSearch questions at one request (seed 1789, same questions in both runs, NLI on the GPU in both): evidence guard median 6.08 to 0.90 s (faster in 12 of 12, median -5.2 s), first released sentence 19.6 to 13.7 s, total 25.7 to 17.6 s (12 of 12 faster, median -5.9 s). No source was removed in either run, and the same 75 sentences were removed. The remaining 0.9 s is local tokenization and the round trip to Modal. Unit tests cover one request for all sources, the per-source maximum and the model check.
+- Date: 2026-10-30
+
+---
+
+### D078 R-09 direct baseline routing for reviewed references (extends D073/D074)
+
+- Context: The model can leave `paper_ref` empty for DPR/BERT baseline questions, so D074's scenario correction cannot apply.
+- Decision: Match supported explicit English baseline requests against the shared registry before model planning. A known reference selects S2 with `require_baseline=true`, without an LLM call or database lookup in the planner. Add the checked BERT short name (52967399); DPR and its reviewed citation forms remain supported. The S2 linker checks existence and ambiguity.
+- Reason: Recognize these references independently of model output. BERT already resolves by title prefix in the linker; its registry entry also enables direct routing. Preserve title-prefix passage matching for BERT-base/BERT-large and strict DPR boundaries.
+- Limits: Full titles, BERT-base/BERT-large in user questions, unregistered names and other question forms still use model planning. Missing registered papers are reported only during S2 retrieval. Further direct-routing names require reviewed entries.
+- Validation: Tests cover routing with LLM/DB calls forbidden, explicit filters, linker failures and passage boundaries.
+- Date: 2026-10-30
+
+---
+
+### D077 A-12 benchmark results: q4_K_M stays the serving precision (completes D065)
+
+- Context: D065 fixed prompts and scoring, the full run was open. qwen3.8:27b-q4_K_M is the demo tag, chosen before any quality numbers existed.
+- Options: keep q4_K_M; move to q8_0 or bf16 if quantization costs citation quality.
+- Decision: Keep q4_K_M. Report Section 4 shows the full run (597 queries once per tag) against bf16.
+- Reason: q4_K_M needs 17.1 GB instead of 52.5 GB, decodes at 43.6 instead of 27.6 tokens/s and finishes 522 of 597 answers faster than bf16 (total median 7.2 against 9.5 s). Engine TTFT is about 1.2 s higher (2,308 against 1,078 ms), which is small next to planner and source guard in the app. Citation quality is not worse: recall 0.806 against 0.768 (+0.029 [+0.011, +0.047]), precision 0.791 against 0.749 (+0.032 [+0.013, +0.052]), target paper cited in 0.994 against 1.000 (n.s.), "not found" 0.171 against 0.161 (n.s.). q8_0 equals bf16 in recall and precision and says "not found" slightly more often (+0.010 [+0.003, +0.018]).
+- Validation: Modal A100 80 GB, Ollama 0.40.5, 0 failed requests and 0 answers cut at 1,024 tokens in all 1,791 requests. The 30 x 3 sample gives the same medians within 0.15 s TTFT and 0.5 tokens/s. Manual check of the "not found" pattern (20 flagged, 20 not flagged, seed 1789): no misclassification. The higher scores of q4_K_M come with shorter answers (median 187 against 213 tokens, 7.1 against 7.8 sentences) and fewer sentences with several citations (6.2 against 8.5 %), which are the hardest to entail; we do not read it as a quality gain from quantization. Scoring ran on the laptop CPU, results in eval/private/bench/quality.json and quality_30.json (not tracked).
+- Side run, not in the report: gemma4:31b-it-q4_K_M on the 30 x 3 sample, total median 7.1 s, recall 0.797 and precision 0.836 against bf16 0.802 and 0.801 (both n.s., intervals about +-0.08 to +-0.12 at 30 queries). No reason to change the model. Checked on 3 prompts in one container with nvidia-smi: gemma uses 22.9 GB on the GPU against 17.7 GB for qwen q4_K_M (Ollama's /api/ps reports 2.7 GB for gemma, wrong for its llama.cpp runner; for qwen it matches). The tag is a dense 30.7B model built from an MTP variant (`dhiltgen/gemma4:31b-it-mtp-q4_K_M-llamacpp`), so its 75 to 86 tokens/s come from speculative decoding with the multi-token-prediction head, while qwen decodes plainly at 46 tokens/s. Prefill of about 3,000 tokens took 3.0 s against 2.2 s for qwen. The speed comparison is therefore not like for like.
+- Date: 2026-10-29
+
+---
+
+### D076 D-23 data statistics for the report (updates D-08 statistics)
+
+- Context: The report needs dataset sizes, citation coverage, papers without links, dropped authors and the full-text share. The numbers were spread over D032, D045, D046, D048 and D-08, and the D-08 author count (74,949) differed from the database (70,171).
+- Decision: `scripts/data_statistics.py` recomputes the counts from the local D-03 and D-12 files with the loading code (`build_citations`, `extract_authors`) and writes aggregate counts only to `eval/results/d23_data_statistics.json`. Tables with sources: [D-23 data statistics](d23_data_statistics.md).
+- Result: Citation coverage is 23.8 %: 342,467 of 1,437,622 S2ORC bibliography entries point to another corpus paper (the plan estimated about 22 %). 2,536 papers list a corpus paper more than once; without these 13,845 repeated entries, 328,622 distinct pairs remain, exactly the database pairs. 6,233 papers have no citation link. 5 papers, all query targets, have neither title nor abstract; 451 have no year. Years range from 1956 to 2024, median 2016; 74.4 % are from 2010 or later. Authors 70,171 and links 196,079, equal to the database. The D-08 statistics predate the doubled-span fix (b2c3bb0): it removed 4,778 authors and 4 links; dropped affiliations are now 2,471 (was 2,463) and same-paper duplicates 10,448 (was 10,452).
+- Known limits: Author variants stay unmerged under O2: 464 extra authors differ only by accents, 1,108 only by a middle initial (1,575 together). Accent folding would change `normalize_name` (WP2); middle initials may join different people. Same-name different people cannot be counted without author IDs.
+- Date: 2026-10-29
+
+---
+
+### D075 D-18 database retrieval comparison
+
+- Context: Compare dense, BM25 and hybrid paper search over title + abstract on D-22's 597 queries and identical Dev/Test split. Results: [D-18 comparison](d18_retrieval_comparison.md).
+- Evidence: Hybrid increases Recall@20 by 1.60 percentage points on Dev and 2.08 on Test, while MRR@100 and NDCG@10 decrease. Paired bootstrap (10,000 resamples, seed 42) gives six pointwise 95% intervals including zero: no clear advantage is established, and equivalence is not established either.
+- Decision: Keep RRF k=60 and title boost 0.5. Any tuning remains Dev-only team follow-up, with the primary metric agreed beforehand and settings frozen for Test. The offline SQL budget is 60 s; the API retains its default 10 s cap.
+- Validation: Run on dump v2 (counts match D064, archive checksum verified). Overall Recall@20 is 0.690 dense / 0.607 BM25 / 0.709 hybrid against 0.694 / 0.607 / 0.710 in D064. BM25 is identical, so the small dense gap is probably the approximate HNSW index rebuilt on restore (not verified).
+- Date: 2026-10-29
+
+---
+
+### D074 R-09 natural paper references (extends D073)
+
+- Context: Users should be able to select DPR by abbreviation or author-year citation without knowing its full title or internal ID.
+- Decision: Reuse the reviewed registry for paper lookup and preserve target citations in the planner. Resolve other citation-shaped surname/year inputs from metadata with one materialized author scan and existing paper-author links. Exact titles take priority; ambiguous references request clarification instead of selecting a fuzzy other paper. When `paper_ref` is nonblank and `require_baseline` is true, a deterministic rule selects S2 before scenario validation, correcting S1/S3 routing by the model.
+- Scope: Arbitrary titles ending in a year stay on the title path. Single-word titles with citation punctuation remain ambiguous (see retrieval.md). Baseline passage rules and database contents are unchanged.
+- Validation: DPR and both citation forms resolve to 215737187 on the real database. Local surname-query execution was 33 to 52 ms (0.50 to 1.69 s total calls). Unit tests cover ambiguity and title regressions; the live model-planner check timed out.
+- Date: 2026-10-28
+
+---
+
+### D073 R-09 reviewed aliases for baseline passages
+
+- Context: S2's title-only passage filter misses DPR abbreviations and author-year citations.
+- Decision: Use reviewed aliases from `rag/search/paper_aliases.py`, initially DPR (215737187) and Karpukhin et al. (2020), in passage queries, filtering and offline scoring. Normalize recognized citation punctuation. Require explicit own-study context, including passive use, and preserve exclusions and the 100-paper/four-passage limits.
+- Scope: Paper-reference lookup and planning are unchanged. Performance-only matching (`outperforms`) remains excluded. No database rebuild is needed.
+- Validation: On dump v2, scanning 4,389 chunks from the first 100 citing papers gives 0 matches before and 1 after the change (254877181); adding passive patterns leaves this count unchanged. The previously checked four-passage retrieval also finds that paper. This demo does not establish general precision/recall.
 - Date: 2026-10-28
 
 ---

@@ -10,6 +10,7 @@ from scilitrag.contracts import (
     SentenceCheck,
     SentenceEvent,
     StatusEvent,
+    TableEvent,
 )
 from scilitrag.ui.app import Answer, stage_badge
 
@@ -78,3 +79,59 @@ def test_stage_badge_colors():
         removed=[status("generate", f"{SENTENCE_REMOVED}unsupported")],
     )
     assert stage_badge(removed, "generate")[1] == "orange"
+
+
+def test_example_button_sends_its_question(monkeypatch):
+    from streamlit.testing.v1 import AppTest
+
+    from scilitrag.ui.app import EXAMPLES
+
+    # Nothing listens on port 9, so the request fails fast and the UI shows an error.
+    monkeypatch.setenv("API_URL", "http://127.0.0.1:9")
+    at = AppTest.from_file("../src/scilitrag/ui/app.py", default_timeout=30).run()
+    label, question = EXAMPLES[1]
+    at.button(key=f"example-{label}").click().run()
+    history = at.session_state["history"]
+    assert history[0] == ("user", question)
+    assert "not reachable" in history[1][1].error
+
+
+def test_table_is_rendered_before_stream_ends(monkeypatch):
+    from contextlib import nullcontext
+
+    from scilitrag.ui import app
+
+    order = []
+
+    class Placeholder:
+        def container(self):
+            return nullcontext()
+
+        def markdown(self, text):
+            pass
+
+    class Response:
+        def __init__(self):
+            self.headers = {}
+
+        def raise_for_status(self):
+            pass
+
+        def iter_lines(self):
+            return iter(())
+
+    table = TableEvent(columns=["name"], rows=[["Ada"]], query_id="q1", sql="SELECT 1")
+
+    def events(_lines):
+        yield "table", table
+        order.append("stream finished")
+
+    monkeypatch.setattr(app.st, "empty", Placeholder)
+    monkeypatch.setattr(app.st, "dataframe", lambda *a, **k: order.append("table rendered"))
+    monkeypatch.setattr(app.st, "caption", lambda *a, **k: None)
+    monkeypatch.setattr(app, "render_guardrails", lambda answer: None)
+    monkeypatch.setattr(app.httpx2, "stream", lambda *a, **k: nullcontext(Response()))
+    monkeypatch.setattr(app, "iter_events", events)
+    answer = app.stream_answer("question", Placeholder())
+    assert order == ["table rendered", "stream finished"]
+    assert answer.tables == [table]

@@ -1,8 +1,35 @@
-% Owner: WP1 (Nuray). Tasks: D-20, D-22.
+% Owner: WP1 (Nuray). Tasks: D-20, D-22, D-23.
 % Required: chunk size, overlap and strategy justified with retrieval hit-rates;
 % embedding model and vector index algorithm; name of the foundation model.
 \section{Hybrid Indexing and Retrieval Pipeline}
 \label{sec:retrieval}
+
+\paragraph{Data.}
+We use LitSearch (revision \texttt{9573fb2}): 597 literature-search queries over 64{,}183 papers with Semantic Scholar metadata and S2ORC full texts.
+Quality filters remove 8{,}068 papers, mostly with an empty title, no author names or no section heading; all 574 query targets are kept (Table~\ref{tab:data}).
+Publication years range from 1956 to 2024 (median 2016); 74\,\% of the papers are from 2010 or later and 33\,\% from 2020 or later.
+Citation edges come from the corpus' own citation lists and are all confirmed by the citing paper's bibliography.
+Only 23.8\,\% of the 1.44 million bibliography entries are matched to another corpus paper, so citation counts and citation paths cover citations within LitSearch, not a paper's full citation record.
+Authors are taken from S2ORC name annotations and merged by normalized name; variants that differ only by accents (464) or a middle initial (1{,}108) remain separate authors.
+
+\begin{table}[ht]
+\centering
+\caption{Data after filtering (D-03 corpus).}
+\label{tab:data}
+\begin{tabular}{lr}
+\toprule
+Item & Count \\
+\midrule
+Papers (of 64{,}183 in LitSearch) & 56{,}115 \\
+Queries / target papers & 597 / 574 \\
+Distinct citation pairs & 328{,}622 \\
+Papers without any citation link & 6{,}233 \\
+Authors / paper-author links & 70{,}171 / 196{,}079 \\
+Author blocks dropped (no name, affiliation, duplicate) & 31{,}449 \\
+Papers selected for chunking / chunks & 1{,}000 / 48{,}860 \\
+\bottomrule
+\end{tabular}
+\end{table}
 
 \paragraph{Chunking.}
 Full texts are available for 1{,}000 papers (all query targets, the demo topics and a random sample).
