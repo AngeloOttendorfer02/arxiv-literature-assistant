@@ -111,7 +111,8 @@ def test_table_is_rendered_before_stream_ends(monkeypatch):
             pass
 
     class Response:
-        headers = {}
+        def __init__(self):
+            self.headers = {}
 
         def raise_for_status(self):
             pass

@@ -1,6 +1,6 @@
+import re
 from collections.abc import AsyncIterator
 from contextlib import aclosing
-import re
 
 from scilitrag.config import load_settings
 from scilitrag.contracts import Evidence, Plan
