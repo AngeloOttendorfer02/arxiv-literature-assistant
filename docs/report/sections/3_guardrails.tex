@@ -6,26 +6,58 @@
 \label{sec:guardrails}
 
 \paragraph{Adversarial input defense.}
-\todo{Prompt Guard 2, topic gate, write-intent refusal, PII masking; categories and what happens per category.}
+Before any database or model call, \texttt{check\_input} runs three stages.
+(1)~Prompt Guard~2 (86M, threshold 0.5) scores the query in windows of at most 512 tokens and takes the highest score; it misses requests for the assistant's own instructions (``print your system prompt'' scores 0.003), so about eight English and German patterns cover them.
+(2)~The topic gate embeds the query with the retrieval embedder and compares it with hand-written prototype sentences of three classes (literature question, off-topic, write request); the query is refused when a disallowed class beats the allowed one.
+(3)~Presidio masks e-mail addresses and phone numbers before logging and lookup; names stay, as authors are search terms.
+A refused query ends with its category (injection, off-topic, write intent) and a fixed message; a test counts that no SQL and no model call ran.
+The application also uses a database role with \texttt{SELECT} only, and a test shows that writes and \texttt{DROP} are rejected by the database.
+Indirect injection is handled by the evidence guard: every retrieved chunk and abstract is scored with Prompt Guard~2 and removed from the prompt at 0.5 or above; SQL tables are built by our code and not scored.
 
-\paragraph{Output groundedness.}
-\todo{check\_sentence: structure, DB facts, NLI; how citation labels map to chunk IDs.}
+\paragraph{Output groundedness and citation mapping.}
+The model sees numbered evidence and may only emit labels $[1],\dots,[n]$.
+The code keeps the mapping from label to source (chunk ID, paper ID, title, year, or the query ID of an SQL table) per request.
+Each sentence of the streamed answer is held back until \texttt{check\_sentence} passes it:
+(i)~it needs a valid label at its end;
+(ii)~every number and year in it must occur in the cited sources, SQL tables included;
+(iii)~an NLI model (ModernCE-large-nli) takes each cited chunk as premise and the sentence without labels as hypothesis; one source with entailment $\ge 0.5$ suffices, a contradiction $\ge 0.5$ is reported as a factual mismatch.
+Failed sentences are removed and counted (``$x$ checked, $y$ removed''); the others are masked and rendered by code, which replaces each label by title, year, ID and passage from the mapping.
+No citation text written by the model reaches the user: a label can only point to a source that was in the context, and the NLI stage catches a valid label behind a claim the source does not support.
 
 \paragraph{Efficacy.}
-Table~\ref{tab:guardrails} reports defense success rate (DSR) on adversarial prompts,
-false rejection rate (FRR) on benign queries and the latency each stage adds.
+Thresholds are chosen on a tuning split with at most 5\,\% false rejections, and the test split is read once (own wording, one author; intervals are wide, e.g.\ 21/23 injections: 73 to 98\,\%).
+Table~\ref{tab:guardrails} shows the results at the thresholds in use.
+The query guards refuse 94\,\% of 50 attacks and 2\,\% of 49 harmless questions; only 57\,\% of the injections get the injection label, since the topic gate catches some jailbreaks as off-topic.
+The evidence guard removes a third of 12 injected passages (none of 3 with the instruction in the middle); 0.01 would catch half but would also remove 7\,\% of 200 real chunks, so we keep 0.5 and name the gap as a limit of Prompt Guard~2 on passages.
+The sentence check was tested on 130 sentence/passage pairs with changed numbers, negations, added claims, wrong sources and numbers swapped inside one passage: it removes 97\,\% of the manipulated sentences (37/38) but also 26\,\% of the faithful ones, mostly those combining facts of two passages (4/4), because each source is judged alone.
 
 \begin{table}[ht]
 \centering
-\caption{Guardrail efficacy on the held-out test set. \todo{set sizes}}
+\caption{Defense success rate (DSR) on attacks and false rejection rate (FRR) on harmless inputs, test split; latency in ms (median / p95) of 28 harmless questions run as S1 with an extractive answer, on a 16-thread laptop CPU. Query guards always on the CPU; evidence guard and sentence check on the Modal GPU, in brackets on the CPU.}
 \label{tab:guardrails}
-\begin{tabular}{lrrrr}
+\small
+\begin{tabular}{llrrr}
 \toprule
-Stage & DSR (\%) & FRR (\%) & Median latency (ms) & p95 latency (ms) \\
+Guard & Group & Cases & Rate (\%) & Latency (ms) \\
 \midrule
-Prompt Guard 2 & \todo{} & \todo{} & \todo{} & \todo{} \\
-Topic gate & \todo{} & \todo{} & \todo{} & \todo{} \\
-Sentence validation & \todo{} & \todo{} & \todo{} & \todo{} \\
+Prompt Guard~2 & injection, DSR & 23 & 91 & 82 / 94 \\
+Topic gate & write intent, DSR & 13 & 92 & 38 / 52 \\
+ & off-topic, DSR & 14 & 100 &  \\
+All query guards & harmless, FRR & 49 & 2 &  \\
+Evidence guard & injected, DSR & 12 & 33 & 590 / 752 (1{,}893 / 4{,}081) \\
+ & clean, FRR & 22 & 0 &  \\
+Sentence check, per sentence & manipulated, DSR & 38 & 97 & 347 / 375 (554 / 1{,}123) \\
+ & faithful, FRR & 23 & 26 &  \\
+\midrule
+All guards, per request & & & & 2{,}391 / 2{,}818 (4{,}729 / 8{,}540) \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+\paragraph{Overhead and limits.}
+With NLI and the evidence guard on the Modal GPU the guards add a median of 2.4\,s per request (p95 2.8\,s); with all models on the CPU it is 4.7\,s (p95 8.5\,s).
+The sentence checks dominate (1.7\,s of 2.4\,s): each sentence costs a round trip of about 0.35\,s, and a sentence is only released after its check, so the user waits 0.54\,s for the first sentence (p95 0.83\,s).
+Retrieval takes 35\,s per request in our setup and exceeds all guards together.
+On the CPU, loading Prompt Guard and the NLI model took almost three minutes at the first request, so the models must be loaded at start-up.
+In live runs the check first removed 64\,\% of the sentences (37 of 58), but 34 of them were the notice ``only abstract evidence is present'' that our own code writes in front of the answer; a check of the model's claims cannot ground it, so it now passes by exact template match.
+Of the 24 sentences the model itself wrote, 3 were removed (13\,\%); after the change a second run removed 1 of 24 sentences (4\,\%).
