@@ -6,7 +6,9 @@ from scilitrag.rag.search.paper_aliases import (
     VERIFIED_ALIASES,
     VerifiedAliases,
     author_year_reference,
+    baseline_search_topic,
     reviewed_reference_ids,
+    target_aliases,
 )
 
 
@@ -31,6 +33,23 @@ def test_explicit_title_prefix_resolves_bert():
         )
 
     assert EntityLinker(reader).paper("BERT") == 1
+
+
+def test_reviewed_bert_alias_resolves_by_identity_without_fuzzy_lookup():
+    def reader(sql, params):
+        assert "similarity(title" not in sql
+        if "ANY(%(ids)s)" in sql:
+            assert params == {"ids": [52967399]}
+            return [{"corpus_id": 52967399, "title": "BERT: Pre-training"}]
+        return []
+
+    assert reviewed_reference_ids("bert") == [52967399]
+    assert EntityLinker(reader).paper("BERT") == 52967399
+
+
+def test_short_name_only_registry_entry_does_not_invent_citation_metadata():
+    assert target_aliases("", 52967399) == ("BERT",)
+    assert baseline_search_topic("BERT", 52967399) == "BERT experimental baseline comparison"
 
 
 @pytest.mark.parametrize("scores", [[0.4], [0.9, 0.85]])
@@ -163,7 +182,7 @@ def test_registry_lookup_preserves_name_and_hyphen_boundaries(reference):
     assert reviewed_reference_ids(reference) == []
 
 
-@pytest.mark.parametrize("reference", ["DPR", "Karpukhin et al. (2020)", "Smith (2021)"])
+@pytest.mark.parametrize("reference", ["DPR", "BERT", "Karpukhin et al. (2020)", "Smith (2021)"])
 def test_missing_identity_or_citation_never_substitutes_a_fuzzy_other_paper(reference):
     def reader(sql, params):
         if "similarity(title" in sql:
@@ -174,13 +193,17 @@ def test_missing_identity_or_citation_never_substitutes_a_fuzzy_other_paper(refe
         EntityLinker(reader).paper(reference)
 
 
-@pytest.mark.parametrize("reference", ["DPR", "Karpukhin et al. (2020)", "Smith (2021)"])
+@pytest.mark.parametrize("reference", ["DPR", "BERT", "Karpukhin et al. (2020)", "Smith (2021)"])
 def test_conflicting_alias_or_author_year_matches_require_a_title(reference):
     def reader(sql, params):
         if "lower(title)=" in sql:
-            return [{"corpus_id": 42, "title": "Another paper"}] if reference == "DPR" else []
+            return (
+                [{"corpus_id": 42, "title": "Another paper"}]
+                if reference in {"DPR", "BERT"}
+                else []
+            )
         if "ANY(%(ids)s)" in sql:
-            return [{"corpus_id": 215737187, "title": "Dense Passage Retrieval"}]
+            return [{"corpus_id": params["ids"][0], "title": "Reviewed paper"}]
         if sql == AUTHOR_YEAR_SQL:
             return [
                 {"corpus_id": 42, "title": "Another paper"},

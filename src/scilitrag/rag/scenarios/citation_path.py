@@ -43,6 +43,8 @@ def baseline_candidate(
         return False
     verified = VERIFIED_ALIASES.get(target_id)
     short_names = {name.casefold() for name in verified.short_names} if verified else set()
+    # Preserve title-prefix matching for BERT-base/BERT-large even when BERT is reviewed.
+    short_names.difference_update(name.casefold() for name in target_aliases(title))
     alias_patterns = []
     for alias in sorted(aliases, key=len, reverse=True):
         # Reviewed short names exclude distinct models such as DPR-PAQ. Preserve

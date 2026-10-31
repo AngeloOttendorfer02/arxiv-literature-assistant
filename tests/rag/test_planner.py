@@ -40,13 +40,79 @@ def test_validated_plan_preserves_full_question():
     assert result.query == query and result.paper_ref == "BERT"
 
 
+@pytest.mark.parametrize("reference", ["DPR", "BERT"])
+@pytest.mark.parametrize(
+    "template",
+    [
+        "Which papers use {reference} as a baseline?",
+        "Which papers cite {reference} and use it as a baseline?",
+        'Which papers compare against "{reference}" as a baseline?',
+        "List papers that use {reference} as an experimental baseline.",
+    ],
+)
+def test_explicit_baseline_request_is_resolved_before_the_llm(reference, template):
+    query = template.format(reference=reference)
+    result = build_plan(query, Client(AssertionError("LLM must not be called")))
+    assert result.scenario == "S2" and result.require_baseline
+    assert result.paper_ref == reference and result.query == query
+    assert result.author_ref is None and result.k == 5
+
+
+@pytest.mark.parametrize("reference", ["DPR", "BERT"])
+def test_deterministic_baseline_route_preserves_explicit_filters(reference):
+    query = f"Find top 10 papers since 2022 that use {reference} as a baseline until 2024."
+    result = build_plan(query, Client(AssertionError("LLM must not be called")))
+    assert result.scenario == "S2" and result.paper_ref == reference
+    assert result.year_from == 2022 and result.year_to == 2024 and result.k == 10
+
+
+@pytest.mark.parametrize(
+    "query",
+    [
+        "What is DPR?",
+        "Which papers discuss BERT baselines?",
+        "Which papers do not use DPR as a baseline?",
+        "Which papers use DPR-PAQ as a baseline?",
+        "Which papers use DPRv2 as a baseline?",
+        "Which papers use ADPR as a baseline?",
+        "Which papers use BERTv2 as a baseline?",
+        "Which papers use RoBERTa as a baseline?",
+        "Which papers use DPR-based models as a baseline?",
+        "Which papers use DPR as a baseline and BERT for reranking?",
+        "Which papers compare against BM25 as a baseline?",
+        "Which authors use DPR as a baseline?",
+    ],
+)
+def test_other_questions_keep_model_planning(query):
+    result = build_plan(
+        query,
+        Client(payload(scenario="S1", paper_ref=None, require_baseline=False)),
+    )
+    assert result.scenario == "S1" and result.paper_ref is None and result.k == 3
+
+
+@pytest.mark.parametrize("reference", ["DPR", "BERT"])
+def test_component_factory_routes_reviewed_baselines_without_llm_or_db(monkeypatch, reference):
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Neither LLM nor DB must be needed for this question")
+
+    monkeypatch.setattr(ChatClient, "complete", forbidden)
+    monkeypatch.setattr("scilitrag.rag.search.database.DatabaseReader.__call__", forbidden)
+    settings = load_settings({"USE_MOCKS": "1", "REAL_COMPONENTS": "plan"})
+    result = get_components(settings).plan(
+        f"Which papers cite {reference} and use it as a baseline?"
+    )
+    assert result.scenario == "S2" and result.paper_ref == reference and result.require_baseline
+
+
 @pytest.mark.parametrize("scenario", ["S1", "S3"])
 @pytest.mark.parametrize("topic", ["retrieval baseline", None])
 @pytest.mark.parametrize(
     "reference", ["DPR", "Karpukhin et al. (2020)", "DPR (Karpukhin et al., 2020)"]
 )
 def test_target_baseline_request_overrides_incorrect_model_scenario(scenario, topic, reference):
-    query = f"Find top 10 papers since 2022 that use {reference} as a baseline."
+    # This phrasing uses model planning, so test the post-model correction too.
+    query = f"Identify top 10 papers since 2022 that use {reference} as a baseline."
     result = build_plan(
         query,
         Client(payload(scenario=scenario, topic=topic, paper_ref=reference, year_from=2020)),

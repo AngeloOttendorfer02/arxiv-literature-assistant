@@ -10,16 +10,17 @@ from scilitrag.rag.search.filters import YEAR
 @dataclass(frozen=True)
 class VerifiedAliases:
     short_names: tuple[str, ...]
-    citation_author: str
-    year: int
+    citation_author: str | None = None
+    year: int | None = None
     long_names: tuple[str, ...] = ()
 
 
-# DPR demo identity from D048. Do not guess acronyms or author order from IDs.
+# Reviewed identities; do not guess acronyms or author order from IDs.
 VERIFIED_ALIASES = {
     215737187: VerifiedAliases(
         ("DPR",), "Karpukhin et al.", 2020, ("Dense Passage Retrieval",)
     ),
+    52967399: VerifiedAliases(("BERT",)),
 }
 
 
@@ -30,7 +31,8 @@ def target_aliases(title: str, target_id: int | None = None) -> tuple[str, ...]:
     if verified:
         author, year = verified.citation_author, verified.year
         aliases.extend(verified.short_names)
-        aliases.extend((f"{author}, {year}", f"{author} ({year})", f"{author} {year}"))
+        if author and year is not None:
+            aliases.extend((f"{author}, {year}", f"{author} ({year})", f"{author} {year}"))
     return tuple(dict.fromkeys(aliases))
 
 
@@ -40,8 +42,9 @@ def baseline_search_topic(title: str, target_id: int) -> str:
     verified = VERIFIED_ALIASES.get(target_id)
     if verified:
         terms.extend(verified.short_names)
-        terms.append(f"{verified.citation_author}, {verified.year}")
-    return " ".join([*terms, "experimental baseline comparison"])
+        if verified.citation_author and verified.year is not None:
+            terms.append(f"{verified.citation_author}, {verified.year}")
+    return " ".join([*dict.fromkeys(terms), "experimental baseline comparison"])
 
 
 def _reference_key(value: str) -> str:
