@@ -14,6 +14,17 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D079 Prompt Guard on the retrieved sources runs on the inference server's GPU (follows from D072)
+
+- Context: With NLI on the GPU (D072), Prompt Guard on the retrieved sources was the largest CPU block before generation: about 6 s per request on the laptop, since every source is scored on its own on the CPU (13 sources at about 0.47 s).
+- Options: score on the CPU as before; precompute scores for all chunks and abstracts in the database (needs a new table, WP1 and WP3); score on the GPU of the Modal server.
+- Decision: `POST /guard` on the Modal server runs the same checkpoint (`meta-llama/Llama-Prompt-Guard-2-86M`, revision a8ded8e) on the A100. The app still cuts the token windows with its own tokenizer (`PromptGuard.windows`, unchanged window and overlap rules) and sends the windows of all sources in one request; the server only runs the model and returns one probability per window, the app keeps the highest per source. Same bearer token as the LLM; the server rejects another model id. Enabled by `GUARD_URL` (`API_GUARD_URL` for compose); without it the check runs on the CPU as before. The input check on the query stays on the CPU (about 0.15 s). The checkpoint is gated, so its weights are copied once into the private Modal Volume instead of giving the server a Hugging Face token.
+- Reason: Same model, same windows and thresholds, so the decision per source does not change; only where the model runs. The pattern is the one of D072.
+- Validation: CPU and GPU scores on 4 texts (clean, injected, a 5-window text with the attack at the end, a benign literature sentence) differ by at most 1e-8. Through the API, 12 LitSearch questions at one request (seed 1789, same questions in both runs, NLI on the GPU in both): evidence guard median 6.08 to 0.90 s (faster in 12 of 12, median -5.2 s), first released sentence 19.6 to 13.7 s, total 25.7 to 17.6 s (12 of 12 faster, median -5.9 s). No source was removed in either run, and the same 75 sentences were removed. The remaining 0.9 s is local tokenization and the round trip to Modal. Unit tests cover one request for all sources, the per-source maximum and the model check.
+- Date: 2026-10-30
+
+---
+
 ### D078 R-09 direct baseline routing for reviewed references (extends D073/D074)
 
 - Context: The model can leave `paper_ref` empty for DPR/BERT baseline questions, so D074's scenario correction cannot apply.

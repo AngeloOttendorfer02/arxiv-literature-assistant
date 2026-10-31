@@ -306,22 +306,24 @@ generation, NLI check of every sentence and citation rendering.
    The embedding model (`ibm-granite/granite-embedding-english-r2`) and the NLI model
    (`dleemiller/ModernCE-large-nli`) are public. All three are downloaded on first use.
 3. **LLM.** The demo model is `qwen3.8:27b-q4_K_M` (17 GB VRAM; D077). Either
-   - on Modal (recommended, also runs the NLI check on the GPU): deploy as in
-     [deploy/modal](deploy/modal/README.md) and set in `.env`
+   - on Modal (recommended, also runs the NLI check and the source guard on the GPU):
+     deploy as in [deploy/modal](deploy/modal/README.md) and set in `.env`
      ```
      LLM_MODEL=qwen3.8:27b-q4_K_M
      LLM_BASE_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/v1
      LLM_API_KEY=<token>
      NLI_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/nli
+     GUARD_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/guard
      API_LLM_BASE_URL=<same as LLM_BASE_URL>
      API_LLM_API_KEY=<same as LLM_API_KEY>
      API_NLI_URL=<same as NLI_URL>
+     API_GUARD_URL=<same as GUARD_URL>
      ```
      The `API_*` variables are used by the Docker api service, the others by a local API.
    - or local Ollama: `ollama pull qwen3.8:27b-q4_K_M` (needs a GPU with about 20 GB),
-     keep `LLM_BASE_URL=http://localhost:11434/v1` and leave the `API_*` and `NLI_URL`
-     variables empty. Then the NLI check runs on the CPU, which takes several seconds per
-     sentence. For development a small model such as `qwen3.5:2b-mtp-q4_K_M` works, with
+     keep `LLM_BASE_URL=http://localhost:11434/v1` and leave the `API_*`, `NLI_URL` and
+     `GUARD_URL` variables empty. Then the NLI check and the source guard run on the CPU,
+     which takes several seconds per sentence and about 6 s per request for the sources. For development a small model such as `qwen3.5:2b-mtp-q4_K_M` works, with
      weaker answers.
 4. **Start.** Set `USE_MOCKS=0` in `.env`, then either Docker
    ```

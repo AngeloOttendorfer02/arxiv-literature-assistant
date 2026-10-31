@@ -37,6 +37,22 @@ NLI_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/nli
 
 The app sends `LLM_API_KEY` as token and its `NLI_MODEL`; the server rejects a different model. Without `NLI_URL` the check runs on the CPU as before.
 
+## Prompt Guard on the GPU
+
+`POST /guard` runs Prompt Guard 2 on the retrieved sources (D079); on the laptop CPU this takes about 6 s per request. The app cuts the token windows as before and sends them in one request, so the server only runs the model. The checkpoint is gated, so its weights are copied into the Volume once from a local Hugging Face cache that has access (Git Bash: `export MSYS_NO_PATHCONV=1` first, otherwise the target path is rewritten):
+
+```
+uvx modal@1.6.2 volume put ollama-models <hf cache>/models--meta-llama--Llama-Prompt-Guard-2-86M/snapshots/a8ded8e697ce7c355e395a0df51f94adb4a2fd27 /prompt-guard-2-86M
+```
+
+Then add to the project `.env`:
+
+```
+GUARD_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/guard
+```
+
+The app sends `LLM_API_KEY` as token and the model id; the server rejects another model. Without `GUARD_URL` the check runs on the CPU as before.
+
 ## Demo with docker compose
 
 Set these in the project `.env`, then `docker compose up -d --build`:
@@ -45,6 +61,7 @@ Set these in the project `.env`, then `docker compose up -d --build`:
 API_LLM_BASE_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/v1
 API_LLM_API_KEY=<token>
 API_NLI_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/nli
+API_GUARD_URL=https://<workspace>--scilitrag-ollama-ollama-serve.us-east.modal.run/guard
 LLM_MODEL=qwen3.8:27b-q4_K_M
 ```
 

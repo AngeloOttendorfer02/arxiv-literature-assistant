@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 pytest.importorskip("torch")
@@ -72,3 +74,44 @@ def test_model_removes_injected_sources_and_keeps_clean_ones():
     result = real_evidence.build_component(settings())([item(1, clean), item(2, poisoned)])
     assert [e.label for e in result.evidence] == [1]
     assert result.removed == [2]
+
+
+def test_remote_guard_scores_all_sources_in_one_request(monkeypatch):
+    import httpx
+
+    from scilitrag.guardrails.prompt_guard import RemoteGuard
+
+    # Windows per text: text "a" has two windows, "b" one.
+    windows = {"a": [[1, 5, 2], [1, 6, 2]], "b": [[1, 7, 2]]}
+    monkeypatch.setattr(PromptGuard, "windows", lambda self, text: windows[text])
+    monkeypatch.setattr(PromptGuard, "score", lambda self, text: pytest.fail("ran on the CPU"))
+    requests = []
+
+    def handler(request):
+        body = json.loads(request.content)
+        requests.append(body)
+        assert request.headers["authorization"] == "Bearer secret"
+        return httpx.Response(200, json={"model": body["model"], "malicious": [0.1, 0.9, 0.2]})
+
+    remote = RemoteGuard("http://gpu/guard", "secret", transport=httpx.MockTransport(handler))
+    monkeypatch.setattr(real_evidence, "RemoteGuard", lambda url, key: remote)
+    check = real_evidence.build_component(settings(GUARD_URL="http://gpu/guard"))
+    result = check(
+        [item(1, "a"), item(2, "b"), Evidence(label=3, type="sql", query_id="q", text="{}")]
+    )
+    assert len(requests) == 1 and requests[0]["windows"] == [[1, 5, 2], [1, 6, 2], [1, 7, 2]]
+    assert result.scores == {1: 0.9, 2: 0.2}
+    assert result.removed == [1]
+
+
+def test_remote_guard_rejects_another_model():
+    import httpx
+
+    from scilitrag.guardrails.prompt_guard import RemoteGuard
+
+    def handler(request):
+        return httpx.Response(200, json={"model": "other", "malicious": [0.0]})
+
+    remote = RemoteGuard("http://gpu/guard", None, transport=httpx.MockTransport(handler))
+    with pytest.raises(RuntimeError):
+        remote.scores([[[1, 2]]])
