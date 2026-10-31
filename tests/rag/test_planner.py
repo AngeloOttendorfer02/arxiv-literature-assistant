@@ -195,3 +195,26 @@ def test_s2_does_not_silently_drop_unrelated_unresolved_author():
         )),
     )
     assert result.author_ref == "Jane Doe"
+
+
+def test_s1_topic_is_not_treated_as_a_specific_paper_reference():
+    query = "Find up to 3 papers about dense passage retrieval published from 2020 to 2023."
+    result = build_plan(
+        query,
+        Client(payload(scenario="S1", topic="dense passage retrieval",
+                       paper_ref="dense passage retrieval", author_ref=None,
+                       require_baseline=False)),
+    )
+    assert result.scenario == "S1" and result.paper_ref is None
+    assert result.topic == "dense passage retrieval"
+    assert result.year_from == 2020 and result.year_to == 2023
+
+
+def test_s1_preserves_explicit_paper_reference():
+    query = "Find the paper Dense Passage Retrieval for Open-Domain Question Answering."
+    title = "Dense Passage Retrieval for Open-Domain Question Answering"
+    result = build_plan(
+        query, Client(payload(scenario="S1", topic=title, paper_ref=title,
+                              author_ref=None, require_baseline=False)),
+    )
+    assert result.paper_ref == title

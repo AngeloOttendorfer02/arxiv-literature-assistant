@@ -112,6 +112,17 @@ def build_plan(masked_query: str, client: JsonCompletionClient) -> Plan:
     filters = parse_filters(masked_query)
     result = _model_plan(masked_query, client)
     author_ref = result.author_ref
+    paper_ref = result.paper_ref
+    # A topic is not a paper constraint merely because the planner copied it.
+    if result.scenario == "S1" and paper_ref and result.topic:
+        topic = result.topic.strip()
+        topic_request = re.search(
+            r"\b(?:papers|articles|studies|research|work)\s+(?:about|on)\s+"
+            + re.escape(topic) + r"(?=$|[\s.,?])",
+            masked_query, flags=re.IGNORECASE,
+        )
+        if topic and paper_ref.strip().casefold() == topic.casefold() and topic_request:
+            paper_ref = None
     # An LLM may copy a paper acronym into the citing-author filter. Remove it
     # only when it matches the target citation's acronym and is absent from the
     # question; explicitly supplied author references remain intact.
@@ -128,6 +139,7 @@ def build_plan(masked_query: str, client: JsonCompletionClient) -> Plan:
     # are removed instead of silently narrowing the search.
     return result.model_copy(
         update={
+            "paper_ref": paper_ref,
             "author_ref": author_ref,
             "year_from": filters.year_from,
             "year_to": filters.year_to,

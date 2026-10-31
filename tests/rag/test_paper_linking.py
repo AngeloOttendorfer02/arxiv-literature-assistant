@@ -206,3 +206,10 @@ def test_a_reviewed_short_name_can_have_multiple_paper_identities(monkeypatch):
 
     with pytest.raises(RagUserError, match="Which paper"):
         EntityLinker(reader).paper("DPR")
+
+
+def test_reviewed_dpr_long_name_with_acronym_resolves_exactly():
+    assert reviewed_reference_ids("Dense Passage Retrieval (DPR)") == [215737187]
+    assert reviewed_reference_ids("dense passage retrieval(dpr)") == [215737187]
+    assert reviewed_reference_ids("Dense Passage Retrieval (DPR-PAQ)") == []
+    assert reviewed_reference_ids("Other Retrieval (DPR)") == []
