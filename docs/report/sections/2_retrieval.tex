@@ -14,7 +14,7 @@ Authors are taken from S2ORC name annotations and merged by normalized name; var
 
 \begin{table}[ht]
 \centering
-\caption{Data after filtering (D-03 corpus).}
+\caption{Data after filtering.}
 \label{tab:data}
 \begin{tabular}{lr}
 \toprule
@@ -65,7 +65,7 @@ Its NDCG@10 gain over bge-base is significant on both splits (paired bootstrap, 
 Vectors are stored in pgvector with an HNSW index (cosine, $m=16$, $ef_\mathrm{construction}=64$, $ef_\mathrm{search}=100$, iterative scan so that filtered searches stay complete).
 BM25 runs in PostgreSQL via ParadeDB pg\_search on title (weight 0.5) and abstract, and on chunk text; filters on year, author and paper are part of the same SQL query.
 Dense and BM25 lists are fused with reciprocal rank fusion ($k=60$).
-On the full database, LitSearch Recall@20 is 0.690 dense, 0.607 BM25 and 0.704 hybrid.
+On the full database, LitSearch Recall@20 is 0.690 dense, 0.607 BM25 and 0.709 hybrid.
 
 \paragraph{Foundation model.}
 \todo{Open-weight LLM and why (D037).}

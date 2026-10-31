@@ -24,7 +24,10 @@
 \maketitle
 
 \begin{abstract}
-\todo{Three to four sentences: task, data (LitSearch~\cite{ajith2024litsearch}), approach, key numbers.}
+SciLitRAG is a retrieval-augmented assistant for scientific literature search and citation analysis over 56{,}115 LitSearch~\cite{ajith2024litsearch} papers.
+It combines hybrid retrieval (dense vector search and BM25) and SQL over citation and author tables with a self-hosted language model (\texttt{qwen3.8:27b}) and guardrails that check requests and generated sentences before display.
+Across 597 queries, hybrid retrieval over paper titles and abstracts achieves a mean Recall@20 of 0.709.
+Four-bit quantization reduces model VRAM by about two-thirds without an observed decrease in NLI-scored citation quality.
 \end{abstract}
 
 \input{sections/1_architecture}
