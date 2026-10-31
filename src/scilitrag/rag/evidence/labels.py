@@ -8,6 +8,21 @@ LABEL = re.compile(r"\[([1-9]\d*)\]")
 NUMERIC_BRACKET = re.compile(r"\[\s*\d[^\]]*\]")
 TRAILING_LABELS = re.compile(r"(?:\[[1-9]\d*\]\s*)+[.!?]?\s*$")
 
+ABSTRACT_ONLY_SECTION = "Abstract only"
+ABSTRACT_ONLY_NOTICE = (
+    "Only abstract evidence is present in this context for this result [{label}]."
+)
+
+
+def is_abstract_notice(sentence: str, mapping: EvidenceMapping) -> bool:
+    """True for the frame sentence written by the code for a source that has only an abstract."""
+    return any(
+        item.type == "paper"
+        and item.section == ABSTRACT_ONLY_SECTION
+        and sentence.strip() == ABSTRACT_ONLY_NOTICE.format(label=label)
+        for label, item in mapping.items()
+    )
+
 
 def citation_labels(sentence: str) -> list[int]:
     """Reject malformed numeric brackets and return labels in first-use order."""

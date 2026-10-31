@@ -5,6 +5,7 @@ import time
 
 from scilitrag.config import Settings
 from scilitrag.contracts import CheckSentence, Evidence, EvidenceMapping, SentenceCheck
+from scilitrag.rag.evidence.labels import is_abstract_notice
 
 # Checkpoint order; the config.json id2label of some NLI models disagrees with it.
 NLI_LABELS = ("contradiction", "entailment", "neutral")
@@ -121,6 +122,9 @@ def build_component(settings: Settings) -> CheckSentence:
         labels = list(dict.fromkeys(int(n) for n in re.findall(r"\[\s*(\d+)\s*\]", sentence)))
         if any(label not in mapping for label in labels):
             return result("unknown_label")
+        # Written by our code, not by the model; the abstract does not entail a statement about itself.
+        if is_abstract_notice(sentence, mapping):
+            return result("ok")
         cited = [mapping[label] for label in labels]
         claim = " ".join(LABEL.sub("", sentence).split())
 

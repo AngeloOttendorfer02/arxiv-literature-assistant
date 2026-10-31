@@ -5,6 +5,7 @@ from contextlib import aclosing
 from scilitrag.config import load_settings
 from scilitrag.contracts import Evidence, Plan
 from scilitrag.rag.evidence.context import build_context
+from scilitrag.rag.evidence.labels import ABSTRACT_ONLY_NOTICE, ABSTRACT_ONLY_SECTION
 from scilitrag.rag.llm.client import ChatClient
 
 
@@ -47,8 +48,12 @@ async def generate_with(
         return
     included = set(packet.included_labels)
     for item in evidence:
-        if item.label in included and item.type == "paper" and item.section == "Abstract only":
-            yield f"Only abstract evidence is present in this context for this result [{item.label}]. "
+        if (
+            item.label in included
+            and item.type == "paper"
+            and item.section == ABSTRACT_ONLY_SECTION
+        ):
+            yield ABSTRACT_ONLY_NOTICE.format(label=item.label) + " "
     async with aclosing(client.stream(packet.messages)) as stream:
         async for token in stream:
             yield token

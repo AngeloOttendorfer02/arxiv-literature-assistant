@@ -194,3 +194,64 @@ def model():
 def test_model_label_order(model, hypothesis, expected):
     probs = model.probabilities(CHUNK, hypothesis)
     assert max(probs, key=probs.get) == expected
+
+
+def abstract_only(label=1):
+    return Evidence(
+        label=label,
+        type="paper",
+        corpus_id=7,
+        title="A paper",
+        section="Abstract only",
+        text="We study retrieval.",
+    )
+
+
+NOTICE = "Only abstract evidence is present in this context for this result [1]."
+
+
+def test_code_written_abstract_notice_passes_without_nli(probs):
+    probs["values"] = {"contradiction": 0.9, "entailment": 0.0, "neutral": 0.1}
+    assert check(NOTICE, abstract_only()).status == "ok"
+    assert probs["calls"] == []
+
+
+def test_abstract_notice_is_only_exempt_for_an_abstract_only_source(probs):
+    probs["values"] = {"contradiction": 0.9, "entailment": 0.0, "neutral": 0.1}
+    full_text = Evidence(
+        label=1, type="paper", corpus_id=7, section="Abstract", text="We study retrieval."
+    )
+    assert check(NOTICE, full_text).status == "fact_mismatch"
+    assert check(NOTICE, chunk()).status == "fact_mismatch"
+
+
+def test_changed_notice_text_is_still_checked(probs):
+    probs["values"] = {"contradiction": 0.0, "entailment": 0.0, "neutral": 1.0}
+    sentence = "Only abstract evidence is present and it proves the model is perfect [1]."
+    assert check(sentence, abstract_only()).status == "unsupported"
+    assert len(probs["calls"]) == 1
+
+
+def test_generator_and_check_share_the_notice_text():
+    import asyncio
+
+    from scilitrag.contracts import Plan
+    from scilitrag.rag.generation import generate_with
+
+    class Silent:
+        settings = None
+
+        async def stream(self, messages):
+            return
+            yield
+
+    async def collect():
+        return [
+            t
+            async for t in generate_with(
+                Plan(scenario="S1", topic="x", k=3), [abstract_only()], Silent()
+            )
+        ]
+
+    first = asyncio.run(collect())[0]
+    assert check(first, abstract_only()).status == "ok"
