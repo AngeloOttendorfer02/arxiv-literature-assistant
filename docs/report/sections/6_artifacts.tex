@@ -15,7 +15,7 @@ The README then explains how to clean the data, select papers for chunking, load
 \paragraph{Provenance.}
 LitSearch~\cite{ajith2024litsearch} is obtained from Hugging Face\footnote{\url{https://huggingface.co/datasets/princeton-nlp/LitSearch}} and is not redistributed.
 Table~\ref{tab:provenance} lists Hugging Face identifiers and recorded revisions.
-Dataset and embedding revisions are pinned in the code; NLI and Prompt Guard are loaded without a pinned revision, so the table records their evaluated and locally cached snapshots, respectively.
+Dataset and embedding revisions are pinned in the code. The application loads NLI and Prompt Guard without a pinned revision; the table records the NLI snapshot used in our evaluation and the Prompt Guard snapshot copied to the inference server.
 Library versions are locked in \texttt{uv.lock}; the main ones are torch 2.14.1, transformers 5.20.2, sentence-transformers 6.2.0, FastAPI 0.143.3, Streamlit 1.66.0, psycopg 3.3.6, Presidio Analyzer 2.2.364 and spaCy 3.8.16.
 
 \begin{table}[ht]
