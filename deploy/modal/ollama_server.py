@@ -2,7 +2,8 @@
 
 Ollama listens on 127.0.0.1 inside the container only; a FastAPI proxy in front of it
 enforces a bearer token and forwards both the OpenAI-compatible /v1 API and the native /api.
-POST /nli runs the app's NLI check on the same GPU (D072).
+POST /nli runs the app's NLI check on the same GPU (D072), POST /guard Prompt Guard on the
+retrieved sources (D079).
 """
 
 import hmac
@@ -22,6 +23,11 @@ GPU = "A100-80GB"
 NUM_PARALLEL = os.environ.get("OLLAMA_NUM_PARALLEL", "1")
 # Same checkpoint as NLI_MODEL in the app (D057); the app sends its id and a mismatch fails.
 NLI_MODEL = os.environ.get("NLI_MODEL", "dleemiller/ModernCE-large-nli")
+# Prompt Guard for the source check (D079). Gated on Hugging Face, so the weights are copied
+# into the volume once (README) instead of giving the server a token.
+GUARD_MODEL = "meta-llama/Llama-Prompt-Guard-2-86M"
+GUARD_DIR = f"{MODELS_DIR}/prompt-guard-2-86M"
+GUARD_BATCH = 32
 
 image = (
     modal.Image.debian_slim(python_version="3.12")
@@ -108,6 +114,8 @@ class Ollama:
         self.proc = _start_ollama()
         self.nli = None
         self.nli_lock = threading.Lock()
+        self.guard = None
+        self.guard_lock = threading.Lock()
 
     def nli_scores(self, pairs: list[list[str]]) -> list[list[float]]:
         """Class probabilities in checkpoint order; the model loads on the first call."""
@@ -128,6 +136,31 @@ class Ollama:
             ).to("cuda")
             with torch.no_grad():
                 return model(**inputs).logits.softmax(-1).tolist()
+
+    def guard_scores(self, windows: list[list[int]]) -> list[float]:
+        """Malicious probability per window; the app cuts the windows with its tokenizer."""
+        with self.guard_lock:
+            import torch
+            from transformers import AutoModelForSequenceClassification
+
+            if self.guard is None:
+                model = AutoModelForSequenceClassification.from_pretrained(GUARD_DIR)
+                self.guard = model.eval().to("cuda")
+            model = self.guard
+            pad = model.config.pad_token_id or 0
+            scores = []
+            for i in range(0, len(windows), GUARD_BATCH):
+                batch = windows[i : i + GUARD_BATCH]
+                width = max(len(w) for w in batch)
+                ids = torch.tensor([w + [pad] * (width - len(w)) for w in batch], device="cuda")
+                mask = torch.tensor(
+                    [[1] * len(w) + [0] * (width - len(w)) for w in batch], device="cuda"
+                )
+                with torch.no_grad():
+                    logits = model(input_ids=ids, attention_mask=mask).logits
+                # Index 1 is "malicious", as in the app.
+                scores.extend(logits.softmax(-1)[:, 1].tolist())
+            return scores
 
     @modal.exit()
     def stop(self):
@@ -168,6 +201,24 @@ class Ollama:
                 )
             probs = await run_in_threadpool(self.nli_scores, pairs) if pairs else []
             return {"model": NLI_MODEL, "probabilities": probs}
+
+        @web.post("/guard")
+        async def guard(request: Request):
+            if not authorized(request):
+                return JSONResponse({"error": "unauthorized"}, status_code=401)
+            payload = await request.json()
+            if payload.get("model") != GUARD_MODEL:
+                return JSONResponse({"error": f"server runs {GUARD_MODEL}"}, status_code=400)
+            windows = payload.get("windows") or []
+            if not all(
+                isinstance(w, list) and 0 < len(w) <= 512 and all(isinstance(t, int) for t in w)
+                for w in windows
+            ):
+                return JSONResponse(
+                    {"error": "windows must be lists of 1 to 512 token ids"}, status_code=400
+                )
+            scores = await run_in_threadpool(self.guard_scores, windows) if windows else []
+            return {"model": GUARD_MODEL, "malicious": scores}
 
         @web.api_route("/{path:path}", methods=["GET", "POST", "DELETE"])
         async def proxy(path: str, request: Request):
