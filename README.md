@@ -244,7 +244,7 @@ The restore checks the `.sha256` file next to the dump, runs `pg_restore`, then
 `roles.sql`, `indexes.sql` and `retrieval_indexes.sql` from this repository and
 `ANALYZE` (about 80 s). It refuses a database that already has the project tables;
 `docker compose down -v` deletes existing data first. The dump `scilitrag_v2`
-(about 400 MiB, chunks of 256 tokens with 10 % overlap; D062) holds schema and data
+(about 400 MiB, chunks of 256 tokens with 10 % overlap; D064) holds schema and data
 of the six tables only, without indexes, roles or grants, so index changes need no
 new dump. `scilitrag_v1` (512-token chunks) is superseded.
 
@@ -269,7 +269,7 @@ uv run --no-project --python 3.13 --index https://download.pytorch.org/whl/cu130
 ```
 
 Create the dump before running `indexes.sql`; the restore builds the indexes.
-Details in D054 and D062.
+Details in D054 and D064.
 
 ### Validate the database (D-17)
 
@@ -383,11 +383,14 @@ Ollama runs on the host, outside compose. Keep it bound to localhost (default `1
 ## Tests
 
 ```sh
-uv run --locked --group data --group rag pytest
-uv run --locked --group data --group rag python scripts/smoke.py
-uv run --locked --group data --group rag ruff check .
-uv run --locked --group data --group rag ruff format --check .
+uv run --locked --group data --group rag --group guardrails --group embed pytest
+uv run --locked --group data --group rag --group guardrails --group embed python scripts/smoke.py
+uv run --locked --group data --group rag --group guardrails --group embed ruff check .
+uv run --locked --group data --group rag --group guardrails --group embed ruff format --check .
 ```
+
+Without the `guardrails` and `embed` groups the tests that need `torch` and `transformers`
+(Prompt Guard, topic gate, NLI) are skipped. CI installs all groups.
 
 The UI tests also require the `ui` group and are skipped without it:
 
@@ -426,6 +429,8 @@ src/scilitrag/
   config.py     environment configuration
   components.py selects mocks or real components
 eval/retrieval/ synthetic public evaluation examples
+eval/guardrails/ own test sets for the guardrails (attacks, harmless questions, evidence, validator)
+eval/results/   recorded scores and timings of the evaluations (no texts)
 eval/private/   ignored references, source passages, annotations and results
 bench/          quantization benchmark
 deploy/modal/   Ollama endpoint on Modal for benchmark and load test (A-09)
@@ -434,7 +439,8 @@ scripts/        helper scripts (data download, smoke test)
 tests/rag/      retrieval, generation and citation tests
 tests/evaluation/ reference validation, runner and metric tests
 tests/          shared/API/UI/data tests and fixtures
-docs/           decisions and diagrams
+docs/           decisions, evaluation reports and diagrams
+docs/report/    technical report (LaTeX, one file per section in sections/)
 ```
 
 The [database ER diagram](docs/er_diagram.md) documents the current tables,
@@ -470,6 +476,34 @@ candidates or re-score human-reviewed runs with `scripts/evaluate_retrieval.py`.
 The [evaluation guide](docs/evaluation.md) explains frozen revisions, seed scopes, labels
 and undefined metrics. A refused or empty response does not count as a completed evaluation.
 Synthetic success does not establish real model quality.
+
+## Evaluate guardrails
+
+The test sets in `eval/guardrails` are our own wording and contain no LitSearch records (see
+[their README](eval/guardrails/README.md)). Thresholds are chosen on the tuning split only; the test
+split is read once. The scripts store raw scores or timings, never texts, in `eval/results` and
+write tables to `docs`.
+
+| Script | Measures | Needs | Output |
+| --- | --- | --- | --- |
+| `evaluate_guardrails.py` | Defense success rate, false rejection rate and confusion matrix of the input guards and the evidence guard (D067, D068) | groups `guardrails`, `embed`, `data`; with `DATA_DIR` the harmless LitSearch questions join the test split | `eval/results/guardrails.json`, `docs/guardrail_evaluation.md` |
+| `evaluate_validator.py` | Precision and recall of `check_sentence` on manipulated answer sentences (D070) | group `guardrails` | `eval/results/validator.json`, `docs/validator_evaluation.md` |
+| `sample_evidence_scores.py` | Share of real chunks and abstracts the evidence guard would remove (D069) | database, groups `rag`, `guardrails` | `eval/results/evidence_real_sample.json`, `docs/evidence_real_sample.md` |
+| `measure_guardrail_latency.py` | Latency per guardrail stage, median and p95 (D080) | database, groups `rag`, `guardrails`, `embed`; `--live` also the LLM settings | `eval/results/guardrail_latency_<mode>.json`, `docs/guardrail_latency_<mode>.md` |
+
+```sh
+uv run --locked --group guardrails --group embed --group data python scripts/evaluate_guardrails.py
+uv run --locked --group guardrails python scripts/evaluate_validator.py
+uv run --locked --group rag --group guardrails python scripts/sample_evidence_scores.py
+uv run --locked --group rag --group guardrails --group embed python scripts/measure_guardrail_latency.py
+```
+
+`evaluate_guardrails.py` and `evaluate_validator.py` take `--analyze-only` to redo the threshold choice
+and the tables from the recorded scores without models. `measure_guardrail_latency.py` replays an
+extractive answer without a language model by default; `--live` runs the whole pipeline against
+`LLM_BASE_URL`, `--from-log logs/requests.jsonl` evaluates the log of a real API run, and
+`--tag NAME` keeps the results of another setup (for example `NLI_URL` and `GUARD_URL` on Modal)
+from overwriting an earlier run. The result and the table state where NLI and the evidence guard ran.
 
 ## Decisions
 
