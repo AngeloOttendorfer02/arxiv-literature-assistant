@@ -741,6 +741,30 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ## Rejected approaches
 
+### R007 Evidence guard threshold 0.01
+
+- Approach: Lower the Prompt Guard threshold on retrieved sources from 0.5 to 0.01, because it caught 54 percent of the injected passages on tuning instead of 33 percent (D067, D068).
+- Why rejected: Our own clean passages scored at most 0.0011, so they did not represent real text. On 200 random chunks from the full database 0.01 would remove 7.0 percent (14/200) and 0.5 percent of 200 abstracts; the median real chunk scores 0.0025. At 0.5 only 1 of 200 chunks is removed. Lesson: choose a threshold on a sample of real data, not only on test cases written by the team. The remaining gap in indirect injection is a limit of Prompt Guard 2 on passages. See D069.
+- Date: 2026-10-28
+
+### R006 Chunks of 512 tokens
+
+- Approach: Keep 512 tokens with 10 percent overlap (D049 default, D-16 database).
+- Why rejected: Retrieval quality was equivalent to 256/10 within noise, but 10 percent of the chunks exceed the 2,400 character limit and are cut in the prompt, none at 256, and the NLI check takes 555 instead of 292 ms per full chunk. At an equal budget of about 1,024 tokens, 256/10 holds the source span in 0.84 of the questions against 0.62. Lesson: chunk size also sets prompt and NLI cost, so retrieval quality alone should not decide it. The chunks and embeddings were rebuilt. See D060.
+- Date: 2026-10-27
+
+### R005 Sentence check on the application CPU
+
+- Approach: Run NLI and Prompt Guard on the sources in the API process on the CPU, next to the orchestrator (D036, D057, D056).
+- Why rejected: It was fast enough for a single request but broke under load. In the load test the check took a median of 20 s of a 38 s request while the GPU generated the answer in about 6 s; throughput stayed at 1.1 to 1.6 requests per minute and 8 of 12 requests timed out at 8 parallel requests. Lesson: we had expected the language model to be the bottleneck, but the safety layer was; only a test of the whole pipeline showed it. NLI now runs on the inference server (D072), Prompt Guard on the sources too (D079); the models and thresholds are unchanged. See D071.
+- Date: 2026-10-28
+
+### R004 Small NLI model EttinX-nli-s
+
+- Approach: Use dleemiller/EttinX-nli-s (68M, about 250 ms per pair on the CPU) for the sentence check, as chosen in D029 after 7 hand-made pairs.
+- Why rejected: On 1,034 pairs from 150 real abstracts it rejected 23 percent of verbatim sentences with a premise of about 200 tokens and 87 percent with about 600 tokens (ModernCE-base: 87 and 53 percent passed; ModernCE-large: 100 and 99 percent). Manipulated sentences (negation, number, wrong paper) passed at most 14 percent with all three models. Lesson: seven examples say nothing about accuracy; test with the premise length the system will see. See D057.
+- Date: 2026-10-23
+
 ### R003 Trimming affiliation words from author last names
 
 - Approach: In D-08, remove excluded words from the end of a last name ("Quoc V Le Google Brain" to "Quoc V Le") instead of dropping the entry.
