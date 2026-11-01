@@ -1,14 +1,27 @@
 % Owner: WP4 (Ben), discarded approaches from all. Tasks: A-13, E-04.
 % Required: resource bottlenecks under concurrent load; at least 2 failed or discarded
-% approaches with lessons learned (source: docs/decisions.md).
+% approaches with lessons learned (source: docs/decisions.md); known edge cases (grading).
 \section{Architectural Trade-offs, Bottlenecks and Post-Mortem}
 \label{sec:tradeoffs}
 
 \paragraph{Bottlenecks under load.}
-\todo{Load test with 1, 2, 4, 8 parallel requests: p50 and p95 latency, tokens/s; which resource saturates first (A-13).}
+We sent 12 different LitSearch questions at each of 1, 2, 4 and 8 concurrent requests through the API with all real components (Ollama with 8 slots; Table~\ref{tab:load} in the appendix).
+In the first run, NLI and the evidence guard both ran on the laptop CPU: the sentence check alone took 20 of 38\,s at one request, throughput stayed at 1.1 to 1.6 completed requests per minute and 8 of 12 requests timed out at 8, while the app drew only 4 to 6 tokens/s from a GPU that decodes 43 tokens/s per request and retrieval stayed between 0.8 and 3.5\,s.
+The laptop CPU was the bottleneck, not the GPU or the database.
+With NLI moved to the GPU, all 48 requests completed at 1, 2, 4 and 8: median latency 30, 34, 38 and 64\,s, p95 57, 58, 48 and 93\,s, and 1.9, 3.0, 5.7 and 5.9 requests per minute.
+Throughput levels off between 4 and 8; the stages that grow most are the evidence guard, then still on the CPU (6.5 to 15.2\,s), and the planner's model call (6.2 to 12.6\,s), which shares the GPU with eight generations.
+We then moved the evidence guard to the GPU too, without repeating the load test; hence the lower end-to-end time in Section~\ref{sec:benchmarks}.
 
 \paragraph{Discarded approaches.}
-\begin{enumerate}
-\item \todo{Approach, why it failed, lesson.}
-\item \todo{Approach, why it failed, lesson.}
+\begin{enumerate}\setlength{\itemsep}{0pt}\setlength{\topsep}{0pt}
+\item \emph{Guard models on the orchestrator's CPU.} Only the LLM on the GPU looked sufficient, but the CPU-bound checks limited throughput (above). Lesson: measure through the full pipeline, not only the engine.
+\item \emph{Evidence-guard threshold 0.01.} Tuned on our own passages it caught 54\,\% of injected passages and no clean one, but on 200 random real chunks it would remove 7\,\%, since real text scores higher than our clean examples. Lesson: check thresholds on production data before adopting them.
+\item \emph{A small NLI model (EttinX-nli-s).} Chosen first on seven hand-made pairs, it rejected 23\,\% of sentences copied verbatim from a 200-token premise and 87\,\% from a 600-token one; ModernCE-large keeps 99\,\% at six times the cost. Lesson: test with the premise lengths the system actually produces.
 \end{enumerate}
+
+\paragraph{Known edge cases.}
+Citation counts and paths only cover the 23.8\,\% of the 1.44 million bibliography entries that match a corpus paper, and author names that differ by an accent or a middle initial count as different authors.
+Only 1{,}000 papers have chunked full texts; for the others the answer rests on the abstract, which the app states.
+The sentence check removes true sentences that combine two sources.
+The evidence guard misses instructions in the middle of a passage, and some jailbreaks are refused with the off-topic instead of the injection category.
+S2 resolves only reviewed short names (DPR, BERT) without the model; for other references the planner can miss the paper, and the question is answered as a topic search.

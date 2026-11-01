@@ -9,7 +9,11 @@
 \usepackage{booktabs}
 \usepackage{graphicx}
 \usepackage{xcolor}
+% \FloatBarrier keeps the architecture figure inside section 1.
+\usepackage{placeins}
 \usepackage[hidelinks]{hyperref}
+% Long model IDs may break at hyphens as well as slashes.
+\renewcommand{\UrlBreaks}{\do\/\do-}
 
 \graphicspath{{figures/}}
 
