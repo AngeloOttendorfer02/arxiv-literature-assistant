@@ -27,6 +27,8 @@ RUN useradd --create-home --uid 1000 app
 COPY --from=build --chown=app:app /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 USER app
+# Owned by app, so the hfcache volume in compose.yaml is writable.
+RUN mkdir -p /home/app/.cache/huggingface
 WORKDIR /app
 
 EXPOSE 8000
