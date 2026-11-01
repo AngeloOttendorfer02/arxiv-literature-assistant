@@ -120,6 +120,8 @@ def build_component(settings: Settings) -> CheckSentence:
             )
 
         labels = list(dict.fromkeys(int(n) for n in re.findall(r"\[\s*(\d+)\s*\]", sentence)))
+        if not labels:
+            return result("no_citation")
         if any(label not in mapping for label in labels):
             return result("unknown_label")
         # Written by our code, not by the model; the abstract does not entail a statement about itself.

@@ -55,11 +55,13 @@ def mask_pii(text: str) -> str:
     results = _analyzer().analyze(
         text=text, language=LANGUAGE, entities=list(PLACEHOLDERS), score_threshold=MIN_SCORE
     )
-    # Replace from the end so earlier offsets stay valid; skip spans nested in a kept one.
-    masked, floor = text, len(text) + 1
-    for hit in sorted(results, key=lambda r: (r.start, -(r.end - r.start)), reverse=True):
-        if hit.end > floor:
-            continue
+    # Longest spans win, so a span nested in another one is dropped.
+    kept = []
+    for hit in sorted(results, key=lambda r: (-(r.end - r.start), r.start)):
+        if all(hit.end <= k.start or hit.start >= k.end for k in kept):
+            kept.append(hit)
+    # Replace from the end so earlier offsets stay valid.
+    masked = text
+    for hit in sorted(kept, key=lambda r: r.start, reverse=True):
         masked = masked[: hit.start] + PLACEHOLDERS[hit.entity_type] + masked[hit.end :]
-        floor = hit.start
     return masked

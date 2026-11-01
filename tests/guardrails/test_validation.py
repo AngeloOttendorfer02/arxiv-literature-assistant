@@ -162,6 +162,11 @@ def test_unknown_label(probs):
     assert check("Claim [5].", chunk()).status == "unknown_label"
 
 
+def test_uncited_sentence_is_no_citation(probs):
+    assert check("Transformers were invented by aliens.", chunk()).status == "no_citation"
+    assert probs["calls"] == []
+
+
 def test_thresholds_come_from_settings(probs):
     probs["values"] = {"contradiction": 0.0, "entailment": 0.6, "neutral": 0.4}
     assert check("Claim [1].", chunk(), NLI_ENTAILMENT_THRESHOLD="0.5").status == "ok"
@@ -230,6 +235,14 @@ def test_changed_notice_text_is_still_checked(probs):
     sentence = "Only abstract evidence is present and it proves the model is perfect [1]."
     assert check(sentence, abstract_only()).status == "unsupported"
     assert len(probs["calls"]) == 1
+
+
+def test_combined_notice_passes_only_if_every_source_is_abstract_only(probs):
+    probs["values"] = {"contradiction": 0.9, "entailment": 0.0, "neutral": 0.1}
+    combined = "Only abstract evidence is present in this context for these results [1][2]."
+    assert check(combined, abstract_only(1), abstract_only(2)).status == "ok"
+    assert probs["calls"] == []
+    assert check(combined, abstract_only(1), chunk(2)).status == "fact_mismatch"
 
 
 def test_generator_and_check_share_the_notice_text():

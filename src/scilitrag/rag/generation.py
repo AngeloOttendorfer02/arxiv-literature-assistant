@@ -5,7 +5,7 @@ from contextlib import aclosing
 from scilitrag.config import load_settings
 from scilitrag.contracts import Evidence, Plan
 from scilitrag.rag.evidence.context import build_context
-from scilitrag.rag.evidence.labels import ABSTRACT_ONLY_NOTICE, ABSTRACT_ONLY_SECTION
+from scilitrag.rag.evidence.labels import ABSTRACT_ONLY_SECTION, abstract_notice
 from scilitrag.rag.llm.client import ChatClient
 
 
@@ -28,14 +28,17 @@ async def generate_with(
 ) -> AsyncIterator[str]:
     if not evidence:
         return
+    # Frame sentences from code go out with the model's first token, so they do not count as TTFT.
+    frame = ""
     if plan.scenario == "S3":
         for item in evidence:
             if item.type == "sql":
-                yield (
+                frame += (
                     "The ranking counts one credit per author for each indexed citing-paper "
                     f"and cited-paper pair [{item.label}]. "
                 )
                 if _is_plain_author_ranking(plan):
+                    yield frame
                     return
     settings = settings or getattr(client, "settings", None)
     packet = build_context(
@@ -45,18 +48,25 @@ async def generate_with(
         item_limit=settings.evidence_item_char_limit if settings else 2400,
     )
     if not packet.included_labels:
+        if frame:
+            yield frame
         return
     included = set(packet.included_labels)
-    for item in evidence:
-        if (
-            item.label in included
-            and item.type == "paper"
-            and item.section == ABSTRACT_ONLY_SECTION
-        ):
-            yield ABSTRACT_ONLY_NOTICE.format(label=item.label) + " "
+    abstract_only = [
+        item.label
+        for item in evidence
+        if item.label in included and item.type == "paper" and item.section == ABSTRACT_ONLY_SECTION
+    ]
+    if abstract_only:
+        frame += abstract_notice(abstract_only) + " "
     async with aclosing(client.stream(packet.messages)) as stream:
         async for token in stream:
+            if frame:
+                yield frame
+                frame = ""
             yield token
+    if frame:
+        yield frame
 
 
 def build_component(settings):
