@@ -68,7 +68,7 @@ The embedding comparison used exact search (granite Recall@20 0.695), the produc
 
 \begin{table}[ht]
 \centering
-\caption{Models with recorded revisions, and source and hardware of each reported figure. Source files are in \texttt{eval/results/} of the repository and contain scores and timings only, no dataset text. Guard scores do not depend on the hardware.}
+\caption{Models with recorded revisions, and source and hardware of each reported figure. Source files are in \texttt{eval/results/} of the repository and contain scores and timings only, no dataset text. Laptop: Intel i7-9750H, 12 threads. Guard scores do not depend on the hardware.}
 \label{tab:provenance}
 \small
 \begin{tabular}{lll}
@@ -98,10 +98,10 @@ Embedding comparison & \texttt{d22\_embedding\_comparison.json} & RTX 4070 Ti SU
 Retrieval recall & \texttt{d18\_retrieval\_comparison.json} & production database \\
 DSR / FRR (Table~\ref{tab:guardrails}) & \texttt{guardrails.json}, \texttt{validator.json}, & CPU \\
  & \texttt{evidence\_real\_sample.json} & \\
-Guard latency (Table~\ref{tab:guardrails}) & \texttt{guardrail\_latency\_replay\_gpu\_home.json} & i7-9750H laptop + Modal A100 \\
+Guard latency (Table~\ref{tab:guardrails}) & \texttt{guardrail\_latency\_replay\_gpu\_home.json} & laptop + Modal A100 \\
 Precision benchmark (Table~\ref{tab:precision}) & \texttt{a12\_engine.jsonl}, \texttt{a12\_quality.json} & Modal A100 80\,GB \\
 Gemma side run (Section~\ref{sec:retrieval}) & \texttt{a12\_engine\_30.jsonl}, \texttt{a12\_quality\_30.json} & Modal A100 80\,GB \\
-End to end (Section~\ref{sec:benchmarks}) & \texttt{a12\_end\_to\_end\_\{guard\_gpu,d082\}.jsonl} & i7-9750H laptop + Modal A100 \\
+End to end (Section~\ref{sec:benchmarks}) & \texttt{a12\_end\_to\_end\_\{guard\_gpu,d082\}.jsonl} & laptop + Modal A100 \\
 Load test (Table~\ref{tab:load}) & \texttt{a13\_load\_nli\_\{cpu,gpu\}.jsonl} & laptop + Modal A100 \\
 \bottomrule
 \end{tabular}
