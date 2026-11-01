@@ -7,17 +7,15 @@
 
 \paragraph{Architecture.}
 SciLitRAG answers three kinds of questions: papers on a topic (S1), papers that cite a given paper, optionally as a baseline (S2), and the authors most cited by papers on a topic (S3).
-Figure~\ref{fig:architecture} shows the two tiers: UI, FastAPI orchestrator and database run locally in docker compose; the inference engine is a standalone Ollama server with an OpenAI-compatible API, here on a Modal GPU, locally on port 11434 without one.
+Figure~\ref{fig:architecture} shows the two tiers: UI, FastAPI orchestrator and database run locally in docker compose; the inference engine is a standalone Ollama server with an OpenAI-compatible API, here on a GPU at Modal~\cite{modal} next to NLI and Prompt Guard for the sources, locally on port 11434 without one.
 Vector store and relational tables share one PostgreSQL database (ParadeDB with pgvector and pg\_search), so filters and citation joins run in the same query as the search.
 
-\begin{figure}[!ht]
+\begin{figure}[!h]
   \centering
   \includegraphics[width=0.94\textwidth]{architecture}
-  \caption{System architecture and request loop (steps 1 to 7). UI, FastAPI and ParadeDB run in
-    docker compose on 127.0.0.1; Ollama, NLI and Prompt Guard for the retrieved sources run on
-    Modal. The input check can refuse a request before any database or LLM call; the grounding
-    check removes sentences that their cited chunk does not entail. Not drawn as a step: the
-    evidence guard between retrieval and SQL.}
+  \caption{Request loop (steps 1 to 7). The input check can refuse a request before any database
+    or LLM call; the grounding check removes sentences that their cited chunk does not entail. Not
+    drawn as a step: the evidence guard between retrieval and SQL.}
   \label{fig:architecture}
 \end{figure}
 

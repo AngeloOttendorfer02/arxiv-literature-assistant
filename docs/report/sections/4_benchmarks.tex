@@ -11,7 +11,7 @@ Citation recall and precision follow ALCE~\cite{gao2023alce}, scored with the ap
 
 \begin{table}[ht]
 \centering
-\caption{Precision vs.\ memory, speed and citation quality (597 queries, medians). TTFT engine as reported by Ollama, TTFT client including the network; Total is the full answer. n.s.: not significantly different from bf16 (paired bootstrap, 95\,\%).}
+\caption{Precision vs.\ memory, speed and citation quality (597 queries, medians). TTFT engine as reported by Ollama, TTFT client including the network; Total is the full answer. Best value per column in bold; $^{*}$ significantly different from bf16 (paired bootstrap, 95\,\%), tested for recall and precision only.}
 \label{tab:precision}
 \small
 \setlength{\tabcolsep}{4pt}
@@ -20,9 +20,9 @@ Citation recall and precision follow ALCE~\cite{gao2023alce}, scored with the ap
 Precision & VRAM & TTFT engine & TTFT client & Tokens/s & Total & Recall & Precision \\
  & (GB) & (s) & (s) & & (s) & & \\
 \midrule
-bf16     & 52.5 & 1.08 & 1.65 & 27.6 & 9.5 & 0.768 & 0.749 \\
-q8\_0    & 28.5 & 2.32 & 2.87 & 38.7 & 8.4 & 0.764 (n.s.) & 0.741 (n.s.) \\
-q4\_K\_M & 17.1 & 2.31 & 2.84 & 43.6 & 7.2 & 0.806 & 0.791 \\
+bf16     & 52.5 & \textbf{1.08} & \textbf{1.65} & 27.6 & 9.5 & 0.768 & 0.749 \\
+q8\_0    & 28.5 & 2.32 & 2.87 & 38.7 & 8.4 & 0.764 & 0.741 \\
+q4\_K\_M & \textbf{17.1} & 2.31 & 2.84 & \textbf{43.6} & \textbf{7.2} & \textbf{0.806}$^{*}$ & \textbf{0.791}$^{*}$ \\
 \bottomrule
 \end{tabular}
 \end{table}

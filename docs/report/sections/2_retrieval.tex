@@ -5,7 +5,7 @@
 \label{sec:retrieval}
 
 \paragraph{Data.}
-We use LitSearch~\cite{ajith2024litsearch} (revision \texttt{9573fb2}): 597 literature-search queries over 64{,}183 papers with Semantic Scholar metadata and S2ORC full texts.
+We use LitSearch~\cite{ajith2024litsearch}: 597 literature-search queries over 64{,}183 papers with Semantic Scholar metadata and S2ORC full texts.
 Quality filters (empty title, no author names, no section heading) leave 56{,}115 papers and keep all 574 query targets; the database holds 328{,}622 distinct citation pairs (Table~\ref{tab:data} in the appendix).
 \paragraph{Chunking.}
 Full texts are chunked for 1{,}000 papers (all query targets, the demo topics and a random sample); without front matter and bibliography, each section is split into windows of the embedding tokenizer with overlap; no chunk crosses a section boundary.
@@ -21,3 +21,4 @@ In the production database, LitSearch Recall@20 is 0.690 dense (HNSW), 0.607 BM2
 \paragraph{Foundation model.}
 We use the open-weight Qwen~3.8 with 27B parameters (\texttt{qwen3.8:27b}~\cite{ollama_qwen38}); the demo serves its 4-bit variant \texttt{qwen3.8:27b-q4\_K\_M} with Ollama.
 It was chosen because Ollama offers it in 16-, 8- and 4-bit variants, so the precision comparison of Section~\ref{sec:benchmarks} runs in one engine, and at 27B the 16-bit variant (56\,GB) still fits one A100 80\,GB with room for the KV cache.
+A side run of \texttt{gemma4:31b-it-q4\_K\_M} on 30 of the benchmark queries gave no significant difference in citation quality (recall 0.797, precision 0.836 against 0.802 and 0.801 for qwen in bf16), so we kept qwen.
