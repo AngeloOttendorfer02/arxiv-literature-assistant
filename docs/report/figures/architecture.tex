@@ -44,9 +44,11 @@
 \node[anchor=north, font=\small\bfseries] at (ret.north) {Hybrid retrieval};
 \node[chip] (dense) at ([xshift=-0.8cm, yshift=0.05cm]ret.center) {dense\\[-1pt]pgvector};
 \node[chip] (bm25)  at ([xshift=0.8cm, yshift=0.05cm]ret.center)  {BM25\\[-1pt]pg\_search};
-\node[chip] (rrf)   at ([yshift=-0.8cm]ret.center) {RRF fusion};
-\draw[-{Latex[length=1.4mm]}, draw=line] (dense.south) -- (rrf.north west);
-\draw[-{Latex[length=1.4mm]}, draw=line] (bm25.south) -- (rrf.north east);
+\node[chip] (rrf)   at ([xshift=-0.85cm, yshift=-0.8cm]ret.center) {RRF fusion};
+\node[chip, draw=accent, fill=accentbg, inner sep=1.8pt] (evg) at ([xshift=0.8cm, yshift=-0.8cm]ret.center) {evidence\\[-1pt]guard};
+\draw[-{Latex[length=1.4mm]}, draw=line] (dense.south) -- (rrf.north);
+\draw[-{Latex[length=1.4mm]}, draw=line] (bm25.south west) -- (rrf.north east);
+\draw[-{Latex[length=1.4mm]}, draw=accent] (rrf.east) -- (evg.west);
 \node[box, text width=1.9cm] (sql) at (15.25, -0.9) {\bx{SQL facts}{parameterized\\templates}};
 \node[guard, text width=3.1cm] (chk) at (13.2, -5.6) {\bx{Grounding check}{cited chunk must entail\\the sentence (NLI)}};
 \node[lbl, text=accent, anchor=north] (rm) at (chk.south) {otherwise the sentence is removed};
