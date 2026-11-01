@@ -14,8 +14,8 @@ Vector store and relational tables share one PostgreSQL database (ParadeDB with 
   \centering
   \includegraphics[width=0.94\textwidth]{architecture}
   \caption{Request loop (steps 1 to 7). The input check can refuse a request before any database
-    or LLM call; the grounding check removes sentences that their cited chunk does not entail. Not
-    drawn as a step: the evidence guard between retrieval and SQL.}
+    or LLM call; the evidence guard drops flagged sources before SQL and generation; the grounding
+    check removes sentences that their cited chunk does not entail.}
   \label{fig:architecture}
 \end{figure}
 
