@@ -68,4 +68,6 @@ Dense and BM25 lists are fused with reciprocal rank fusion ($k=60$).
 On the full database, LitSearch Recall@20 is 0.690 dense, 0.607 BM25 and 0.709 hybrid.
 
 \paragraph{Foundation model.}
-\todo{Open-weight LLM and why (D037).}
+We use the open-weight model \texttt{qwen3.8:27b}, served by Ollama on one A100 80\,GB at Modal, so that prompts and retrieved texts stay on our own inference server and the model can be quantized and measured.
+It is available in bf16 (56\,GB), q8\_0 (30\,GB) and q4\_K\_M (18\,GB); the library has no fp16 tag, so bf16 is the 16-bit variant, and a comparison within one engine is sufficient.
+The app answers with q4\_K\_M, which needs a third of the memory of bf16 at no measurable loss in citation quality (Section~\ref{sec:benchmarks}).
