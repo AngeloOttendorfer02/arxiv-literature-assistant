@@ -31,28 +31,28 @@ The sentence check removes 97\,\% of 38 manipulated sentences (changed numbers, 
 
 \begin{table}[ht]
 \centering
-\caption{Defense success rate (DSR) on attacks and false rejection rate (FRR) on harmless inputs, test split. Latency in ms (median / p95) over 28 harmless questions run as S1 with an extractive answer (no LLM) from a 16-thread laptop; query guards on the laptop CPU, evidence guard and sentence check on the Modal GPU, in brackets with all models on the CPU.}
+\caption{Defense success rate (DSR) on attacks and false rejection rate (FRR) on harmless inputs, test split. Latency in ms (median / p95) over 29 harmless questions run as S1 with an extractive answer (no LLM) from a 12-thread laptop; query guards on the laptop CPU, evidence guard and sentence check on the Modal GPU.}
 \label{tab:guardrails}
 \small
 \begin{tabular}{llrrr}
 \toprule
 Guard & Group & Cases & Rate (\%) & Latency (ms) \\
 \midrule
-Prompt Guard~2 & injection, DSR & 23 & 91 & 82 / 94 \\
-Topic gate & write intent, DSR & 13 & 92 & 38 / 52 \\
+Prompt Guard~2 & injection, DSR & 23 & 91 & 152 / 397 \\
+Topic gate & write intent, DSR & 13 & 92 & 108 / 150 \\
  & off-topic, DSR & 14 & 100 &  \\
 All query guards & harmless, FRR & 49 & 2 &  \\
-Evidence guard & injected, DSR & 12 & 33 & 590 / 752 (1{,}893 / 4{,}081) \\
+Evidence guard & injected, DSR & 12 & 33 & 253 / 323 \\
  & clean, FRR & 22 & 0 &  \\
-Sentence check, per sentence & manipulated, DSR & 38 & 97 & 347 / 375 (554 / 1{,}123) \\
+Sentence check, per sentence & manipulated, DSR & 38 & 97 & 211 / 226 \\
  & faithful, FRR & 23 & 26 &  \\
 \midrule
-All guards, per request & & & & 2{,}391 / 2{,}818 (4{,}729 / 8{,}540) \\
+All guards, per request & & & & 1{,}532 / 1{,}816 \\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \paragraph{Overhead.}
-With the evidence guard and NLI on the GPU the guards cost 2.4\,s per request (p95 2.8\,s), with all models on the CPU 4.7\,s (p95 8.5\,s).
-The sentence checks dominate (1.7 of 2.4\,s, about 0.35\,s per sentence, mostly the round trip to Modal); since a sentence is released only after its check, they delay the first visible sentence by 0.54\,s.
-In live runs, 34 of 58 checked sentences were our own code's notice that only an abstract is available, which no abstract can entail; it now passes by exact template match, and a second run removed 1 of 24 sentences.
+With the evidence guard and NLI on the GPU the guards cost 1.5\,s per request (p95 1.8\,s).
+The sentence checks dominate (1.0 of 1.5\,s, about 0.21\,s per sentence, mostly the round trip to Modal); since a sentence is released only after its check, they delay the first visible sentence by 0.22\,s.
+In live runs, the check removed our own code's notice that only an abstract is available, which no abstract can entail; it now passes by exact template match and is sent once per answer, and on the 12 questions of Section~\ref{sec:benchmarks} the share of removed sentences fell from 52\,\% to 24\,\%.
