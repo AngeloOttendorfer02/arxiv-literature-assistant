@@ -5,13 +5,13 @@
 \label{sec:benchmarks}
 
 \paragraph{Setup.}
-We serve \texttt{qwen3.8:27b} in bf16, q8\_0 and q4\_K\_M with Ollama 0.40.5 on one A100 80\,GB (Modal) and answer all 597 LitSearch queries once per precision, each with the same S1 prompt from the app retrieval (median 3{,}000 tokens).
+We serve \texttt{qwen3.8:27b} in bf16, q8\_0 and q4\_K\_M with Ollama 0.40.5 on one A100 80\,GB (Modal); the model has no fp16 tag, so bf16 is the 16-bit variant.
+Each precision answers all 597 LitSearch queries once with the same S1 prompt built from the app's retrieval (median 3{,}000 tokens), one request at a time.
 Citation recall and precision follow ALCE~\cite{gao2023alce}, scored with the app's NLI model; answers stating that the evidence holds nothing matching count as ``not found''.
-Precisions are compared with bf16 by a paired bootstrap (95\,\%).
 
 \begin{table}[ht]
 \centering
-\caption{Precision vs.\ memory, speed and citation quality (597 queries, medians). TTFT client includes the network; Total is the full answer. n.s.: not significantly different from bf16.}
+\caption{Precision vs.\ memory, speed and citation quality (597 queries, medians). TTFT engine as reported by Ollama, TTFT client including the network; Total is the full answer. n.s.: not significantly different from bf16 (paired bootstrap, 95\,\%).}
 \label{tab:precision}
 \small
 \setlength{\tabcolsep}{4pt}
@@ -30,14 +30,13 @@ q4\_K\_M & 17.1 & 2.31 & 2.84 & 43.6 & 7.2 & 0.806 & 0.791 \\
 \paragraph{Results.}
 Quantization cuts memory by a factor of three and speeds up decoding by 58\,\%, but doubles the engine TTFT, since prompt evaluation is compute-bound and decoding bandwidth-bound.
 Decoding dominates the answer time, so q4\_K\_M is faster than bf16 on 522 of 597 queries.
-Quantization costs no citation quality: q8\_0 matches bf16, and q4\_K\_M even scores about 3 points higher, because it writes shorter answers with fewer multi-source sentences, which are the hardest to entail.
-The ``not found'' rate (0.16 to 0.17) does not differ significantly.
+Quantization costs no citation quality: q8\_0 matches bf16, and q4\_K\_M scores about 3 points higher; its answers are shorter (median 187 against 213 tokens) with fewer multi-source sentences, which are the hardest to entail, so we do not read this as a quality gain.
 
 \paragraph{End to end.}
-Through the whole app (q4\_K\_M, NLI on the GPU, D072), a single request takes 22 to 30\,s, of which the LLM answer is under half.
-Before generation, the planner (3.6 to 6.2\,s) and Prompt Guard on the retrieved sources (6 to 6.5\,s, CPU) dominate; generation with the sentence checks takes 11 to 16\,s.
+Through the whole app (q4\_K\_M, 12 LitSearch questions, one at a time, guards as in Section~\ref{sec:guardrails}), a request takes 17.6\,s in the median and the first checked sentence appears after 13.7\,s.
+Of this, the planner's model call takes 4.1\,s, retrieval 0.6\,s and generation including the sentence checks 12.1\,s.
 
 \paragraph{Trade-offs.}
-We serve q4\_K\_M: a third of the memory of bf16, faster answers and no measurable quality loss.
-Its 1.2\,s higher TTFT is small next to the guardrail and planning overhead, which is the price of checked, cited answers.
-\todo{Guardrail overhead vs.\ safety, with Section~\ref{sec:guardrails}.}
+We serve q4\_K\_M: a third of the memory of bf16, faster answers and no measurable loss in citation quality.
+Its 1.2\,s higher TTFT is small next to the planner call, and the guards add 2.4\,s per request (Table~\ref{tab:guardrails}).
+That is the price of answers whose every sentence is backed by a cited source; it also removes faithful sentences that combine two sources (26\,\% FRR), which we accept, as removing a true sentence is safer than showing an unsupported one.

@@ -47,6 +47,8 @@ docs/report/*
 !docs/report/.latexmkrc
 !docs/report/sections/
 !docs/report/figures/
+# Built report kept in the repository for reading without LaTeX
+!docs/report/SciLitRAG_report.pdf
 
 # Private evaluation sources, annotations and model outputs
 # May contain LitSearch text; never redistribute with the repository.
