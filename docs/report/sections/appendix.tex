@@ -98,10 +98,10 @@ Embedding comparison & \texttt{d22\_embedding\_comparison.json} & RTX 4070 Ti SU
 Retrieval recall & \texttt{d18\_retrieval\_comparison.json} & production database \\
 DSR / FRR (Table~\ref{tab:guardrails}) & \texttt{guardrails.json}, \texttt{validator.json}, & CPU \\
  & \texttt{evidence\_real\_sample.json} & \\
-Guard latency (Table~\ref{tab:guardrails}) & \texttt{guardrail\_latency\_replay\{,\_gpu\}.json} & laptop + Modal A100 \\
+Guard latency (Table~\ref{tab:guardrails}) & \texttt{guardrail\_latency\_replay\_gpu\_home.json} & i7-9750H laptop + Modal A100 \\
 Precision benchmark (Table~\ref{tab:precision}) & \texttt{a12\_engine.jsonl}, \texttt{a12\_quality.json} & Modal A100 80\,GB \\
 Gemma side run (Section~\ref{sec:retrieval}) & \texttt{a12\_engine\_30.jsonl}, \texttt{a12\_quality\_30.json} & Modal A100 80\,GB \\
-End to end (Section~\ref{sec:benchmarks}) & \texttt{a12\_end\_to\_end\_guard\_gpu.jsonl} & laptop + Modal A100 \\
+End to end (Section~\ref{sec:benchmarks}) & \texttt{a12\_end\_to\_end\_\{guard\_gpu,d082\}.jsonl} & i7-9750H laptop + Modal A100 \\
 Load test (Table~\ref{tab:load}) & \texttt{a13\_load\_nli\_\{cpu,gpu\}.jsonl} & laptop + Modal A100 \\
 \bottomrule
 \end{tabular}

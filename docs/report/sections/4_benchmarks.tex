@@ -33,10 +33,10 @@ Decoding dominates the answer time, so q4\_K\_M is faster than bf16 on 522 of 59
 Quantization costs no citation quality: q8\_0 matches bf16, and q4\_K\_M scores about 3 points higher; its answers are shorter (median 187 against 213 tokens) with fewer multi-source sentences, which are the hardest to entail, so we do not read this as a quality gain.
 
 \paragraph{End to end.}
-Through the whole app (q4\_K\_M, 12 LitSearch questions, one at a time, guards as in Section~\ref{sec:guardrails}), a request takes 17.6\,s in the median and the first checked sentence appears after 13.7\,s.
-Of this, the planner's model call takes 4.1\,s, retrieval 0.6\,s and generation including the sentence checks 12.1\,s.
+Through the whole app (q4\_K\_M, 12 LitSearch questions, one at a time, guards as in Section~\ref{sec:guardrails}), a request takes 14.9\,s in the median: the planner's model call 3.3\,s, retrieval 0.9\,s and generation including the sentence checks 9.5\,s.
+The first sentence appears with the model's first token after 8.3\,s, and decoding runs at 42 tokens/s, close to Table~\ref{tab:precision}.
 
 \paragraph{Trade-offs.}
 We serve q4\_K\_M: a third of the memory of bf16, faster answers and no measurable loss in citation quality.
-Its 1.2\,s higher TTFT is small next to the planner call, and the guards add 2.4\,s per request (Table~\ref{tab:guardrails}).
+Its 1.2\,s higher TTFT is small next to the planner call, and the guards add 1.5\,s per request (Table~\ref{tab:guardrails}).
 That is the price of answers whose every sentence is backed by a cited source; it also removes faithful sentences that combine two sources (26\,\% FRR), which we accept, as removing a true sentence is safer than showing an unsupported one.
