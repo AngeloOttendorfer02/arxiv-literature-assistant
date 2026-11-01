@@ -46,17 +46,17 @@ Setting & Chunks & NDCG@10 & S1 Hit@2 & Hit@5 & Hit@budget & Cut & NLI (ms) \\
 
 \begin{table}[ht]
 \centering
-\caption{Load test through the API, 12 requests per level. Latency of completed requests (p95 by nearest rank, with 12 requests close to the slowest), completed requests per minute and timeouts (120\,s).}
+\caption{Load test through the API, 12 requests per level. Median and maximum latency of completed requests, completed requests per minute and timeouts (120\,s).}
 \label{tab:load}
 \small
 \begin{tabular}{lrrrr}
 \toprule
 Parallel requests & 1 & 2 & 4 & 8 \\
 \midrule
-NLI on CPU: p50 / p95 (s) & 38 / 73 & 84 / 109 & 96 / 113 & 103 / 108 \\
+NLI on CPU: median / max (s) & 38 / 73 & 84 / 109 & 96 / 113 & 103 / 108 \\
 NLI on CPU: requests/min & 1.4 & 1.2 & 1.6 & 1.1 \\
 NLI on CPU: timeouts & 0 & 1 & 3 & 8 \\
-NLI on GPU: p50 / p95 (s) & 30 / 57 & 34 / 58 & 38 / 48 & 64 / 93 \\
+NLI on GPU: median / max (s) & 30 / 57 & 34 / 58 & 38 / 48 & 64 / 93 \\
 NLI on GPU: requests/min & 1.9 & 3.0 & 5.7 & 5.9 \\
 NLI on GPU: timeouts & 0 & 0 & 0 & 0 \\
 \bottomrule
@@ -68,7 +68,7 @@ The embedding comparison used exact search (granite Recall@20 0.695), the produc
 
 \begin{table}[ht]
 \centering
-\caption{Models with recorded revisions, and source and hardware of each reported figure. Source files are in \texttt{eval/results/} of the repository; $^{\dagger}$ in \texttt{eval/private/bench/}, kept outside the repository because they contain LitSearch text. Guard scores do not depend on the hardware.}
+\caption{Models with recorded revisions, and source and hardware of each reported figure. Source files are in \texttt{eval/results/} of the repository and contain scores and timings only, no dataset text. Guard scores do not depend on the hardware.}
 \label{tab:provenance}
 \small
 \begin{tabular}{lll}
@@ -99,9 +99,9 @@ Retrieval recall & \texttt{d18\_retrieval\_comparison.json} & production databas
 DSR / FRR (Table~\ref{tab:guardrails}) & \texttt{guardrails.json}, \texttt{validator.json}, & CPU \\
  & \texttt{evidence\_real\_sample.json} & \\
 Guard latency (Table~\ref{tab:guardrails}) & \texttt{guardrail\_latency\_replay\{,\_gpu\}.json} & laptop + Modal A100 \\
-Precision benchmark (Table~\ref{tab:precision}) & \texttt{engine.jsonl}$^{\dagger}$, \texttt{quality.json}$^{\dagger}$ & Modal A100 80\,GB \\
-End to end (Section~\ref{sec:benchmarks}) & \texttt{load\_guard\_gpu.jsonl}$^{\dagger}$ & laptop + Modal A100 \\
-Load test (Section~\ref{sec:tradeoffs}) & \texttt{load.jsonl}$^{\dagger}$, \texttt{load\_gpu\_nli.jsonl}$^{\dagger}$ & laptop + Modal A100 \\
+Precision benchmark (Table~\ref{tab:precision}) & \texttt{a12\_engine.jsonl}, \texttt{a12\_quality.json} & Modal A100 80\,GB \\
+End to end (Section~\ref{sec:benchmarks}) & \texttt{a12\_end\_to\_end\_guard\_gpu.jsonl} & laptop + Modal A100 \\
+Load test (Table~\ref{tab:load}) & \texttt{a13\_load\_nli\_\{cpu,gpu\}.jsonl} & laptop + Modal A100 \\
 \bottomrule
 \end{tabular}
 

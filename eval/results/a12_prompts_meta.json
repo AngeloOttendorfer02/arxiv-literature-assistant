@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "dataset_revision": "9573fb284a1026c998df47024b888a163f0f0e25",
+  "embed_model": "ibm-granite/granite-embedding-english-r2",
+  "embed_dim": 768,
+  "seed": 1789,
+  "k": 5,
+  "context_char_budget": 16000,
+  "evidence_item_char_limit": 2400,
+  "queries": 597,
+  "exported": 597,
+  "skipped": {},
+  "context": {
+    "retrieved_median": 7,
+    "shown_median": 7,
+    "prompts_with_omitted": 41,
+    "omitted_share": 0.06867671691792294,
+    "prompts_with_truncated": 89,
+    "target_retrieved": 351,
+    "target_shown": 351,
+    "target_dropped_by_budget": 0
+  }
+}
