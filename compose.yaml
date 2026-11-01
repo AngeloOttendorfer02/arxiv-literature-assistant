@@ -60,6 +60,8 @@ services:
     volumes:
       # Request log (logs/requests.jsonl) on the host for evaluation.
       - ./logs:/app/logs
+      # Hugging Face models survive rebuilds of the api container.
+      - hfcache:/home/app/.cache/huggingface
     extra_hosts:
       # Needed on Linux; Docker Desktop resolves host.docker.internal by itself.
       - "host.docker.internal:host-gateway"
@@ -95,3 +97,4 @@ services:
 
 volumes:
   pgdata:
+  hfcache:

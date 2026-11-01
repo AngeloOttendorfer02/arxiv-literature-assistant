@@ -343,7 +343,8 @@ generation, NLI check of every sentence and citation rendering.
      ```
      Modal stops the container after 5 minutes without requests.
    - The API loads its local models on the first query and downloads them first if they
-     are not cached. A new api container starts without cache.
+     are not cached. In Docker the cache lives in the volume `hfcache` and survives
+     rebuilds; `docker compose down -v` deletes it.
 
    Send one query through the UI and wait for it to finish; later queries are fast.
    `GET /health` does not probe a Modal LLM, so `ok` there does not mean the model is loaded.
