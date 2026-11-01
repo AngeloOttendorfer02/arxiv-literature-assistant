@@ -6,64 +6,30 @@
 \label{sec:architecture}
 
 \paragraph{Architecture.}
-\todo{Diagram (A-14): Streamlit UI, FastAPI, Ollama on Modal, ParadeDB with pgvector and BM25, relational tables. Put the file in figures/.}
+SciLitRAG answers three kinds of questions: papers on a topic (S1), papers that cite a given paper, optionally as a baseline (S2), and the authors most cited by papers on a topic (S3).
+Figure~\ref{fig:architecture} shows the two tiers: UI, FastAPI orchestrator and database run locally in docker compose; the inference engine is a standalone Ollama server with an OpenAI-compatible API, here on a Modal GPU, locally on port 11434 without one.
+Vector store and relational tables share one PostgreSQL database (ParadeDB with pgvector and pg\_search), so filters and citation joins run in the same query as the search.
 
-\paragraph{Execution flow.}
-For an S3 question about the most cited authors on a topic, FastAPI first runs
-\texttt{check\_input}: Prompt Guard, the topic/write-intent gate and PII masking.
-A refusal ends the request before planning or database retrieval.
-The model produces a validated scenario plan; explicit year and result-limit filters
-are reconciled in code. Filtered dense and BM25 retrieval selects topic papers and
-their passages. The evidence guard removes flagged sources before SQL and generation.
-SQL follows outgoing citation edges from the surviving paper seeds to cited papers
-and their authors. Each distinct citing/cited-paper pair gives every cited-paper
-coauthor one credit; these are subset counts, not global citation totals.
-The resulting table, its parameters, dataset revision and query ID are emitted directly
-by the application, before generated sentences. For a plain ranking request the
-application can finish using the table and a cited counting-rule sentence. For other
-S3 requests the model summarizes paper evidence and does not calculate the ranking.
+\begin{figure}[!ht]
+  \centering
+  \includegraphics[width=0.94\textwidth]{architecture}
+  \caption{System architecture and request loop (steps 1 to 7). UI, FastAPI and ParadeDB run in
+    docker compose on 127.0.0.1; Ollama, NLI and Prompt Guard for the retrieved sources run on
+    Modal. The input check can refuse a request before any database or LLM call; the grounding
+    check removes sentences that their cited chunk does not entail. Not drawn as a step: the
+    evidence guard between retrieval and SQL.}
+  \label{fig:architecture}
+\end{figure}
 
-The OpenAI-compatible model stream carries text deltas to a bounded server-side
-sentence buffer. Raw deltas are not forwarded to the UI. Each complete sentence,
-including the final punctuated tail, passes citation-structure checks and
-\texttt{check\_sentence}: numerical consistency against cited evidence, then NLI for
-non-SQL sources. SQL evidence receives the numerical check. Accepted sentences are
-PII-masked, rendered with citation objects and released as sentence SSE events;
-rejected sentences produce a removal status. Timeout or provider failure produces
-a terminal error; disconnect cancels generation and closes its stream.
+\paragraph{Execution flow of a multi-hop query.}
+For an S3 question (most cited authors on a topic), FastAPI first runs \texttt{check\_input}: Prompt Guard, the topic and write-intent gate and PII masking; a refusal ends the request before any database or model call.
+The planner asks the model for a plan under a strict JSON schema (scenario, topic, filters); explicit years and result limits from the question are reconciled in code.
+Hybrid retrieval selects topic papers and their passages, and the evidence guard drops flagged sources.
+SQL then follows the citation edges from the remaining seed papers to the cited papers and their authors; every distinct citing/cited pair gives each author of the cited paper one credit, so the counts cover this subset, not global citation totals.
+The application emits the ranking table with its parameters and query ID before any generated text; for a plain ranking question the table is the whole answer, otherwise the model summarizes the paper evidence and never computes the ranking.
 
-\paragraph{Citation Engine.}
-Positive integer labels are allocated within each request and map to exact paper,
-chunk or SQL evidence snapshots. Screening preserves surviving labels; SQL evidence
-appends without renumbering them. Before semantic validation, the engine checks label
-syntax, membership and trailing placement. Deterministic rendering attaches corpus
-and chunk IDs, author IDs, title, year, section, source text and a SHA-256 source
-fingerprint; SQL citations resolve by query ID to the emitted table and its scope.
-The UI citation drawer exposes this provenance. Syntactic validity alone does not
-establish support, so evaluation keeps structural checks separate from human citation
-and numerical-claim judgments. Pipeline timing fields include retrieval and guardrails;
-provider token throughput and engine-only TTFT are measured separately by the benchmark.
+The model streams text deltas over the OpenAI-compatible API into a bounded server-side sentence buffer; raw tokens never reach the UI.
+Each complete sentence passes the citation-label check and \texttt{check\_sentence} (Section~\ref{sec:guardrails}); accepted sentences are PII-masked, rendered with their citations and sent as a \texttt{sentence} SSE event, removed ones only as a status event.
+A timeout or provider failure ends the stream with an \texttt{error} event; a client disconnect cancels generation.
 
-\paragraph{Local WP2 verification.}
-A local diagnostic on the recorded dataset revision tested the citation path for the
-paper with corpus ID 215737187. Direct S2 retrieval returned 20 citing papers; all
-20 IDs and publication years matched a separately exported bounded database reference.
-All 80 retrieved passages belonged to those 20 citing papers. This verifies one
-retrieval case; it does not measure answer quality or baseline-use accuracy.
-
-A plain S3 author-ranking request completed in approximately 99.8 seconds in the local
-setup. Its three returned author IDs and counts (32379: 7, 41141: 6, and 12839: 5)
-matched an independently calculated reference for the same three seed papers and
-dataset revision. One sentence was checked and retained. These counts describe the
-recorded subset of the dataset rather than global citation totals. In a separate S2
-application attempt, retrieval returned evidence but the request timed out before an
-answer was emitted; a corpus-ID phrasing was also incorrectly classified as a write
-request. These failures are not counted as completed answers.
-
-Automated retrieval, sentence-streaming and evaluation checks passed 193 tests, with
-three skipped, in one local run. A later focused S2 and metrics run passed 109 tests,
-with one skipped. A separate 20-passage development sample had 17 assistant-reviewed
-labels and three unresolved passages. The baseline matcher was refined using that
-sample; results on it must not be reported as independent human-reviewed accuracy.
-Reviewed citation precision and numerical exact-match results across scenarios remain
-to be measured.
+\FloatBarrier

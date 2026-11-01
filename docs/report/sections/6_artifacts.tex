@@ -6,31 +6,11 @@
 
 \paragraph{Repository.}
 Code, tests and setup instructions are provided in this repository.
-The README covers setup with \texttt{uv}, a mock mode without database or model, the Docker start (\texttt{compose.yaml} with \texttt{db}, \texttt{api} and \texttt{ui}; Dockerfiles in \texttt{docker/}) and running with real components.
-The database is pre-seeded from a dump: \texttt{scripts/restore\_database.py} restores it into a fresh ParadeDB database and creates roles and indexes from the repository's SQL files.
-Since LitSearch's licensing status is unclear, the dump is shared only within the team.
-Alternatively, the database can be built from scratch: \texttt{scripts/download\_data.py} downloads the fixed LitSearch version listed in Table~\ref{tab:provenance}.
-The README then explains how to clean the data, select papers for chunking, load the database, generate embeddings and create the search indexes.
+The README covers setup with \texttt{uv}, a mock mode, docker compose (\texttt{db}, \texttt{api}, \texttt{ui}; Dockerfiles in \texttt{docker/}) and the inference server on Modal (\texttt{deploy/modal/}).
+The database is pre-seeded from a dump: \texttt{scripts/restore\_database.py} restores it into a fresh ParadeDB database and creates roles and indexes; since LitSearch's licensing status is unclear, the dump is shared only within the team.
+Alternatively, \texttt{scripts/download\_data.py} downloads the pinned LitSearch revision and the README describes the build from scratch.
 
 \paragraph{Provenance.}
-LitSearch~\cite{ajith2024litsearch} is obtained from Hugging Face\footnote{\url{https://huggingface.co/datasets/princeton-nlp/LitSearch}} and is not redistributed.
-Table~\ref{tab:provenance} lists Hugging Face identifiers and recorded revisions.
-Dataset and embedding revisions are pinned in the code. The application loads NLI and Prompt Guard without a pinned revision; the table records the NLI snapshot used in our evaluation and the Prompt Guard snapshot copied to the inference server.
-Library versions are locked in \texttt{uv.lock}; the main ones are torch 2.14.1, transformers 5.20.2, sentence-transformers 6.2.0, FastAPI 0.143.3, Streamlit 1.66.0, psycopg 3.3.6, Presidio Analyzer 2.2.364 and spaCy 3.8.16.
-
-\begin{table}[ht]
-\centering
-\caption{Dataset and Hugging Face model identifiers with recorded revisions.}
-\label{tab:provenance}
-\small
-\begin{tabular}{lll}
-\toprule
-Use & Hugging Face ID & Revision \\
-\midrule
-Dataset & \texttt{princeton-nlp/LitSearch} & \texttt{9573fb2} \\
-Embedding & \texttt{ibm-granite/granite-embedding-english-r2} & \texttt{47ea694} \\
-NLI & \texttt{dleemiller/ModernCE-large-nli} & \texttt{0c0575b} \\
-Injection detection & \texttt{meta-llama/Llama-Prompt-Guard-2-86M} & \texttt{a8ded8e} \\
-\bottomrule
-\end{tabular}
-\end{table}
+LitSearch is obtained from \url{https://huggingface.co/datasets/princeton-nlp/LitSearch} and not redistributed.
+Hugging Face models: \nolinkurl{ibm-granite/granite-embedding-english-r2}~\cite{hf_granite}, \nolinkurl{dleemiller/ModernCE-large-nli}~\cite{hf_modernce} and \nolinkurl{meta-llama/Llama-Prompt-Guard-2-86M}~\cite{hf_promptguard}; the LLM is the Ollama tag \texttt{qwen3.8:27b-q4\_K\_M}~\cite{ollama_qwen38}.
+Libraries are locked in \texttt{uv.lock}; Table~\ref{tab:provenance} lists revisions, versions and the source and hardware of every figure.

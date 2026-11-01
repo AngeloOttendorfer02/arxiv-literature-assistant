@@ -1,45 +1,27 @@
 % Owner: WP4 (Ben), discarded approaches from all. Tasks: A-13, E-04.
 % Required: resource bottlenecks under concurrent load; at least 2 failed or discarded
-% approaches with lessons learned (source: docs/decisions.md).
+% approaches with lessons learned (source: docs/decisions.md); known edge cases (grading).
 \section{Architectural Trade-offs, Bottlenecks and Post-Mortem}
 \label{sec:tradeoffs}
 
 \paragraph{Bottlenecks under load.}
-We sent 1, 2, 4 and 8 parallel requests through the whole app (q4\_K\_M, 12 different LitSearch questions per level, Ollama with 8 slots on the Modal A100), once with the sentence check on the laptop CPU and once on the GPU (Table~\ref{tab:load}).
-On the CPU, throughput stayed at 1.1 to 1.6 requests per minute and 8 of 12 requests timed out at 8 parallel requests.
-The GPU was not the limit: it decoded about 43 tokens/s per request, while the app consumed 4 to 6 tokens/s in total.
-The bottleneck was the laptop CPU, which NLI and Prompt Guard on the sources shared; the check alone took 20\,s of a 38\,s request.
-With NLI on the GPU all 48 requests finished and throughput rose from 1.9 to 5.9 requests per minute.
-It flattens between 4 and 8 parallel requests (5.7 and 5.9), so the next limit is on the inference side; we did not measure which resource it is.
-The database is no bottleneck: retrieval took 0.8 to 3.5\,s and the SQL stage under 2\,ms at every level.
-
-\begin{table}[ht]
-\centering
-\caption{Load test through the API, 12 requests per level. p50 latency of completed requests, completed requests per minute, timeouts (120\,s).}
-\label{tab:load}
-\small
-\begin{tabular}{lrrrr}
-\toprule
-Parallel requests & 1 & 2 & 4 & 8 \
-\midrule
-NLI on CPU: p50 (s) & 38 & 84 & 96 & 103 \
-NLI on CPU: requests/min & 1.4 & 1.2 & 1.6 & 1.1 \
-NLI on CPU: timeouts & 0 & 1 & 3 & 8 \
-NLI on GPU: p50 (s) & 30 & 34 & 38 & 64 \
-NLI on GPU: requests/min & 1.9 & 3.0 & 5.7 & 5.9 \
-NLI on GPU: timeouts & 0 & 0 & 0 & 0 \
-\bottomrule
-\end{tabular}
-\end{table}
+We sent 12 different LitSearch questions at each of 1, 2, 4 and 8 concurrent requests through the API with all real components (Ollama with 8 slots; Table~\ref{tab:load} in the appendix).
+In the first run, NLI and the evidence guard both ran on the laptop CPU: the sentence check alone took 20 of 38\,s at one request, throughput stayed at 1.1 to 1.6 completed requests per minute and 8 of 12 requests timed out at 8, while the app drew only 4 to 6 tokens/s from a GPU that decodes 43 tokens/s per request and retrieval stayed between 0.8 and 3.5\,s.
+The laptop CPU was the bottleneck, not the GPU or the database.
+With NLI moved to the GPU, all 48 requests completed at 1, 2, 4 and 8: median latency 30, 34, 38 and 64\,s, maximum 57, 58, 48 and 93\,s, and 1.9, 3.0, 5.7 and 5.9 requests per minute.
+Throughput levels off between 4 and 8; the stages that grow most are the evidence guard, then still on the CPU (6.5 to 15.2\,s), and the planner's model call (6.2 to 12.6\,s), which shares the GPU with eight generations.
+We then moved the evidence guard to the GPU too, without repeating the load test; hence the lower end-to-end time in Section~\ref{sec:benchmarks}.
 
 \paragraph{Discarded approaches.}
-\begin{enumerate}
-\item \textbf{The small NLI model.}
-We first chose EttinX-nli-s (68M) for the sentence check, because it needs 0.25\,s per pair on the CPU against 1.7\,s for ModernCE-large, and it was right on our 7 hand-made pairs.
-On 1{,}034 pairs from 150 real abstracts it rejected 23\,\% of verbatim sentences with a 200-token premise and 87\,\% with a 600-token premise; ModernCE-base passed 87\,\% and 53\,\%, ModernCE-large 100\,\% and 99\,\%, while manipulated sentences were passed by at most 14\,\% in all three.
-Lesson: seven examples say nothing about accuracy, and a model must be tested with the premise length it will see in production. The price of the larger model, six times the CPU latency, led to the next point.
-\item \textbf{The sentence check on the application CPU.}
-Keeping the check next to the API looked simple, and it was fast enough for a single request. Under load it was the first thing to break: the check took 20\,s of a 38\,s request while the GPU generated the answer in about 6\,s, throughput did not grow with parallel requests, and most requests timed out at 8.
-We moved NLI and later Prompt Guard on the sources to the inference server (two-tier design), without changing models or thresholds.
-Lesson: we had assumed the language model would be the bottleneck, but the safety layer was; only a test of the whole pipeline showed this, an engine benchmark alone would not have.
+\begin{enumerate}\setlength{\itemsep}{0pt}\setlength{\topsep}{0pt}
+\item \emph{Guard models on the orchestrator's CPU.} Only the LLM on the GPU looked sufficient, but the CPU-bound checks limited throughput (above). Lesson: measure through the full pipeline, not only the engine.
+\item \emph{Evidence-guard threshold 0.01.} Tuned on our own passages it caught 54\,\% of injected passages and no clean one, but on 200 random real chunks it would remove 7\,\%, since real text scores higher than our clean examples. Lesson: check thresholds on production data before adopting them.
+\item \emph{A small NLI model (EttinX-nli-s).} Chosen first on seven hand-made pairs, it rejected 23\,\% of sentences copied verbatim from a 200-token premise and 87\,\% from a 600-token one; ModernCE-large keeps 99\,\% at six times the cost. Lesson: test with the premise lengths the system actually produces.
 \end{enumerate}
+
+\paragraph{Known edge cases.}
+Citation counts and paths only cover the 23.8\,\% of the 1.44 million bibliography entries that match a corpus paper, and author names that differ by an accent or a middle initial count as different authors.
+Only 1{,}000 papers have chunked full texts; for the others the answer rests on the abstract, which the app states.
+The sentence check removes true sentences that combine two sources.
+The evidence guard misses instructions in the middle of a passage, and some jailbreaks are refused with the off-topic instead of the injection category.
+S2 resolves only reviewed short names (DPR, BERT) without the model; for other references the planner can miss the paper, and the question is answered as a topic search.
