@@ -14,6 +14,17 @@ One entry per decision, newest first. Changes to a decision get a new entry that
 
 ---
 
+### D082 One abstract-only notice per answer, sent with the model's first token (changes D081)
+
+- Context: With D081 the notice passes the check, so an S1 answer with 4 abstract-only sources started with 4 identical sentences. The notices and the S3 rule sentence were yielded before the model call, so the pipeline counted them as the first token: `ttft_engine_ms` and `tokens_per_s` measured the notice, not the model (review 2026-11-01, 2.1 and 3.5).
+- Options: (A) one notice with all labels, frame sentences held back until the model's first token; (B) a new event or field for notices (contract and UI change); (C) mark notices so the pipeline skips them when timing.
+- Decision: A. `abstract_notice(labels)` in `rag/evidence/labels.py` builds "Only abstract evidence is present in this context for these results [1][2][4]." (singular wording for one label). `is_abstract_notice` accepts it only if every cited label is an abstract-only paper. `generate_with` sends the frame sentences right before the first model token, or at the end if the model sends nothing; a plain S3 ranking without a model call is unchanged.
+- Reason: No contract change, the notice stays visible, and engine TTFT is again the time to the model's first token.
+- Validation: New tests for the combined notice (passes only if all sources are abstract-only), the order (notice after the model started) and engine TTFT with a 0.2 s model delay (old code: 2.6 ms). Not rerun live. The report's figures are not affected: the precision table uses Ollama's own timings, the end-to-end run uses the time to the first checked sentence, and the replay in S-14 writes its answer without notices.
+- Date: 2026-11-01
+
+---
+
 ### D081 The frame sentence for abstract-only sources passes check_sentence without NLI (fixes a finding of D080)
 
 - Context: `rag/generation.py` writes "Only abstract evidence is present in this context for this result [n]." in front of the model's answer for every paper source that has only an abstract (R-07, R-08: frame sentences come from code). The sentence goes through `check_sentence` like all others, and the NLI model rejects it, because the abstract does not entail a statement about itself. In a run with the model of the team 34 of 58 sentences were this sentence, all removed (D080); the user never saw the hint and "sentences removed" in the interface and the logs was inflated.

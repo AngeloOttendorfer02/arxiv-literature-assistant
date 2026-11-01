@@ -23,6 +23,10 @@ def test_masks_every_occurrence():
     assert mask_pii("a@b.org and c@d.org") == "<EMAIL> and <EMAIL>"
 
 
+def test_nested_span_keeps_the_outer_one():
+    assert mask_pii("IBAN AT61 1904 3002 3457 3201") == "IBAN <IBAN>"
+
+
 @pytest.mark.parametrize(
     "text",
     [

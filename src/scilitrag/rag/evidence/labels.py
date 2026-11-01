@@ -9,18 +9,27 @@ NUMERIC_BRACKET = re.compile(r"\[\s*\d[^\]]*\]")
 TRAILING_LABELS = re.compile(r"(?:\[[1-9]\d*\]\s*)+[.!?]?\s*$")
 
 ABSTRACT_ONLY_SECTION = "Abstract only"
-ABSTRACT_ONLY_NOTICE = (
-    "Only abstract evidence is present in this context for this result [{label}]."
-)
+
+
+def abstract_notice(labels: list[int]) -> str:
+    """Frame sentence written by the code for the sources that have only an abstract."""
+    noun = "this result" if len(labels) == 1 else "these results"
+    cited = "".join(f"[{label}]" for label in labels)
+    return f"Only abstract evidence is present in this context for {noun} {cited}."
 
 
 def is_abstract_notice(sentence: str, mapping: EvidenceMapping) -> bool:
-    """True for the frame sentence written by the code for a source that has only an abstract."""
-    return any(
-        item.type == "paper"
-        and item.section == ABSTRACT_ONLY_SECTION
-        and sentence.strip() == ABSTRACT_ONLY_NOTICE.format(label=label)
-        for label, item in mapping.items()
+    """True if the sentence is that frame sentence and every cited source is abstract-only."""
+    labels = [int(value) for value in LABEL.findall(sentence)]
+    return (
+        bool(labels)
+        and all(
+            label in mapping
+            and mapping[label].type == "paper"
+            and mapping[label].section == ABSTRACT_ONLY_SECTION
+            for label in labels
+        )
+        and sentence.strip() == abstract_notice(labels)
     )
 
 

@@ -49,6 +49,58 @@ def test_grounded_generation_flows_through_sentence_validation():
     assert events[-1][0] == "done"
 
 
+def abstract_only(label):
+    return Evidence(label=label, type="paper", corpus_id=label, section="Abstract only", text="x")
+
+
+def test_abstract_only_sources_share_one_notice_sent_with_the_first_model_token():
+    state = []
+
+    class Client:
+        async def stream(self, messages):
+            state.append("model")
+            yield "A claim [1]. "
+
+    async def collect():
+        tokens = []
+        async for token in generate_with(
+            Plan(scenario="S1", k=3), [abstract_only(1), abstract_only(2)], Client()
+        ):
+            tokens.append((token, list(state)))
+        return tokens
+
+    tokens = asyncio.run(collect())
+    assert tokens[0] == (
+        "Only abstract evidence is present in this context for these results [1][2]. ",
+        ["model"],
+    )
+    assert tokens[1][0] == "A claim [1]. "
+
+
+def test_engine_ttft_waits_for_the_model_not_the_notice():
+    class Client:
+        async def stream(self, messages):
+            await asyncio.sleep(0.2)
+            yield "A claim [1]. "
+
+    async def generate(p, sources):
+        async for token in generate_with(p, sources, Client()):
+            yield token
+
+    c = replace(
+        mock_components(0),
+        plan=lambda _: Plan(scenario="S1", k=1),
+        retrieve=lambda _: [abstract_only(1)],
+        generate=generate,
+    )
+
+    async def collect():
+        return [event async for event in run_query("retrieval", c)]
+
+    done = asyncio.run(collect())[-1][1]
+    assert done.ttft_engine_ms >= 200
+
+
 def test_no_evidence_never_calls_the_model():
     class Forbidden:
         def stream(self, *args):
