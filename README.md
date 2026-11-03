@@ -6,6 +6,19 @@ The default mock configuration runs offline. With real components, every request
 
 Developed by Angelo Ottendorfer, Benjamin Storck, Kristof Zörenyi and Nuray Visne.
 
+## My contribution
+
+I worked on the retrieval, generation and citation components of this four-person project:
+
+- Combined dense vector search and BM25 with reciprocal rank fusion for hybrid retrieval.
+- Developed citation-path retrieval, evidence tracking and deterministic citation rendering.
+- Integrated model streaming, structured response validation and cancellation handling.
+- Built evaluation workflows for retrieval results and source-based citation quality.
+
+The project uses Python, FastAPI, Streamlit, PostgreSQL/ParadeDB, pgvector, Docker and Ollama.
+For a quick interface demo without a database or model, follow [Run the API with mocks](#run-the-api-with-mocks).
+Mock answers are synthetic and do not represent real retrieval results.
+
 ## Dataset
 
 The project uses [LitSearch](https://huggingface.co/datasets/princeton-nlp/LitSearch) ([princeton-nlp/LitSearch](https://github.com/princeton-nlp/LitSearch)). The dataset is **not** part of this repository and must not be redistributed. Database dumps are shared privately within the team only.
@@ -57,6 +70,11 @@ uv run --group ui streamlit run src/scilitrag/ui/app.py
 ```
 
 Opens http://localhost:8501. The UI reaches the API at `API_URL` (default `http://localhost:8000`).
+Each question is processed independently; previous chat messages are not sent to the API. The
+sidebar lets you inspect sources and request checks, start a new conversation, or download the
+current conversation as Markdown. The download includes questions, answers, source metadata and
+displayed tables; it does not separately include citation excerpts. Conversation state is limited
+to the current UI session.
 
 ### Switching single components to real
 
