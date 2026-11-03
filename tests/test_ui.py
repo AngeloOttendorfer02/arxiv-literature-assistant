@@ -102,6 +102,47 @@ def test_example_button_sends_its_question(monkeypatch):
     history = at.session_state["history"]
     assert history[0] == ("user", question)
     assert "not reachable" in history[1][1].error
+    assert not at.exception
+
+    at.button(key="clear-history").click().run()
+    assert at.session_state["history"] == []
+    assert not at.exception
+
+
+def test_author_example_streams_table_and_allows_source_inspection(monkeypatch):
+    from contextlib import contextmanager
+
+    import httpx2
+    from fastapi.testclient import TestClient
+    from streamlit.testing.v1 import AppTest
+
+    from scilitrag.api.app import create_app
+    from scilitrag.components import mock_components
+    from scilitrag.config import load_settings
+    from scilitrag.ui.app import EXAMPLES
+
+    settings = load_settings({"USE_MOCKS": "1", "LOG_DIR": ""})
+    with TestClient(create_app(mock_components(0), settings)) as client:
+
+        @contextmanager
+        def local_stream(_method, _url, **kwargs):
+            with client.stream("POST", "/query", json=kwargs["json"]) as response:
+                yield response
+
+        monkeypatch.setattr(httpx2, "stream", local_stream)
+        at = AppTest.from_file("../src/scilitrag/ui/app.py", default_timeout=30).run()
+        label, _ = EXAMPLES[2]
+        at.button(key=f"example-{label}").click().run()
+
+        assert not at.exception
+        answer = at.session_state["history"][1][1]
+        assert answer.done is not None and answer.tables
+        assert answer.tables[0].rows[0][0] == "MOCK Author A"
+
+        citation = next(item for item in answer.citations() if item.query_id)
+        at.button(key=f"cite-1-{citation.label}").click().run()
+        assert not at.exception
+        assert at.session_state["selected"] == (1, citation.label)
 
 
 def test_table_is_rendered_before_stream_ends(monkeypatch):

@@ -4,22 +4,14 @@ Run: uv run --group ui streamlit run src/scilitrag/ui/app.py
 """
 
 import os
-from dataclasses import dataclass, field
 
 import httpx2
 import streamlit as st
 from dotenv import find_dotenv, load_dotenv
 
-from scilitrag.contracts import (
-    SENTENCE_REMOVED,
-    Citation,
-    DoneEvent,
-    ErrorEvent,
-    SentenceEvent,
-    StatusEvent,
-    TableEvent,
-)
+from scilitrag.contracts import SENTENCE_REMOVED, SentenceEvent, TableEvent
 from scilitrag.ui.citation_details import citation_details
+from scilitrag.ui.session import GUARD_STAGES, Answer, answer_text, export_conversation
 from scilitrag.ui.sse import iter_events
 
 load_dotenv(find_dotenv(usecwd=True))
@@ -58,7 +50,6 @@ APP_STYLE = """
 </style>
 """
 
-GUARD_STAGES = ("prompt_guard", "topic_gate", "pii")
 STAGE_LABELS = {
     "prompt_guard": "Injection check",
     "topic_gate": "Topic check",
@@ -86,52 +77,6 @@ EXAMPLES = (
     ("S3 Author ranking", "Which authors are cited most in papers on dense passage retrieval?"),
     ("S4 Write request", "Please remove all papers by Geoffrey Hinton from the database."),
 )
-REFUSALS = {
-    "write_intent": "This assistant can only search and read papers. Changing or deleting data "
-    "is not possible.",
-    "injection": "The request was blocked because it tries to change the assistant's instructions.",
-    "off_topic": "The request is outside the scope of ML and NLP literature.",
-}
-
-
-@dataclass
-class Answer:
-    statuses: list[StatusEvent] = field(default_factory=list)
-    removed: list[StatusEvent] = field(default_factory=list)
-    sentences: list[SentenceEvent] = field(default_factory=list)
-    tables: list[TableEvent] = field(default_factory=list)
-    done: DoneEvent | None = None
-    error: str | None = None
-    request_id: str | None = None
-
-    def add(self, event: object) -> None:
-        match event:
-            case StatusEvent(result=result) if result.startswith(SENTENCE_REMOVED):
-                self.removed.append(event)
-            case StatusEvent():
-                self.statuses.append(event)
-            case SentenceEvent():
-                self.sentences.append(event)
-            case TableEvent():
-                self.tables.append(event)
-            case DoneEvent():
-                self.done = event
-            case ErrorEvent(message=message):
-                self.error = f"The API reported an error: {message}"
-
-    def refusal(self) -> str | None:
-        if not (self.done and self.done.refused):
-            return None
-        blocked = [s for s in self.statuses if s.stage in GUARD_STAGES and s.result != "ok"]
-        reason = blocked[-1].result if blocked else ""
-        return REFUSALS.get(reason, f"The request was refused ({reason or 'no reason given'}).")
-
-    def citations(self) -> list[Citation]:
-        seen: dict[int, Citation] = {}
-        for sentence in self.sentences:
-            for citation in sentence.citations:
-                seen.setdefault(citation.label, citation)
-        return [seen[label] for label in sorted(seen)]
 
 
 def stage_badge(answer: Answer, stage: str) -> tuple[str, str]:
@@ -174,6 +119,9 @@ def render_drawer(history: list) -> None:
         st.caption("Click a citation below an answer to inspect its source.")
         return
     index, label = selected
+    if index >= len(history) or history[index][0] != "assistant":
+        st.caption("This source is no longer available.")
+        return
     answer = history[index][1]
     citation = next((c for c in answer.citations() if c.label == label), None)
     if citation is None:
@@ -215,6 +163,12 @@ def ask_example(question: str) -> None:
     st.session_state.example = question
 
 
+def clear_conversation() -> None:
+    st.session_state.history = []
+    st.session_state.pop("selected", None)
+    st.session_state.pop("example", None)
+
+
 def render_examples(*, show_safety: bool = True) -> None:
     """Give new users one concrete starting point for each supported scenario."""
     descriptions = (
@@ -247,10 +201,6 @@ def render_examples(*, show_safety: bool = True) -> None:
                 on_click=ask_example,
                 args=(question,),
             )
-
-
-def answer_text(answer: Answer) -> str:
-    return " ".join(sentence.text for sentence in answer.sentences)
 
 
 def render_answer(answer: Answer, index: int) -> None:
@@ -337,7 +287,24 @@ def main() -> None:
 
     with st.sidebar:
         st.markdown("### Research workspace")
-        st.caption("Inspect the sources behind an answer and the latest request checks.")
+        st.caption("Each question is searched independently; previous messages are not sent.")
+        st.button(
+            "New conversation",
+            key="clear-history",
+            on_click=clear_conversation,
+            disabled=not history,
+            use_container_width=True,
+        )
+        st.download_button(
+            "Download conversation",
+            data=export_conversation(history),
+            file_name="scilitrag-conversation.md",
+            mime="text/markdown",
+            on_click="ignore",
+            disabled=not history,
+            help="Includes questions, answers, source metadata, and displayed tables.",
+            use_container_width=True,
+        )
         with st.expander("Request checks", expanded=False):
             panel = st.empty()
             with panel.container():
