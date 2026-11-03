@@ -60,6 +60,14 @@ def test_no_refusal_without_refused_done():
     assert Answer(done=DoneEvent(total_ms=1)).refusal() is None
 
 
+@pytest.mark.parametrize(("index", "scenario"), [(0, "S1"), (1, "S2"), (2, "S3")])
+def test_example_questions_match_mock_scenarios(index, scenario):
+    from scilitrag.mocks.rag import plan
+    from scilitrag.ui.app import EXAMPLES
+
+    assert plan(EXAMPLES[index][1]).scenario == scenario
+
+
 def test_citations_are_unique_and_sorted():
     answer = Answer(sentences=[sentence(3, 1), sentence(1, 2)])
     assert [c.label for c in answer.citations()] == [1, 2, 3]

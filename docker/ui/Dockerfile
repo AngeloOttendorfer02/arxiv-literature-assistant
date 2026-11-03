@@ -26,6 +26,7 @@ FROM python:3.13-slim-trixie
 RUN useradd --create-home --uid 1000 app
 COPY --from=build --chown=app:app /app/.venv /app/.venv
 COPY --chown=app:app src/scilitrag/ui/app.py /app/app.py
+COPY --chown=app:app .streamlit /app/.streamlit
 ENV PATH="/app/.venv/bin:$PATH"
 USER app
 WORKDIR /app

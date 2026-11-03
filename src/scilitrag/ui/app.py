@@ -28,6 +28,36 @@ API_URL = os.environ.get("API_URL", "http://localhost:8000").rstrip("/")
 # deadline. Keep the connection open while the server sends its keep-alives.
 TIMEOUT = httpx2.Timeout(10.0, read=None)
 
+# A small layer of styling complements Streamlit's theme without changing widgets.
+APP_STYLE = """
+<style>
+    .block-container {max-width: 1120px; padding-top: 2rem; padding-bottom: 3rem;}
+    [data-testid="stSidebar"] {border-right: 1px solid #dfe6f1;}
+    [data-testid="stChatMessage"] {
+        border: 1px solid #e2e8f1; border-radius: 16px; background: #ffffff;
+    }
+    .scilitrag-brand {display: flex; align-items: center; gap: 12px; margin-bottom: 2rem;}
+    .scilitrag-mark {
+        display: flex; align-items: center; justify-content: center;
+        width: 40px; height: 40px; border-radius: 12px;
+        background: #315ad8; color: white; font-weight: 750; font-size: 20px;
+    }
+    .scilitrag-name {font-size: 20px; font-weight: 750; color: #17233a; line-height: 1.2;}
+    .scilitrag-subtitle {font-size: 12px; color: #59677b;}
+    .scilitrag-eyebrow {
+        color: #315ad8; font-size: 12px; font-weight: 700;
+        letter-spacing: .09em; text-transform: uppercase;
+    }
+    .scilitrag-hero {font-size: clamp(2rem, 4vw, 3.2rem); line-height: 1.1;
+        letter-spacing: -.04em; color: #17233a; margin: .5rem 0 .75rem;}
+    .scilitrag-intro {color: #506078; font-size: 1.05rem; max-width: 660px;}
+    @media (max-width: 640px) {
+        .block-container {padding-top: 1rem;}
+        .scilitrag-brand {margin-bottom: 1.2rem;}
+    }
+</style>
+"""
+
 GUARD_STAGES = ("prompt_guard", "topic_gate", "pii")
 STAGE_LABELS = {
     "prompt_guard": "Injection check",
@@ -185,12 +215,38 @@ def ask_example(question: str) -> None:
     st.session_state.example = question
 
 
-def render_examples() -> None:
-    row = st.container(horizontal=True)
-    for label, question in EXAMPLES:
-        row.button(
-            label, key=f"example-{label}", help=question, on_click=ask_example, args=(question,)
-        )
+def render_examples(*, show_safety: bool = True) -> None:
+    """Give new users one concrete starting point for each supported scenario."""
+    descriptions = (
+        ("Explore a topic", "Find papers about a research question."),
+        ("Trace citations", "Find papers citing a particular work."),
+        ("Discover authors", "Explore citation rankings for a topic."),
+    )
+    st.markdown("#### Start with an example")
+    for column, (label, question), (title, description) in zip(
+        st.columns(3), EXAMPLES[:3], descriptions
+    ):
+        with column, st.container(border=True):
+            st.markdown(f"**{title}**")
+            st.caption(description)
+            st.button(
+                "Try example",
+                key=f"example-{label}",
+                help=question,
+                on_click=ask_example,
+                args=(question,),
+            )
+    if show_safety:
+        with st.expander("Try a refused write request"):
+            label, question = EXAMPLES[3]
+            st.caption("The assistant is designed for read-only literature search.")
+            st.button(
+                "Try safety example",
+                key=f"example-{label}",
+                help=question,
+                on_click=ask_example,
+                args=(question,),
+            )
 
 
 def answer_text(answer: Answer) -> str:
@@ -274,20 +330,39 @@ def stream_answer(query: str, panel) -> Answer:
 
 
 def main() -> None:
-    st.set_page_config(page_title="Literature Assistant", layout="wide")
-    st.title("Literature Assistant")
-    st.caption("Ask about ML and NLP papers and inspect the sources cited in each answer.")
-    render_examples()
-
+    st.set_page_config(page_title="SciLitRAG", page_icon="📚", layout="wide")
+    st.markdown(APP_STYLE, unsafe_allow_html=True)
     history = st.session_state.setdefault("history", [])
     answers = [content for role, content in history if role == "assistant"]
 
     with st.sidebar:
-        panel = st.empty()
-        with panel.container():
-            render_guardrails(answers[-1] if answers else None)
+        st.markdown("### Research workspace")
+        st.caption("Inspect the sources behind an answer and the latest request checks.")
+        with st.expander("Request checks", expanded=False):
+            panel = st.empty()
+            with panel.container():
+                render_guardrails(answers[-1] if answers else None)
         st.divider()
         render_drawer(history)
+
+    st.markdown(
+        '<div class="scilitrag-brand"><div class="scilitrag-mark">S</div>'
+        '<div><div class="scilitrag-name">SciLitRAG</div>'
+        '<div class="scilitrag-subtitle">Scientific literature assistant</div></div></div>',
+        unsafe_allow_html=True,
+    )
+    if not history:
+        st.markdown(
+            '<div class="scilitrag-eyebrow">Explore research with context</div>'
+            '<h1 class="scilitrag-hero">Ask better questions<br>of the literature.</h1>'
+            '<p class="scilitrag-intro">Search ML and NLP papers, follow citation paths, '
+            "and inspect the sources behind each answer.</p>",
+            unsafe_allow_html=True,
+        )
+        render_examples()
+    else:
+        with st.expander("Example questions"):
+            render_examples(show_safety=False)
 
     for index, (role, content) in enumerate(history):
         with st.chat_message(role):

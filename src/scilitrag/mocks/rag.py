@@ -68,7 +68,7 @@ SQL_SENTENCE = " MOCK Author A is the most cited author with 12 citations [4]."
 
 def plan(masked_query: str) -> Plan:
     query = masked_query.lower()
-    if "most cited author" in query:
+    if re.search(r"\bmost cited authors?\b|\bauthors?\b.*\bcited most\b", query):
         scenario = "S3"
     elif "cite" in query or "baseline" in query:
         scenario = "S2"
