@@ -184,3 +184,66 @@ def test_table_is_rendered_before_stream_ends(monkeypatch):
     answer = app.stream_answer("question", Placeholder())
     assert order == ["table rendered", "stream finished"]
     assert answer.tables == [table]
+
+
+def test_incomplete_stream_keeps_partial_answer_and_reports_interruption(monkeypatch):
+    from contextlib import nullcontext
+
+    from scilitrag.ui import app
+
+    class Placeholder:
+        def container(self):
+            return nullcontext()
+
+        def markdown(self, text):
+            pass
+
+    class Response:
+        def __init__(self):
+            self.headers = {"x-request-id": "request-1"}
+
+        def raise_for_status(self):
+            pass
+
+        def iter_lines(self):
+            event = sentence(1)
+            return iter(["event: sentence", f"data: {event.model_dump_json()}", ""])
+
+    monkeypatch.setattr(app.st, "empty", Placeholder)
+    monkeypatch.setattr(app, "render_guardrails", lambda answer: None)
+    monkeypatch.setattr(app.httpx2, "stream", lambda *a, **k: nullcontext(Response()))
+
+    answer = app.stream_answer("question", Placeholder())
+
+    assert [item.text for item in answer.sentences] == ["x"]
+    assert answer.error == "The response ended before completion. The answer may be incomplete."
+
+
+def test_terminal_done_event_completes_stream(monkeypatch):
+    from contextlib import nullcontext
+
+    from scilitrag.ui import app
+
+    class Placeholder:
+        def container(self):
+            return nullcontext()
+
+    class Response:
+        def __init__(self):
+            self.headers = {}
+
+        def raise_for_status(self):
+            pass
+
+        def iter_lines(self):
+            event = DoneEvent(total_ms=1)
+            return iter(["event: done", f"data: {event.model_dump_json()}", ""])
+
+    monkeypatch.setattr(app.st, "empty", Placeholder)
+    monkeypatch.setattr(app, "render_guardrails", lambda answer: None)
+    monkeypatch.setattr(app.httpx2, "stream", lambda *a, **k: nullcontext(Response()))
+
+    answer = app.stream_answer("question", Placeholder())
+
+    assert answer.done is not None
+    assert answer.error is None

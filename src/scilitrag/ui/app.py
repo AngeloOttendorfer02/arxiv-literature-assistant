@@ -269,13 +269,18 @@ def stream_answer(query: str, panel) -> Answer:
     except httpx2.HTTPStatusError as exc:
         answer.error = f"The API answered with HTTP {exc.response.status_code}."
     except httpx2.HTTPError:
-        answer.error = f"The API at {API_URL} is not reachable."
+        if answer.request_id or answer.statuses or answer.sentences or answer.tables:
+            answer.error = "The API connection was interrupted. The answer may be incomplete."
+        else:
+            answer.error = f"The API at {API_URL} is not reachable."
     except (KeyError, ValueError):
         # Unknown event name (KeyError) or payload (pydantic ValidationError and JSON errors
         # are ValueErrors): API and UI were built from different contracts.
         answer.error = (
             "The API sent an event this UI does not understand (contract version mismatch?)."
         )
+    if answer.done is None and answer.error is None:
+        answer.error = "The response ended before completion. The answer may be incomplete."
     return answer
 
 
@@ -339,7 +344,8 @@ def main() -> None:
                 render_answer(content, index)
 
     typed = st.chat_input("Ask about papers, citations or authors")
-    query = typed or st.session_state.pop("example", None)
+    example = st.session_state.pop("example", None)
+    query = typed or example
     if not query:
         return
 
